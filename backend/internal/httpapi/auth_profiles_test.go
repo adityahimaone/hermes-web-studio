@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -36,4 +37,31 @@ func TestPasswordAuthProtectsAPIAndSetsHttpOnlyCookie(t *testing.T) {
 	}
 	var payload map[string]any
 	_ = json.Unmarshal(recorder.Body.Bytes(), &payload)
+}
+
+func TestProfileAndProviderCRUDRedactsCredentials(t *testing.T) {
+	api := newTestServer(t, "http://127.0.0.1:1", "")
+	defer api.Close()
+	profile := postJSON(t, api.URL+"/api/profiles", map[string]any{"id": "writing", "name": "Writing", "model": "q4", "provider_id": "custom"})
+	if profile.StatusCode != http.StatusCreated {
+		t.Fatalf("profile create=%d", profile.StatusCode)
+	}
+	_ = profile.Body.Close()
+	provider := postJSON(t, api.URL+"/api/providers", map[string]any{"id": "custom", "name": "Local", "kind": "openai-compatible", "base_url": "http://127.0.0.1:9000/v1", "api_key": "do-not-return"})
+	if provider.StatusCode != http.StatusCreated {
+		t.Fatalf("provider create=%d", provider.StatusCode)
+	}
+	body, _ := io.ReadAll(provider.Body)
+	_ = provider.Body.Close()
+	if strings.Contains(string(body), "do-not-return") || !strings.Contains(string(body), `"has_key":true`) {
+		t.Fatalf("provider leaked credential: %s", body)
+	}
+	response, err := api.Client().Get(api.URL + "/api/settings/capabilities")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("capabilities=%d", response.StatusCode)
+	}
 }

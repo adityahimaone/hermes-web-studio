@@ -274,6 +274,17 @@ The UI keeps preview and editor loading, empty, success, and error states
 separate. Grouping, activation, linked files, usage, and profile-aware refresh
 remain unimplemented until their upstream contracts are inventoried.
 
+The server also exposes registered Spaces and operator diagnostics without
+putting workspace paths or credentials in browser-owned state. Profile and
+provider CRUD responses contain only safe metadata; provider secrets are
+represented by `has_key` and are never returned. The control surface reports
+15 supported locale identifiers with English fallback.
+
+Conversation runtime helpers define disclosure, compaction repair, branch
+lineage, session projection, model search, safe export, and deterministic
+lifecycle rows. These helpers do not certify the corresponding upstream/live
+Hermes behavior until browser and side-by-side evidence is recorded.
+
 The production frontend exposes a manifest and service worker under the Vite
 base path. Registration is production-only and uses the configured base path;
 API requests are network-only and are never placed in the offline cache;

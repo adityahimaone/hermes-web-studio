@@ -334,6 +334,18 @@ The acceptance script verifies it is visible only on Chat.
 - P012, P016, P034, P048, P054, P055, and P061 remain `[~]` pending their
   reference, live, hosted, or independent-review gates.
 
+## 2026-08-30 — Parallel parity wave two
+
+- Added conversation-runtime helpers for disclosure modes, compaction/repair,
+  branch lineage, projections, model search, safe exports, and lifecycle rows.
+- Added server-owned Spaces activation/health, Kanban board/card CRUD, task
+  history/delete controls, Memory note CRUD/search safety, and operator health
+  and logs routes.
+- Added profile/provider CRUD with credential redaction, 15-locale fallback,
+  PWA update/bfcache hooks, release artifact checks, and copied-state rehearsal.
+- P017-P026, P027, P029, P032-P036, P038, P040-P042, P045, P047, and P064 are
+  now `[~]`; external/live/complete parity gates remain explicitly open.
+
 ## 2026-08-30 — PWA API cache boundary
 
 - Prevented the service worker from caching `/api/*` responses so stale

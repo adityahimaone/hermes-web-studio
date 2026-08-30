@@ -148,7 +148,8 @@ func (s *Server) handleMemory(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "memory_not_found", "The requested note was not found.")
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"name": name, "content": string(data)})
+		info, _ := os.Stat(path)
+		writeJSON(w, http.StatusOK, map[string]any{"name": name, "content": string(data), "updated_at": info.ModTime().UTC()})
 		return
 	}
 	notes := make([]map[string]string, 0)
@@ -160,7 +161,67 @@ func (s *Server) handleMemory(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(filepath.Join(s.config.HermesHome, "SOUL.md")); err == nil {
 		notes = append(notes, map[string]string{"name": "SOUL.md", "path": "../SOUL.md"})
 	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query != "" {
+		filtered := notes[:0]
+		for _, note := range notes {
+			if strings.Contains(strings.ToLower(note["name"]), strings.ToLower(query)) {
+				filtered = append(filtered, note)
+			}
+		}
+		notes = filtered
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"notes": notes, "sources": []string{"hermes-state"}})
+}
+
+func (s *Server) memoryPath(name string) (string, bool) {
+	clean := filepath.Clean(filepath.FromSlash(strings.TrimSpace(name)))
+	if clean == "." || filepath.IsAbs(clean) || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || filepath.Base(clean) != clean || !strings.HasSuffix(clean, ".md") {
+		return "", false
+	}
+	root := filepath.Join(s.config.HermesHome, "memories")
+	if clean == "SOUL.md" {
+		root = s.config.HermesHome
+	}
+	return filepath.Join(root, clean), true
+}
+
+func (s *Server) handleMemoryWrite(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	path, ok := s.memoryPath(input.Name)
+	if !ok || strings.TrimSpace(input.Name) == "SOUL.md" || len(input.Content) > 1<<20 {
+		writeError(w, http.StatusBadRequest, "invalid_memory_path", "The memory note path or content is invalid.")
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil || os.WriteFile(path, []byte(input.Content), 0600) != nil {
+		writeError(w, http.StatusInternalServerError, "memory_write_failed", "The memory note could not be saved.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"name": filepath.Base(path), "content": input.Content})
+}
+
+func (s *Server) handleMemoryDelete(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	path, ok := s.memoryPath(name)
+	if !ok || name == "SOUL.md" {
+		writeError(w, http.StatusBadRequest, "invalid_memory_path", "The memory note path is invalid.")
+		return
+	}
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			writeError(w, http.StatusNotFound, "memory_not_found", "The memory note was not found.")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "memory_delete_failed", "The memory note could not be deleted.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"tasks": true, "skills": true, "memory": true, "todos": true, "goals": true, "spaces": true, "preferences": true, "background": false, "voice": false, "terminal": false, "extensions": false, "reason": "Runtime integrations require an explicit Hermes provider contract."})

@@ -18,8 +18,20 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+window.addEventListener('pageshow', event => {
+  if (event.persisted) window.dispatchEvent(new CustomEvent('hermes:bfcache-restore'))
+})
+
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).then(registration => {
+      void registration.update()
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) window.dispatchEvent(new CustomEvent('hermes:sw-update'))
+        })
+      })
+    })
   })
 }

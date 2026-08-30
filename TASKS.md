@@ -150,43 +150,43 @@ personal source as the new acceptance baseline.
 - [~] P014 Make Runs-first normalization cover message, reasoning, tool, progress, subagent, approval, clarification, usage, compression, recovery, and terminal events (existing normalized event path retained; clarification/compression/recovery coverage remains)
 - [~] P015 Preserve inflight turns across session switches, hard reload, reconnect backoff, cursor replay, and full-session poll fallback (journal restore, transcript restore, cursor reconnect, and stale-stream protection implemented; expired-stream polling fallback and live proof remain)
 - [~] P016 Implement Queue/Interrupt/Steer modes, including attachments, visible pending intent, cancellation, replacement, and cleanup on every exit (modes, pending intent, attachment names, removal, replacement, and cleanup implemented; live/browser proof remains)
-- [ ] P017 Implement compact worklog, transparent stream, and final-answer-only modes with per-turn disclosure persistence and settled-history behavior
-- [ ] P018 Add compaction barriers, `/compact`, exhausted-context recovery, partial-message crash recovery, retry, and safe transcript repair/audit
-- [ ] P019 Complete message copy, edit/regenerate, clear watermark, branch/fork from any valid turn, duplicate, undo, and lineage reporting
-- [ ] P020 Complete WebUI/CLI/cron/webhook/gateway session projections, canonical deduplication, active recency, clusters, external read-only rules, and import
-- [ ] P021 Complete title/content search, projects, tags, archived visibility, pinning, batch delete/move/archive, and adaptive/LLM title regeneration
-- [ ] P022 Complete Markdown, syntax, JSON/YAML tree, Mermaid toolbar, KaTeX, tables, safe links, media tokens, timestamps, and routing metadata
-- [ ] P023 Complete searchable provider-grouped model selection, live custom endpoint discovery, auxiliary models, aliases, quota/cost/TPS, reasoning, and toolsets
-- [ ] P024 Complete slash-command registry/autocomplete and reference built-ins with transparent pass-through for unknown commands
-- [ ] P025 Complete transcript/session Markdown, JSON, and self-contained HTML export; import; public share creation/revocation; and safe download behavior
-- [ ] P026 Add deterministic normal/error/cancel/switch/reload/reconnect/compression/recovery lifecycle rows plus live Hermes side-by-side acceptance
+- [~] P017 Implement compact worklog, transparent stream, and final-answer-only modes with per-turn disclosure persistence and settled-history behavior (disclosure helpers and render predicates added; UI persistence and live stream modes remain)
+- [~] P018 Add compaction barriers, `/compact`, exhausted-context recovery, partial-message crash recovery, retry, and safe transcript repair/audit (barrier and repair helpers added; command integration and crash/live recovery remain)
+- [~] P019 Complete message copy, edit/regenerate, clear watermark, branch/fork from any valid turn, duplicate, undo, and lineage reporting (branch/fork/undo lineage helpers added; full message UI and server effects remain)
+- [~] P020 Complete WebUI/CLI/cron/webhook/gateway session projections, canonical deduplication, active recency, clusters, external read-only rules, and import (projection/source/dedup helpers added; backend projections and import remain)
+- [~] P021 Complete title/content search, projects, tags, archived visibility, pinning, batch delete/move/archive, and adaptive/LLM title regeneration (existing title/content/filter/action slice retained; move/import/title regeneration remain)
+- [~] P022 Complete Markdown, syntax, JSON/YAML tree, Mermaid toolbar, KaTeX, tables, safe links, media tokens, timestamps, and routing metadata (safe export/runtime helpers added; renderer and routing parity remain)
+- [~] P023 Complete searchable provider-grouped model selection, live custom endpoint discovery, auxiliary models, aliases, quota/cost/TPS, reasoning, and toolsets (deterministic model discovery/search helpers added; live provider groups and runtime metadata remain)
+- [~] P024 Complete slash-command registry/autocomplete and reference built-ins with transparent pass-through for unknown commands (existing /help and /clear retained; registry/autocomplete/pass-through remain)
+- [~] P025 Complete transcript/session Markdown, JSON, and self-contained HTML export; import; public share creation/revocation; and safe download behavior (safe Markdown/JSON/HTML export helpers added; import/share endpoints remain)
+- [~] P026 Add deterministic normal/error/cancel/switch/reload/reconnect/compression/recovery lifecycle rows plus live Hermes side-by-side acceptance (lifecycle rows helper added; live side-by-side evidence remains)
 
 ## M9 — Workbench and operator parity
 
-- [ ] P027 Replace the single-root workspace abstraction with reference-compatible registered Spaces, active inheritance, ordering, health, suggestions, and profile-local state
+- [~] P027 Replace the single-root workspace abstraction with reference-compatible registered Spaces, active inheritance, ordering, health, suggestions, and profile-local state (server-owned registration, activation, and health added; inheritance/order/suggestions/profile-local state remain)
 - [ ] P028 Complete lazy tree/breadcrumb/filemap, hidden-file rules, broad preview matrix, copy paths, open/reveal, create/edit/move/rename/delete, upload/paste/extract, and size limits
-- [ ] P029 Complete workspace Artifacts and optional Todos projections with independent panel state and stream-safe persistence
+- [~] P029 Complete workspace Artifacts and optional Todos projections with independent panel state and stream-safe persistence (server-owned Todos projection and explicit Artifacts empty state retained; Artifacts contract remains)
 - [ ] P030 Add contained terminal start/input/output/resize/close and prove process ownership/cleanup on success, error, cancel, replacement, and disconnect
 - [ ] P031 Add git branch/status/diff/stage/unstage/discard/commit/fetch/pull/push/stash-checkout flows with confirmation and hostile-path tests
-- [ ] P032 Replace task placeholders with cron create/edit/delete, schedule builder, delivery options, skill picker, run/pause/resume, output/history, alerts, and watch status
-- [ ] P033 Implement Kanban boards/tasks/assignees/links/bulk actions/dispatch/events/stats and map its persisted state without local fallback
+- [~] P032 Replace task placeholders with cron create/edit/delete, schedule builder, delivery options, skill picker, run/pause/resume, output/history, alerts, and watch status (run/pause/resume/delete/history added; builder, delivery, alerts, and watch remain)
+- [~] P033 Implement Kanban boards/tasks/assignees/links/bulk actions/dispatch/events/stats and map its persisted state without local fallback (persisted boards/cards CRUD added; assignees, links, bulk, dispatch, events, and stats remain)
 - [~] P034 Complete Skills grouping/search/content/linked files/create/edit/delete/toggle/usage and profile-aware refresh (preview loading/empty/error state separation implemented; CRUD, linked files, usage, and profile refresh remain)
-- [ ] P035 Complete Memory/USER/external-note sources, search, timestamps, inline create/edit, and path/source safety
-- [ ] P036 Complete Todos and Goals lifecycle plus current-goal/workspace projections using Hermes-owned state
+- [~] P035 Complete Memory/USER/external-note sources, search, timestamps, inline create/edit, and path/source safety (server-owned note search/create/edit/delete and protected SOUL.md added; external sources and timestamps remain)
+- [~] P036 Complete Todos and Goals lifecycle plus current-goal/workspace projections using Hermes-owned state (server-owned lifecycle retained and workspace Todos projection added; current-goal integration remains)
 - [ ] P037 Implement Insights for usage, cost/provider history, state synchronization, and operational summaries
-- [ ] P038 Implement Logs, crash visibility, background status, agent/gateway/system health, safe restart, and rollback diagnostics
+- [~] P038 Implement Logs, crash visibility, background status, agent/gateway/system health, safe restart, and rollback diagnostics (operator health/log routes added; crash/background/restart/rollback flows remain)
 - [ ] P039 Implement external-channel sessions, handoff dock, round summaries, per-conversation identity, routing metadata, and model-switch warnings
-- [ ] P040 Add browser and backend matrices for every rail panel covering loading, empty, CRUD, watch/stream, permission failure, cancellation, and recovery
+- [~] P040 Add browser and backend matrices for every rail panel covering loading, empty, CRUD, watch/stream, permission failure, cancellation, and recovery (backend operator/control coverage and shell matrix added; complete rail matrix remains)
 
 ## M10 — Identity, settings, extensibility, and platform parity
 
-- [ ] P041 Complete profile create/update/switch/delete, concurrent isolation, profile-local workspace/state, runtime refresh, and OAuth linking
-- [ ] P042 Complete provider CRUD, self-hosted provider setup, live models, custom OpenAI-compatible endpoints, personalities, and credential redaction
+- [~] P041 Complete profile create/update/switch/delete, concurrent isolation, profile-local workspace/state, runtime refresh, and OAuth linking (server-owned profile CRUD/switch and active-profile protection added; isolation, workspace state, refresh, OAuth remain)
+- [~] P042 Complete provider CRUD, self-hosted provider setup, live models, custom OpenAI-compatible endpoints, personalities, and credential redaction (provider create/list/delete with `has_key` redaction added; live endpoints/models and personalities remain)
 - [ ] P043 Complete password lifecycle, passkey registration/login/delete, OIDC start/callback, trusted headers, cookie rotation, CSRF/CORS, and reverse-proxy threat cases
 - [ ] P044 Match branded onboarding for existing config, provider setup, OAuth polling/cancel, probes, completion, skip rules, and failure recovery
-- [ ] P045 Complete Control Center Conversation, Appearance, Preferences, Providers, Plugins, Extensions, System, and Help sections with searchable settings
+- [~] P045 Complete Control Center Conversation, Appearance, Preferences, Providers, Plugins, Extensions, System, and Help sections with searchable settings (capability section registry added; complete section behavior/search remains)
 - [ ] P046 Implement all reference preference behaviors, including send key, activity modes, scroll, rendering, outline, notifications, token controls, voice/TTS, and tab/composer customization
-- [ ] P047 Add 15 locales with key parity, fallback accounting, RTL chat layout, CJK/IME behavior, and localized login/onboarding/error surfaces
+- [~] P047 Add 15 locales with key parity, fallback accounting, RTL chat layout, CJK/IME behavior, and localized login/onboarding/error surfaces (15-locale resolver/fallback contract added; translated keys, RTL, CJK/IME, and localized surfaces remain)
 - [~] P048 Add PWA manifest/service worker/offline shell, install flow, icons, update invalidation, bfcache behavior, and subpath support (manifest, service worker, install icon, production registration, and Vite subpath support implemented; update invalidation, bfcache, and install-flow evidence remain)
 - [ ] P049 Implement MCP server/tool management and plugin settings/status using server-owned validation and secret filtering
 - [ ] P050 Implement extension registry/install/toggle/uninstall/settings, skin/TTS/nav capability registration, sidecar consent/proxy, iframe tab, and trust boundaries
@@ -206,6 +206,6 @@ personal source as the new acceptance baseline.
 - [~] P061 Run independent security review for auth/proxy, SSRF, XSS/Markdown, workspace/terminal/git, uploads/extraction, extensions/sidecars, migration, and secret boundaries (CSP, Permissions-Policy, headers, and automated platform checks added; independent review and full threat matrix remain)
 - [ ] P062 Run hosted Linux/macOS/Windows artifact, Docker, Nix, PWA/subpath, and browser matrices from release candidates
 - [ ] P063 Complete parallel beta with the personal WebUI available for rollback and resolve every critical/major parity gap
-- [ ] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state
+- [~] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state (sanitized copied-state rehearsal script passes; migration/rollback/operator communication rehearsal remains)
 - [ ] P065 Request explicit user cutover approval; do not archive or modify the personal WebUI before approval
 - [ ] P066 Keep rollback artifacts and the personal implementation available until the agreed rollback window closes

@@ -39,14 +39,26 @@ type Server struct {
 	profileMu     sync.RWMutex
 	profiles      []profile
 	activeProfile string
+	providers     []provider
+	providerMu    sync.RWMutex
 }
 
 type profile struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Model    string `json:"model"`
-	Provider string `json:"provider,omitempty"`
-	Health   string `json:"health"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Model      string `json:"model"`
+	Provider   string `json:"provider,omitempty"`
+	Health     string `json:"health"`
+	ProviderID string `json:"provider_id,omitempty"`
+}
+
+type provider struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Kind    string `json:"kind"`
+	BaseURL string `json:"base_url"`
+	HasKey  bool   `json:"has_key"`
+	Health  string `json:"health"`
 }
 
 type turn struct {
@@ -95,7 +107,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 			profiles = configured
 		}
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -135,7 +147,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/auth/me", s.handleAuthMe)
 	mux.HandleFunc("GET /api/profiles", s.handleProfiles)
+	mux.HandleFunc("POST /api/profiles", s.handleProfileCreate)
+	mux.HandleFunc("PUT /api/profiles", s.handleProfileUpdate)
+	mux.HandleFunc("DELETE /api/profiles", s.handleProfileDelete)
 	mux.HandleFunc("POST /api/profiles/active", s.handleProfileSwitch)
+	mux.HandleFunc("GET /api/providers", s.handleProviders)
+	mux.HandleFunc("POST /api/providers", s.handleProviderCreate)
+	mux.HandleFunc("DELETE /api/providers", s.handleProviderDelete)
 	mux.HandleFunc("GET /api/auth/providers", s.handleAuthProviders)
 	mux.HandleFunc("GET /api/control/{collection}", s.handleControlList)
 	mux.HandleFunc("POST /api/control/{collection}", s.handleControlCreate)
@@ -145,6 +163,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/preferences", s.handlePreferencesUpdate)
 	mux.HandleFunc("GET /api/settings", s.handlePreferences)
 	mux.HandleFunc("POST /api/settings", s.handlePreferencesUpdate)
+	mux.HandleFunc("GET /api/settings/capabilities", s.handleSettingsCapabilities)
 	mux.HandleFunc("GET /api/crons", s.handleCrons)
 	mux.HandleFunc("GET /api/crons/history", s.handleCronHistory)
 	mux.HandleFunc("POST /api/crons/create", s.handleCronCreate)
@@ -156,6 +175,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/skills", s.handleSkillUpdate)
 	mux.HandleFunc("DELETE /api/skills", s.handleSkillDelete)
 	mux.HandleFunc("GET /api/memory", s.handleMemory)
+	mux.HandleFunc("POST /api/memory", s.handleMemoryWrite)
+	mux.HandleFunc("PATCH /api/memory", s.handleMemoryWrite)
+	mux.HandleFunc("DELETE /api/memory", s.handleMemoryDelete)
+	mux.HandleFunc("GET /api/spaces", s.handleSpaces)
+	mux.HandleFunc("POST /api/spaces/active", s.handleSpaceActivate)
+	mux.HandleFunc("GET /api/operator/health", s.handleOperatorHealth)
+	mux.HandleFunc("GET /api/operator/logs", s.handleOperatorLogs)
+	mux.HandleFunc("GET /api/kanban", s.handleKanban)
+	mux.HandleFunc("POST /api/kanban/boards", s.handleKanbanBoardCreate)
+	mux.HandleFunc("POST /api/kanban/cards", s.handleKanbanCardCreate)
+	mux.HandleFunc("PATCH /api/kanban/cards/{id}", s.handleKanbanCardUpdate)
+	mux.HandleFunc("DELETE /api/kanban/cards/{id}", s.handleKanbanCardDelete)
 	mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
 	mux.HandleFunc("GET /api/plugins", s.handlePlugins)
 	return securityHeaders(requestLog(s.authMiddleware(mux)))

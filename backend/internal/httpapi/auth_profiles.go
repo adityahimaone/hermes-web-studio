@@ -132,6 +132,120 @@ func (s *Server) handleProfiles(w http.ResponseWriter, _ *http.Request) {
 	defer s.profileMu.RUnlock()
 	writeJSON(w, 200, map[string]any{"profiles": s.profiles, "active": s.activeProfile})
 }
+
+func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
+	var input profile
+	if !decodeBody(w, r, &input) || strings.TrimSpace(input.ID) == "" || strings.TrimSpace(input.Name) == "" {
+		writeError(w, http.StatusBadRequest, "profile_invalid", "Profile id and name are required.")
+		return
+	}
+	s.profileMu.Lock()
+	defer s.profileMu.Unlock()
+	for _, item := range s.profiles {
+		if item.ID == input.ID {
+			writeError(w, http.StatusConflict, "profile_exists", "The profile already exists.")
+			return
+		}
+	}
+	input.Health = "configured"
+	s.profiles = append(s.profiles, input)
+	writeJSON(w, http.StatusCreated, input)
+}
+
+func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
+	var patch profile
+	if !decodeBody(w, r, &patch) {
+		return
+	}
+	s.profileMu.Lock()
+	defer s.profileMu.Unlock()
+	for i := range s.profiles {
+		if s.profiles[i].ID == patch.ID {
+			if patch.Name != "" {
+				s.profiles[i].Name = patch.Name
+			}
+			if patch.Model != "" {
+				s.profiles[i].Model = patch.Model
+			}
+			if patch.Provider != "" {
+				s.profiles[i].Provider = patch.Provider
+			}
+			if patch.ProviderID != "" {
+				s.profiles[i].ProviderID = patch.ProviderID
+			}
+			writeJSON(w, http.StatusOK, s.profiles[i])
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "profile_not_found", "The profile was not found.")
+}
+
+func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	s.profileMu.Lock()
+	defer s.profileMu.Unlock()
+	if id == "" || id == s.activeProfile || len(s.profiles) == 1 {
+		writeError(w, http.StatusBadRequest, "profile_delete_rejected", "The active or last profile cannot be deleted.")
+		return
+	}
+	for i, item := range s.profiles {
+		if item.ID == id {
+			s.profiles = append(s.profiles[:i], s.profiles[i+1:]...)
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "profile_not_found", "The profile was not found.")
+}
+
+func (s *Server) handleProviders(w http.ResponseWriter, _ *http.Request) {
+	s.providerMu.RLock()
+	defer s.providerMu.RUnlock()
+	writeJSON(w, http.StatusOK, map[string]any{"providers": s.providers})
+}
+
+func (s *Server) handleProviderCreate(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Kind    string `json:"kind"`
+		BaseURL string `json:"base_url"`
+		APIKey  string `json:"api_key"`
+	}
+	if !decodeBody(w, r, &input) || strings.TrimSpace(input.ID) == "" || strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.BaseURL) == "" {
+		writeError(w, http.StatusBadRequest, "provider_invalid", "Provider id, name, and base URL are required.")
+		return
+	}
+	s.providerMu.Lock()
+	defer s.providerMu.Unlock()
+	for _, item := range s.providers {
+		if item.ID == input.ID {
+			writeError(w, http.StatusConflict, "provider_exists", "The provider already exists.")
+			return
+		}
+	}
+	item := provider{ID: input.ID, Name: input.Name, Kind: input.Kind, BaseURL: input.BaseURL, HasKey: strings.TrimSpace(input.APIKey) != "", Health: "configured"}
+	s.providers = append(s.providers, item)
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (s *Server) handleProviderDelete(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	s.providerMu.Lock()
+	defer s.providerMu.Unlock()
+	for i, item := range s.providers {
+		if item.ID == id {
+			s.providers = append(s.providers[:i], s.providers[i+1:]...)
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "provider_not_found", "The provider was not found.")
+}
+
+func (s *Server) handleSettingsCapabilities(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"sections": []string{"conversation", "appearance", "preferences", "providers", "plugins", "extensions", "system", "help"}, "locales": []string{"en", "id", "de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "zh-CN", "zh-TW", "ar", "hi", "tr"}})
+}
 func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID string `json:"id"`

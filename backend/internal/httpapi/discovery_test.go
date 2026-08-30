@@ -77,3 +77,30 @@ func TestSkillsSearchAndCRUDStayInsideHermesHome(t *testing.T) {
 		t.Fatalf("unsafe update=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestMemoryCRUDStaysInsideMemoryRoot(t *testing.T) {
+	hermesHome := t.TempDir()
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), HermesHome: hermesHome}
+	h := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	request := httptest.NewRequest(http.MethodPost, "/api/memory", strings.NewReader(`{"name":"USER.md","content":"prefers concise replies"}`))
+	request.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, request)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "concise") {
+		t.Fatalf("create=%d body=%s", rec.Code, rec.Body.String())
+	}
+	request = httptest.NewRequest(http.MethodPatch, "/api/memory", strings.NewReader(`{"name":"USER.md","content":"updated"}`))
+	request.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, request)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "updated") {
+		t.Fatalf("update=%d body=%s", rec.Code, rec.Body.String())
+	}
+	request = httptest.NewRequest(http.MethodPost, "/api/memory", strings.NewReader(`{"name":"../escape.md","content":"unsafe"}`))
+	request.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, request)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("unsafe=%d body=%s", rec.Code, rec.Body.String())
+	}
+}

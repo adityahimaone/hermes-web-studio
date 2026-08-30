@@ -285,3 +285,15 @@ recorded decision and explicit approval before MVP certification.
   for external runtime or review evidence.
 - **Consequence:** The related M10/M11 tasks remain `[~]` until their stated
   external gates are executed.
+
+## ADR-034: Keep runtime parity helpers pure until upstream behavior is proven
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Implement deterministic conversation-runtime planning,
+  projection, repair, export, and lifecycle helpers as pure functions before
+  wiring uncertain upstream/live semantics into the Gateway adapter.
+- **Reason:** Helpers can be tested against sanitized contracts without
+  inventing unsupported Hermes events or persisting browser-only state.
+- **Consequence:** P017-P026 remain partial until their UI, server effects, and
+  live side-by-side rows are proven.

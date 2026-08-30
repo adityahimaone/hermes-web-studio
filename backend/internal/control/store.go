@@ -11,7 +11,7 @@ import (
 )
 
 var ErrNotFound = errors.New("control item not found")
-var validCollections = map[string]bool{"tasks": true, "todos": true, "goals": true, "spaces": true}
+var validCollections = map[string]bool{"tasks": true, "todos": true, "goals": true, "spaces": true, "artifacts": true, "boards": true}
 
 type Item struct {
 	ID          string            `json:"id"`
@@ -30,6 +30,8 @@ type State struct {
 	Spaces      []Item            `json:"spaces"`
 	Preferences map[string]string `json:"preferences"`
 	TaskHistory []RunRecord       `json:"task_history"`
+	Artifacts   []Item            `json:"artifacts"`
+	Boards      []Item            `json:"boards"`
 }
 type RunRecord struct {
 	ID         string     `json:"id"`
@@ -49,7 +51,7 @@ func New(stateDir string) (*Store, error) {
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		return nil, err
 	}
-	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Tasks: []Item{}, Todos: []Item{}, Goals: []Item{}, Spaces: []Item{}, Preferences: map[string]string{}, TaskHistory: []RunRecord{}}}
+	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Tasks: []Item{}, Todos: []Item{}, Goals: []Item{}, Spaces: []Item{}, Artifacts: []Item{}, Boards: []Item{}, Preferences: map[string]string{}, TaskHistory: []RunRecord{}}}
 	data, err := os.ReadFile(s.path)
 	if err == nil {
 		if json.Unmarshal(data, &s.state) != nil {
@@ -73,6 +75,12 @@ func New(stateDir string) (*Store, error) {
 	}
 	if s.state.TaskHistory == nil {
 		s.state.TaskHistory = []RunRecord{}
+	}
+	if s.state.Artifacts == nil {
+		s.state.Artifacts = []Item{}
+	}
+	if s.state.Boards == nil {
+		s.state.Boards = []Item{}
 	}
 	return s, nil
 }
@@ -123,6 +131,14 @@ func (s *Store) Update(collection, id string, patch Item) (Item, error) {
 			}
 			if patch.DueAt != "" {
 				items[i].DueAt = patch.DueAt
+			}
+			if patch.Metadata != nil {
+				if items[i].Metadata == nil {
+					items[i].Metadata = map[string]string{}
+				}
+				for key, value := range patch.Metadata {
+					items[i].Metadata[key] = value
+				}
 			}
 			items[i].UpdatedAt = time.Now().UTC()
 			s.setItems(collection, items)
@@ -225,8 +241,12 @@ func (s *Store) items(collection string) ([]Item, error) {
 		return s.state.Todos, nil
 	case "goals":
 		return s.state.Goals, nil
-	default:
+	case "spaces":
 		return s.state.Spaces, nil
+	case "artifacts":
+		return s.state.Artifacts, nil
+	default:
+		return s.state.Boards, nil
 	}
 }
 func (s *Store) setItems(collection string, items []Item) {
@@ -239,6 +259,10 @@ func (s *Store) setItems(collection string, items []Item) {
 		s.state.Goals = items
 	case "spaces":
 		s.state.Spaces = items
+	case "artifacts":
+		s.state.Artifacts = items
+	case "boards":
+		s.state.Boards = items
 	}
 }
 func (s *Store) persist() error {
