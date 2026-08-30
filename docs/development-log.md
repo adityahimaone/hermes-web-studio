@@ -56,3 +56,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Attachment original name/MIME metadata is now persisted in a restrictive sidecar so resumed turns keep the file contract.
 - Added functional mobile navigation open/close behavior and session action controls with accessible labels and focus rings; frontend test/build remain green.
 - Fixed session API response serialization so legacy metadata fields are flattened to the browser contract; added integration coverage for pinned/tags metadata.
+- Retry/regenerate now truncates the persisted branch before automatically re-running the selected user prompt, matching edit branch semantics.

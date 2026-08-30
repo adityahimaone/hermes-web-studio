@@ -87,3 +87,5 @@ The normalized event set also includes `subagent`, `approval`, and `usage`. Appr
 Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PDF/plain-text MIME types. Files are stored with `0600` permissions under the resolved WebUI state directory and are addressed by opaque IDs. The Gateway adapter maps images to `image_url`, PDFs to `file`, and text files to text content. Browser code never receives Gateway or provider credentials.
 
 Editing a persisted user message uses `POST /api/sessions/{session_id}/truncate` with `{"count":<message-count>}`. The BFF keeps the transcript prefix, preserves session metadata, and the next composer send creates the replacement branch.
+
+Retry/regenerate uses the same prefix operation and immediately starts a replacement turn, preventing the previous assistant branch from being appended as a second answer.

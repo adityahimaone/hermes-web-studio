@@ -26,7 +26,7 @@ function EmptyState() {
   )
 }
 
-export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (message: ChatMessage) => void; onRetry?: (content: string) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
+export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (message: ChatMessage) => void; onRetry?: (message: ChatMessage) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
   if (!messages.length && stream.status === 'idle') return <EmptyState />
 
   return (
@@ -40,7 +40,7 @@ export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: {
         ) : (
           <article key={message.id} className="flex gap-3">
             <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
-            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && <button type="button" className="message-action mt-3" onClick={() => onRetry([...messages].reverse().find((item: ChatMessage) => item.role === 'user')?.content || '')}><RotateCcw size={14} /> Retry</button>}</div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && (() => { const previous = [...messages].reverse().find((item: ChatMessage) => item.role === 'user'); return previous ? <button type="button" className="message-action mt-3" onClick={() => onRetry(previous)}><RotateCcw size={14} /> Retry</button> : null })()}</div>
           </article>
         )
       ))}

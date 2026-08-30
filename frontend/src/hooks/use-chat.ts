@@ -88,7 +88,14 @@ export function useChat() {
     setDraft('')
     if (streamState.status === 'streaming' || streamIdRef.current) { queueRef.current.push(clean); setQueuedMessages([...queueRef.current]) } else pump(clean, files)
   }, [pump, streamState.status])
-  const retry = useCallback((content: string) => send(content), [send])
+  const retry = useCallback((message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id)
+    if (index < 0) return
+    void truncateSession(activeSessionRef.current, index).catch(() => undefined)
+    setMessages((current) => current.slice(0, index))
+    setDraft('')
+    pump(message.content)
+  }, [messages, pump])
   const edit = useCallback((message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
