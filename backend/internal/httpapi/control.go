@@ -104,3 +104,111 @@ func (s *Server) handlePreferencesUpdate(w http.ResponseWriter, r *http.Request)
 	}
 	writeJSON(w, 200, map[string]any{"preferences": store.Preferences()})
 }
+
+func (s *Server) handleCrons(w http.ResponseWriter, _ *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	items, err := store.List("tasks")
+	if err != nil {
+		writeError(w, 400, "cron_unavailable", "Scheduled tasks are unavailable.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"jobs": items, "available": true})
+}
+func (s *Server) handleCronHistory(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	writeJSON(w, 200, map[string]any{"history": store.History(r.URL.Query().Get("job_id"))})
+}
+func (s *Server) handleCronCreate(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	var input struct {
+		control.Item
+		Name     string `json:"name"`
+		Schedule string `json:"schedule"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	item := input.Item
+	if item.Title == "" {
+		item.Title = input.Name
+	}
+	if item.Title == "" {
+		item.Title = item.Description
+	}
+	if item.Title == "" {
+		writeError(w, 400, "name_required", "A scheduled task name is required.")
+		return
+	}
+	if item.Metadata == nil {
+		item.Metadata = map[string]string{}
+	}
+	if input.Schedule != "" {
+		item.Metadata["schedule"] = input.Schedule
+	} else if schedule := r.URL.Query().Get("schedule"); schedule != "" {
+		item.Metadata["schedule"] = schedule
+	}
+	created, err := store.Create("tasks", item)
+	if err != nil {
+		writeError(w, 400, "cron_invalid", "The scheduled task is invalid.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "job": created})
+}
+func (s *Server) handleCronRun(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	var input struct {
+		JobID string `json:"job_id"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	record, err := store.RunTask(input.JobID)
+	if errors.Is(err, control.ErrNotFound) {
+		writeError(w, 404, "cron_not_found", "The scheduled task was not found.")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, "cron_run_failed", "The scheduled task could not run.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "run": record})
+}
+func (s *Server) handleCronPause(w http.ResponseWriter, r *http.Request) {
+	s.handleCronPauseResume(w, r, true)
+}
+func (s *Server) handleCronResume(w http.ResponseWriter, r *http.Request) {
+	s.handleCronPauseResume(w, r, false)
+}
+func (s *Server) handleCronPauseResume(w http.ResponseWriter, r *http.Request, paused bool) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	var input struct {
+		JobID string `json:"job_id"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	if err := store.PauseTask(input.JobID, paused); err != nil {
+		if errors.Is(err, control.ErrNotFound) {
+			writeError(w, 404, "cron_not_found", "The scheduled task was not found.")
+			return
+		}
+		writeError(w, 500, "cron_update_failed", "The scheduled task could not be updated.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "paused": paused})
+}

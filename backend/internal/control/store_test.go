@@ -29,3 +29,24 @@ func TestStorePersistsCollectionsAndFiltersSecrets(t *testing.T) {
 		t.Fatalf("items=%v err=%v", items, err)
 	}
 }
+
+func TestTaskRunPauseAndHistory(t *testing.T) {
+	s, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := s.Create("tasks", Item{Title: "Daily check"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PauseTask(task.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	record, err := s.RunTask(task.ID)
+	if err != nil || record.Status != "completed" {
+		t.Fatalf("record=%v err=%v", record, err)
+	}
+	if len(s.History(task.ID)) != 1 {
+		t.Fatal("run history missing")
+	}
+}

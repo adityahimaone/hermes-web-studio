@@ -139,9 +139,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/control/{collection}/{id}", s.handleControlDelete)
 	mux.HandleFunc("GET /api/preferences", s.handlePreferences)
 	mux.HandleFunc("PUT /api/preferences", s.handlePreferencesUpdate)
+	mux.HandleFunc("GET /api/settings", s.handlePreferences)
+	mux.HandleFunc("POST /api/settings", s.handlePreferencesUpdate)
+	mux.HandleFunc("GET /api/crons", s.handleCrons)
+	mux.HandleFunc("GET /api/crons/history", s.handleCronHistory)
+	mux.HandleFunc("POST /api/crons/create", s.handleCronCreate)
+	mux.HandleFunc("POST /api/crons/run", s.handleCronRun)
+	mux.HandleFunc("POST /api/crons/pause", s.handleCronPause)
+	mux.HandleFunc("POST /api/crons/resume", s.handleCronResume)
 	mux.HandleFunc("GET /api/skills", s.handleSkills)
 	mux.HandleFunc("GET /api/memory", s.handleMemory)
 	mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
+	mux.HandleFunc("GET /api/plugins", s.handlePlugins)
 	return securityHeaders(requestLog(s.authMiddleware(mux)))
 }
 

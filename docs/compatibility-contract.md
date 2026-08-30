@@ -154,3 +154,12 @@ non-secret display preferences; keys containing token or secret are discarded.
 return empty arrays when no source is configured. `GET /api/capabilities`
 declares runtime-dependent surfaces such as terminal, voice, background work,
 and extensions instead of exposing non-functional controls.
+
+The upstream scheduled-task route names are retained as compatibility aliases:
+`GET /api/crons`, `GET /api/crons/history`, `POST /api/crons/create`,
+`POST /api/crons/run`, `POST /api/crons/pause`, and
+`POST /api/crons/resume`. Jobs are persisted in the same server-owned control
+state and run history is bounded to the latest 100 records. A wall-clock
+scheduler and external delivery remain deferred until the Gateway task runtime
+contract is available. `/api/settings` GET/POST aliases map to the safe
+preferences store, and `/api/plugins` returns sanitized visibility metadata.

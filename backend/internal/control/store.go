@@ -29,6 +29,15 @@ type State struct {
 	Goals       []Item            `json:"goals"`
 	Spaces      []Item            `json:"spaces"`
 	Preferences map[string]string `json:"preferences"`
+	TaskHistory []RunRecord       `json:"task_history"`
+}
+type RunRecord struct {
+	ID         string     `json:"id"`
+	TaskID     string     `json:"task_id"`
+	Status     string     `json:"status"`
+	StartedAt  time.Time  `json:"started_at"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	Error      string     `json:"error,omitempty"`
 }
 type Store struct {
 	path  string
@@ -121,6 +130,54 @@ func (s *Store) Delete(collection, id string) error {
 		}
 	}
 	return ErrNotFound
+}
+func (s *Store) RunTask(id string) (RunRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.state.Tasks {
+		if s.state.Tasks[i].ID == id {
+			now := time.Now().UTC()
+			s.state.Tasks[i].Status = "running"
+			s.state.Tasks[i].UpdatedAt = now
+			finished := now
+			record := RunRecord{ID: newID(), TaskID: id, Status: "completed", StartedAt: now, FinishedAt: &finished}
+			s.state.Tasks[i].Status = "completed"
+			s.state.Tasks[i].UpdatedAt = finished
+			s.state.TaskHistory = append([]RunRecord{record}, s.state.TaskHistory...)
+			if len(s.state.TaskHistory) > 100 {
+				s.state.TaskHistory = s.state.TaskHistory[:100]
+			}
+			return record, s.persist()
+		}
+	}
+	return RunRecord{}, ErrNotFound
+}
+func (s *Store) PauseTask(id string, paused bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.state.Tasks {
+		if s.state.Tasks[i].ID == id {
+			if paused {
+				s.state.Tasks[i].Status = "paused"
+			} else {
+				s.state.Tasks[i].Status = "open"
+			}
+			s.state.Tasks[i].UpdatedAt = time.Now().UTC()
+			return s.persist()
+		}
+	}
+	return ErrNotFound
+}
+func (s *Store) History(taskID string) []RunRecord {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]RunRecord, 0)
+	for _, item := range s.state.TaskHistory {
+		if taskID == "" || item.TaskID == taskID {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 func (s *Store) Preferences() map[string]string {
 	s.mu.RLock()
