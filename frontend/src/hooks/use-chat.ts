@@ -50,10 +50,10 @@ export function useChat() {
     if (next) pumpRef.current(next)
   }, [closeSource])
 
-  const pump = useCallback(async (content: string, files: File[] = []) => {
+  const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[]) => {
     const clean = content.trim(); if (!clean) return
     closeSource(); answerRef.current = ''; terminalRef.current = null
-    setMessages((current) => [...current, { id: newId(), role: 'user', content: clean, status: 'complete' }])
+    setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
       const uploaded = await Promise.all(files.map((file) => uploadAttachment(file, activeSessionRef.current)))
@@ -94,7 +94,7 @@ export function useChat() {
     void truncateSession(activeSessionRef.current, index).catch(() => undefined)
     setMessages((current) => current.slice(0, index))
     setDraft('')
-    pump(message.content)
+    pump(message.content, [], messages.slice(0, index))
   }, [messages, pump])
   const edit = useCallback((message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
