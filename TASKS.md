@@ -58,11 +58,11 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 ## M4 — Control center feature parity
 
-- [ ] Tasks/cron and history
-- [ ] Skills
-- [ ] Memory and external notes
-- [ ] Todos and goals
-- [ ] Spaces/projects
+- [~] Tasks/cron and history (CRUD foundation is implemented; scheduling, run history, pause, and alerts remain)
+- [x] Skills (safe local discovery surface)
+- [~] Memory and external notes (safe local discovery surface; external source adapters remain)
+- [x] Todos and goals
+- [x] Spaces/projects
 - [ ] Slash commands and voice input
 - [ ] Preferences, skins, locale, update status
 - [ ] Background tasks and wakeups

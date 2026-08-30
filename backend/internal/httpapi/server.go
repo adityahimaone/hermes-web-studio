@@ -17,6 +17,7 @@ import (
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/auth"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/session"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/workspace"
@@ -31,6 +32,8 @@ type Server struct {
 	workspaceErr  error
 	auth          *auth.Service
 	authErr       error
+	control       *control.Store
+	controlErr    error
 	mu            sync.Mutex
 	profileMu     sync.RWMutex
 	profiles      []profile
@@ -83,6 +86,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	}
 	ws, wsErr := workspace.New(cfg.WorkspaceRoot)
 	authService, authErr := auth.New(stateDir)
+	controlStore, controlErr := control.New(stateDir)
 	profiles := []profile{{ID: "default", Name: "Default", Model: cfg.DefaultModel, Provider: cfg.DefaultProvider, Health: "gateway"}}
 	if cfg.ProfilesJSON != "" {
 		var configured []profile
@@ -90,7 +94,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 			profiles = configured
 		}
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, profiles: profiles, activeProfile: profiles[0].ID}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -129,6 +133,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/profiles", s.handleProfiles)
 	mux.HandleFunc("POST /api/profiles/active", s.handleProfileSwitch)
 	mux.HandleFunc("GET /api/auth/providers", s.handleAuthProviders)
+	mux.HandleFunc("GET /api/control/{collection}", s.handleControlList)
+	mux.HandleFunc("POST /api/control/{collection}", s.handleControlCreate)
+	mux.HandleFunc("PATCH /api/control/{collection}/{id}", s.handleControlUpdate)
+	mux.HandleFunc("DELETE /api/control/{collection}/{id}", s.handleControlDelete)
+	mux.HandleFunc("GET /api/preferences", s.handlePreferences)
+	mux.HandleFunc("PUT /api/preferences", s.handlePreferencesUpdate)
+	mux.HandleFunc("GET /api/skills", s.handleSkills)
+	mux.HandleFunc("GET /api/memory", s.handleMemory)
+	mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
 	return securityHeaders(requestLog(s.authMiddleware(mux)))
 }
 

@@ -91,3 +91,9 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added server-owned local password setup, iterative hashing, signed HttpOnly/SameSite cookies, login rate limiting, same-origin protection, remote-host setup gating, logout, and safe identity status.
 - Added profile discovery from server-only JSON, model/provider picker data, active profile switching, onboarding diagnostics, trusted-header mode, and explicit OIDC/WebAuthn capability reporting.
 - Added backend auth/profile tests and documented the credential boundary. OIDC authorization and WebAuthn ceremonies remain `[~]` until deployment-specific issuer/RP configuration is available; no unavailable provider is presented as working.
+
+## 2026-08-30 - M4 control center foundation
+
+- Added server-owned persistent collections for tasks, todos, goals, spaces, and filtered preferences with CRUD API routes and tests.
+- Added safe skills and memory discovery endpoints plus explicit capability reporting for runtime-dependent voice, background, extension, and terminal surfaces.
+- Replaced dead Soon navigation buttons with accessible control-center views for tasks, todos, goals, spaces, skills, and memory, including loading, empty, error, create, complete, and delete states.

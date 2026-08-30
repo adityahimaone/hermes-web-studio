@@ -15,7 +15,7 @@ const navigation = [
   { label: 'Spaces', icon: FolderKanban },
 ]
 
-export function Sidebar({ onNewChat, sessions, activeSessionId, onSelectSession, onRename, onPin, onArchive, onDelete, loading, error, mobileOpen, onClose }: { onNewChat: () => void; sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onRename: (id: string) => void; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => void; loading: boolean; error?: string; mobileOpen?: boolean; onClose?: () => void }) {
+export function Sidebar({ onNewChat, onNavigate, currentView, sessions, activeSessionId, onSelectSession, onRename, onPin, onArchive, onDelete, loading, error, mobileOpen, onClose }: { onNewChat: () => void; onNavigate: (view: string) => void; currentView: string; sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onRename: (id: string) => void; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => void; loading: boolean; error?: string; mobileOpen?: boolean; onClose?: () => void }) {
   const [query, setQuery] = useState('')
   const groups = groupSessionsByDate(filterSessions(sessions, query))
   return (
@@ -29,9 +29,9 @@ export function Sidebar({ onNewChat, sessions, activeSessionId, onSelectSession,
       <Button className="mt-4 w-full justify-start" onClick={() => { onNewChat(); onClose?.() }}><Plus size={16} /> New conversation</Button>
 
       <nav className="mt-5 space-y-1" aria-label="Main navigation">
-        {navigation.map(({ label, icon: Icon, active }) => (
-          <button key={label} disabled={!active} className={cn('flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors', active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 disabled:opacity-45')}>
-            <Icon size={16} /><span>{label}</span>{!active && <span className="ml-auto text-[10px]">Soon</span>}
+        {navigation.map(({ label, icon: Icon }) => (
+          <button key={label} onClick={() => { onNavigate(label.toLowerCase()); onClose?.() }} aria-current={currentView === label.toLowerCase() ? 'page' : undefined} className={cn('flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors', currentView === label.toLowerCase() ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50')}>
+            <Icon size={16} /><span>{label}</span>
           </button>
         ))}
       </nav>

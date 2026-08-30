@@ -142,3 +142,15 @@ and arbitrary fields are discarded during decoding. OIDC issuer discovery and
 WebAuthn ceremonies remain explicit capability states until deployment
 configuration is present; unavailable providers are not shown as working login
 paths.
+
+## M4 control-center contract
+
+Tasks, todos, goals, and spaces use server-owned JSON state at `control.json`.
+Collections expose `GET /api/control/{collection}`,
+`POST /api/control/{collection}`, `PATCH /api/control/{collection}/{id}`, and
+`DELETE /api/control/{collection}/{id}`. `GET` and `PUT /api/preferences` store
+non-secret display preferences; keys containing token or secret are discarded.
+`GET /api/skills` and `GET /api/memory` discover local server-state entries and
+return empty arrays when no source is configured. `GET /api/capabilities`
+declares runtime-dependent surfaces such as terminal, voice, background work,
+and extensions instead of exposing non-functional controls.
