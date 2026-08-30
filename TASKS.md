@@ -27,11 +27,11 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 - [x] Persist sessions using existing `~/.hermes/webui` data where possible (JSON CRUD, metadata-preserving edits, attachment sidecars, and chat transcript append tested; no chat SQLite/CLI source is present in the resolved state directory)
 - [x] Add read-only sessions API contract and integration tests
-- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, session actions, inline tag/project metadata, and an isolated live parity runner implemented; operator run remains)
+- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, session actions, inline tag/project metadata, and isolated live parity runner verified; original-WebUI side-by-side proof remains)
 - [x] Load and resume existing session history
 - [~] Edit/regenerate/retry and queue while processing (server-side edit truncation awaited before edit/retry, queued text/attachment delivery implemented and browser-verified; live edit/retry parity proof remains)
 - [x] Markdown, code highlight/copy, Mermaid, safe links
-- [~] Tool cards, subagent cards, reasoning blocks (canonical Runs lifecycle aliases, upserted progress cards, and redaction tested; live upstream variants remain)
+- [~] Tool cards, subagent cards, reasoning blocks (canonical Runs lifecycle aliases, upserted progress cards, redaction, and live tool events verified; current Gateway emitted no structured subagent event)
 - [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)
 - [x] Attachments and multimodal messages (validated upload/download, MIME-specific Gateway transport, live model completion verified, and attachment turns safely stay on chat-completions when Runs mode is enabled)
 - [x] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, live replay proof, and Playwright interruption/reconnect coverage)

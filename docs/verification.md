@@ -68,3 +68,12 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Browser reconnect/finalization | Pass: terminal handling now reduces each event once; the acceptance script confirms the streamed prefix and final answer are not rendered as duplicate assistant replies |
 | Queued attachment | Pass: an attachment selected while the first turn is streaming is retained in the queued turn and forwarded after the reconnecting turn completes |
 | Canonical Runs activity events | Pass: fixture coverage normalizes `tool.start/progress/complete`, `subagent.start/complete`, and reasoning delta aliases without duplicate activity cards |
+
+## 2026-08-30 — M1 live parity probes
+
+| Check | Result |
+|---|---|
+| Safe M1 session/chat runner | Pass: `scripts/m1-live-parity.sh` created an isolated session, verified load/rename/pin/archive/project/tags, completed a real no-tools chat, confirmed persisted history, truncated the transcript prefix, and cleaned up the session |
+| Runs tool activity | Pass: opt-in Runs BFF emitted normalized `tool` and `tool_complete` events for a read-only `pwd` request and returned the expected safe response |
+| Runs subagent activity | Inconclusive capability check: the harmless delegation prompt produced tool events and a safe response but no structured `subagent` event |
+| Runs approval activity | Inconclusive safely: the prompt requesting approval for `printf approval_check` produced no structured `approval` event; no approval was submitted and no command was executed |
