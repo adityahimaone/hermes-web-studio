@@ -28,6 +28,11 @@ export interface SessionSummary {
   title?: string
   updated_at?: string
   created_at?: string
+  pinned?: boolean
+  archived?: boolean
+  project_id?: string
+  project?: string
+  tags?: string[]
   [key: string]: unknown
 }
 

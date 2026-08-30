@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, getSession, getSessions, resolveApproval, startChat, truncateSession, uploadAttachment } from '../lib/api-client'
+import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, setSessionArchived, setSessionPinned, startChat, truncateSession, uploadAttachment } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -108,7 +108,28 @@ export function useChat() {
     closeSource(); setActiveSessionId(sessionId); setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try { const detail = await getSession(sessionId); setMessages(normalizeSessionMessages(detail.messages)) } catch (error) { setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.') } finally { setSessionLoading(false) }
   }, [closeSource])
+  const rename = useCallback(async (sessionId: string) => {
+    const current = sessions.find((item) => item.session_id === sessionId)
+    const title = window.prompt('Rename session', current?.title || '')?.trim()
+    if (!title) return
+    const updated = await renameSession(sessionId, title)
+    setSessions((items) => items.map((item) => item.session_id === sessionId ? updated : item))
+  }, [sessions])
+  const pin = useCallback(async (sessionId: string, pinned: boolean) => {
+    const updated = await setSessionPinned(sessionId, pinned)
+    setSessions((items) => items.map((item) => item.session_id === sessionId ? updated : item))
+  }, [])
+  const archive = useCallback(async (sessionId: string, archived: boolean) => {
+    const updated = await setSessionArchived(sessionId, archived)
+    setSessions((items) => items.map((item) => item.session_id === sessionId ? updated : item))
+  }, [])
+  const remove = useCallback(async (sessionId: string) => {
+    if (!window.confirm('Delete this session?')) return
+    await deleteSession(sessionId)
+    setSessions((items) => items.filter((item) => item.session_id !== sessionId))
+    if (activeSessionRef.current === sessionId) reset()
+  }, [])
   const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
-  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
+  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, rename, pin, archive, remove, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

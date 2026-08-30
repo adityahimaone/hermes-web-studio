@@ -11,7 +11,7 @@ export function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar onNewChat={chat.reset} sessions={chat.sessions} activeSessionId={chat.activeSessionId} onSelectSession={chat.selectSession} loading={chat.sessionLoading} error={chat.sessionError} />
+      <Sidebar onNewChat={chat.reset} sessions={chat.sessions} activeSessionId={chat.activeSessionId} onSelectSession={chat.selectSession} onRename={chat.rename} onPin={chat.pin} onArchive={chat.archive} onDelete={chat.remove} loading={chat.sessionLoading} error={chat.sessionError} />
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/70 px-3 backdrop-blur-xl sm:px-5">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation"><Menu size={18} /></Button>
