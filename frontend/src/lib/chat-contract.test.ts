@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { initialChatState, normalizeSessionMessages, reduceChatEvent } from './chat-contract'
+import { filterSessions, groupSessionsByDate, initialChatState, normalizeSessionMessages, reduceChatEvent } from './chat-contract'
 
 describe('chat event reducer', () => {
   it('builds an answer from token frames and settles on done', () => {
@@ -31,5 +31,21 @@ describe('chat event reducer', () => {
       { id: 'history-0', role: 'user', content: 'hello', status: 'complete', created_at: undefined },
       { id: 'history-1', role: 'assistant', content: 'world', status: 'complete', created_at: '2026-08-30T00:00:00Z' },
     ])
+  })
+
+  it('groups and searches sessions using metadata without changing order within a day', () => {
+    const sessions = [
+      { session_id: 'two', title: 'Build API', updated_at: '2026-08-30T12:00:00Z', tags: ['backend'] },
+      { session_id: 'one', title: 'Design notes', updated_at: '2026-08-29T12:00:00Z', project: 'studio' },
+    ]
+    expect(filterSessions(sessions, 'backend')).toHaveLength(1)
+    expect(groupSessionsByDate(sessions, new Date('2026-08-30T18:00:00Z')).map((group) => group.label)).toEqual(['Today', 'Yesterday'])
+  })
+
+  it('normalizes usage and approval events into visible state', () => {
+    let state = reduceChatEvent(initialChatState, { type: 'usage', data: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20, context_window: 100 } })
+    state = reduceChatEvent(state, { type: 'approval', data: { run_id: 'run-1', name: 'terminal' } })
+    expect(state.usage).toEqual({ input: 12, output: 8, total: 20, contextLimit: 100 })
+    expect(state.approvals[0].id).toBe('run-1')
   })
 })

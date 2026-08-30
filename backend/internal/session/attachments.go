@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -42,8 +43,8 @@ func (s *Store) SaveAttachment(header *multipart.FileHeader) (Attachment, error)
 	if int64(len(data)) > MaxAttachmentSize {
 		return Attachment{}, errors.New("attachment size is not allowed")
 	}
-	mime := http.DetectContentType(data)
-	if !allowedMIME(mime) {
+	contentType := canonicalMIME(http.DetectContentType(data))
+	if !allowedMIME(contentType) {
 		return Attachment{}, errors.New("attachment type is not allowed")
 	}
 	id := randomID()
@@ -55,7 +56,7 @@ func (s *Store) SaveAttachment(header *multipart.FileHeader) (Attachment, error)
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		return Attachment{}, err
 	}
-	return Attachment{ID: id, Name: filepath.Base(header.Filename), MIME: mime, Size: int64(len(data)), Path: path}, nil
+	return Attachment{ID: id, Name: filepath.Base(header.Filename), MIME: contentType, Size: int64(len(data)), Path: path}, nil
 }
 
 func (s *Store) LoadAttachments(ids []string) ([]Attachment, error) {
@@ -72,18 +73,21 @@ func (s *Store) LoadAttachments(ids []string) ([]Attachment, error) {
 		if int64(len(data)) > MaxAttachmentSize {
 			return nil, errors.New("attachment size is not allowed")
 		}
-		result = append(result, Attachment{ID: id, Name: id, MIME: http.DetectContentType(data), Size: int64(len(data)), Path: path, data: data})
+		result = append(result, Attachment{ID: id, Name: id, MIME: canonicalMIME(http.DetectContentType(data)), Size: int64(len(data)), Path: path, data: data})
 	}
 	return result, nil
 }
 
-func allowedMIME(mime string) bool {
-	switch mime {
-	case "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain":
-		return true
-	default:
-		return false
+func canonicalMIME(value string) string {
+	mediaType, _, err := mime.ParseMediaType(value)
+	if err != nil {
+		return value
 	}
+	return mediaType
+}
+
+func allowedMIME(mime string) bool {
+	return strings.HasPrefix(mime, "image/png") || strings.HasPrefix(mime, "image/jpeg") || strings.HasPrefix(mime, "image/gif") || strings.HasPrefix(mime, "image/webp") || strings.HasPrefix(mime, "application/pdf") || strings.HasPrefix(mime, "text/plain")
 }
 func randomID() string {
 	b := make([]byte, 16)

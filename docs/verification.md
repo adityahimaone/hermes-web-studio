@@ -39,3 +39,15 @@ The live M0 gate remains open. Re-run after starting both the Hermes Gateway and
 | Hermes version | Not exposed by the available Gateway health metadata |
 
 This closes the M0 live gate. The version is intentionally recorded as unavailable rather than inferred.
+
+## 2026-08-30 - M1 automated acceptance
+
+| Check | Result |
+|---|---|
+| Backend unit/integration tests | Pass: Gateway normalization, session store/API, cancellation, attachment upload and multimodal payload, approval forwarding, replay cursor |
+| Backend vet and formatting | Pass |
+| Frontend reducer/contract tests | Pass: 4 tests |
+| Frontend production build | Pass: Vite output generated successfully |
+| Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
+| Live Hermes chat | Pass: M0 smoke proof above |
+| Live approval, live multimodal model acceptance, browser network interruption, keyboard/mobile matrix | Pending operator/browser verification; tracked as `[~]` in `TASKS.md` |

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -117,6 +118,119 @@ func TestCancelStopsUpstreamTurn(t *testing.T) {
 	case <-cancelled:
 	case <-time.After(2 * time.Second):
 		t.Fatal("upstream request was not cancelled")
+	}
+}
+
+func TestAttachmentUploadAndMultimodalGatewayPayload(t *testing.T) {
+	seenPayload := make(chan string, 1)
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		seenPayload <- string(body)
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer gw.Close()
+	api := newTestServer(t, gw.URL, "")
+	defer api.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "note.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("hello attachment"))
+	_ = writer.Close()
+	request, _ := http.NewRequest(http.MethodPost, api.URL+"/api/attachments", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	upload, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uploaded map[string]any
+	decode(t, upload.Body, &uploaded)
+	_ = upload.Body.Close()
+	if upload.StatusCode != http.StatusCreated || uploaded["id"] == "" {
+		t.Fatalf("upload status=%d body=%v", upload.StatusCode, uploaded)
+	}
+
+	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"message": "describe", "attachment_ids": []string{uploaded["id"].(string)}})
+	var started map[string]string
+	decode(t, start.Body, &started)
+	_ = start.Body.Close()
+	stream, err := http.Get(api.URL + "/api/chat/stream?stream_id=" + started["stream_id"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.ReadAll(stream.Body)
+	_ = stream.Body.Close()
+	select {
+	case payload := <-seenPayload:
+		if !strings.Contains(payload, "data:text/plain;base64,") || strings.Contains(payload, "Authorization") {
+			t.Fatalf("payload=%s", payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("gateway payload not observed")
+	}
+}
+
+func TestCompletedStreamReplaysAfterLastEventID(t *testing.T) {
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"replay\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer gw.Close()
+	api := newTestServer(t, gw.URL, "")
+	defer api.Close()
+	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"message": "hello"})
+	var started map[string]string
+	decode(t, start.Body, &started)
+	_ = start.Body.Close()
+	first, _ := http.Get(api.URL + "/api/chat/stream?stream_id=" + started["stream_id"])
+	firstBody, _ := io.ReadAll(first.Body)
+	_ = first.Body.Close()
+	if !strings.Contains(string(firstBody), "id: 1") || !strings.Contains(string(firstBody), "id: 2") {
+		t.Fatalf("first stream=%s", firstBody)
+	}
+	reconnectRequest, _ := http.NewRequest(http.MethodGet, api.URL+"/api/chat/stream?stream_id="+started["stream_id"], nil)
+	reconnectRequest.Header.Set("Last-Event-ID", "1")
+	reconnected, err := http.DefaultClient.Do(reconnectRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reconnectedBody, _ := io.ReadAll(reconnected.Body)
+	_ = reconnected.Body.Close()
+	if strings.Contains(string(reconnectedBody), "id: 1") || !strings.Contains(string(reconnectedBody), "id: 2") {
+		t.Fatalf("replayed stream=%s", reconnectedBody)
+	}
+}
+
+func TestApprovalRouteForwardsDecision(t *testing.T) {
+	seen := make(chan string, 1)
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/runs/run-1/approval" {
+			http.NotFound(w, r)
+			return
+		}
+		body, _ := io.ReadAll(r.Body)
+		seen <- string(body)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer gw.Close()
+	api := newTestServer(t, gw.URL, "approval-secret")
+	defer api.Close()
+	response := postJSON(t, api.URL+"/api/runs/run-1/approval", map[string]string{"decision": "approved"})
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", response.StatusCode)
+	}
+	_ = response.Body.Close()
+	select {
+	case payload := <-seen:
+		if payload != `{"decision":"approved"}` {
+			t.Fatalf("payload=%s", payload)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("approval was not forwarded")
 	}
 }
 

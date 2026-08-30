@@ -184,7 +184,7 @@ export function reduceChatEvent(state: ChatState, event: ChatEvent): ChatState {
       return { ...state, status: 'streaming', subagents: [...state.subagents, { id, name: eventText(event.data, 'name') || 'Hermes subagent', status: eventText(event.data, 'status') === 'error' ? 'error' : 'running', task: eventText(event.data, 'task') || undefined }] }
     }
     case 'approval': {
-      const id = eventText(event.data, 'approval_id') || eventText(event.data, 'id') || `approval-${state.approvals.length}`
+      const id = eventText(event.data, 'approval_id') || eventText(event.data, 'run_id') || eventText(event.data, 'id') || `approval-${state.approvals.length}`
       return { ...state, status: 'streaming', approvals: [...state.approvals, { id, name: eventText(event.data, 'name') || 'Action approval', command: eventText(event.data, 'command') || undefined, reason: eventText(event.data, 'reason') || undefined, status: 'pending' }] }
     }
     case 'usage': {
