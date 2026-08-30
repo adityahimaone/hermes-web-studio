@@ -1,5 +1,5 @@
 import { Archive, ArchiveX, Check, ChevronLeft, Pencil, Pin, Search, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Dialog } from '../ui/dialog'
@@ -7,18 +7,19 @@ import { cn } from '../../lib/cn'
 import { filterSessions, groupSessionsByDate, type SessionSummary } from '../../lib/chat-contract'
 import { DropdownMenu } from '../ui/dropdown-menu'
 
-type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; loading: boolean; error?: string; onToggle: () => void }
+type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; loading: boolean; error?: string; onToggle: () => void }
 type SourceFilter = 'all' | 'webui' | 'cli'
 
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
 function sourceOf(session: SessionSummary): SourceFilter { const source = field(session, 'source', 'session_source', 'origin', 'session_type').toLocaleLowerCase(); return source.includes('cli') || source.includes('cron') ? 'cli' : 'webui' }
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 
-export function SessionRail({ sessions, activeSessionId, onSelectSession, onRename, onPin, onArchive, onDelete, loading, error, onToggle }: Props) {
+export function SessionRail({ sessions, activeSessionId, onSelectSession, onSearch, onRename, onPin, onArchive, onDelete, loading, error, onToggle }: Props) {
   const [query, setQuery] = useState(''); const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all'); const [projectFilter, setProjectFilter] = useState('all'); const [selected, setSelected] = useState<string[]>([]); const [batchMode, setBatchMode] = useState(false); const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null); const [deleteTarget, setDeleteTarget] = useState<SessionSummary | null>(null); const [renameValue, setRenameValue] = useState('')
   const projects = useMemo(() => Array.from(new Set(sessions.map(item => item.project || item.project_id).filter((item): item is string => Boolean(item)))).sort(), [sessions])
   const visible = filterSessions(sessions, query).filter(item => (sourceFilter === 'all' || sourceOf(item) === sourceFilter) && (projectFilter === 'all' || (item.project || item.project_id) === projectFilter))
   const groups = groupSessionsByDate(visible)
+  useEffect(() => { if (!onSearch) return; const timer = window.setTimeout(() => { void onSearch(query) }, 250); return () => window.clearTimeout(timer) }, [onSearch, query])
   const toggleSelected = (id: string) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
   const clearBatch = () => { setSelected([]); setBatchMode(false) }
 

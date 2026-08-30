@@ -54,6 +54,19 @@ func TestReaderFallsBackWhenIndexIsCorrupt(t *testing.T) {
 	}
 }
 
+func TestReaderSearchesTranscriptWithoutReturningMessages(t *testing.T) {
+	summaries, err := NewLegacySessionReader(fixtureState(t)).Search("WORLD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(summaries) != 1 || summaries[0].ID != "session-1" {
+		t.Fatalf("search summaries = %#v", summaries)
+	}
+	if _, ok := summaries[0].Metadata["messages"]; ok {
+		t.Fatal("search summary returned transcript messages")
+	}
+}
+
 func TestReaderRejectsTraversalAndDoesNotWrite(t *testing.T) {
 	stateDir := fixtureState(t)
 	before, err := os.ReadFile(filepath.Join(stateDir, "sessions", "session-1.json"))

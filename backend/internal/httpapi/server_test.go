@@ -370,6 +370,35 @@ func TestSessionsAPIFlattensLegacyMetadataForBrowserContract(t *testing.T) {
 	}
 }
 
+func TestSessionsAPISearchesTranscriptServerSide(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"session-search","title":"Untitled","messages":[{"role":"user","content":"needle in transcript"}]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "session-search.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions?q=NEEDLE")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listing struct {
+		Sessions []map[string]any `json:"sessions"`
+	}
+	decode(t, response.Body, &listing)
+	_ = response.Body.Close()
+	if len(listing.Sessions) != 1 || listing.Sessions[0]["session_id"] != "session-search" {
+		t.Fatalf("search listing = %#v", listing)
+	}
+	if _, ok := listing.Sessions[0]["messages"]; ok {
+		t.Fatal("search listing returned transcript messages")
+	}
+}
+
 func TestSessionsAPIRejectsUnsafeAndMissingIDs(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())

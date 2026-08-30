@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
+import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -28,6 +28,11 @@ export function useChat() {
   const closeSource = useCallback(() => { sourceRef.current?.close(); sourceRef.current = null }, [])
   const refreshSessions = useCallback(async (signal?: AbortSignal) => {
     const result = await getSessions(signal)
+    setSessions(result.sessions || [])
+    return result.sessions || []
+  }, [])
+  const searchSessionList = useCallback(async (query: string) => {
+    const result = await searchSessions(query)
     setSessions(result.sessions || [])
     return result.sessions || []
   }, [])
@@ -152,5 +157,5 @@ export function useChat() {
   }, [])
   const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
-  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, rename, pin, archive, remove, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
+  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

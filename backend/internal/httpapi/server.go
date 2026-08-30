@@ -155,8 +155,13 @@ func (s *Server) Handler() http.Handler {
 	return securityHeaders(requestLog(s.authMiddleware(mux)))
 }
 
-func (s *Server) handleSessions(w http.ResponseWriter, _ *http.Request) {
-	sessions, err := s.sessions.List()
+func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(query) > 200 {
+		writeError(w, http.StatusBadRequest, "search_query_too_long", "The session search query is too long.")
+		return
+	}
+	sessions, err := s.sessions.Search(query)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "sessions_unavailable", "Session history is unavailable.")
 		return

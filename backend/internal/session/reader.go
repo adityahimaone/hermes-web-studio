@@ -61,6 +61,42 @@ func (r *LegacySessionReader) List() ([]Summary, error) {
 	return r.scanSummaries()
 }
 
+// Search returns summaries whose metadata or transcript contains query. The
+// transcript is inspected server-side so list responses never include it.
+func (r *LegacySessionReader) Search(query string) ([]Summary, error) {
+	needle := strings.ToLower(strings.TrimSpace(query))
+	if needle == "" {
+		return r.List()
+	}
+	all, err := r.scanSummaries()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]Summary, 0, len(all))
+	for _, summary := range all {
+		if strings.Contains(strings.ToLower(summary.Title), needle) || strings.Contains(strings.ToLower(string(rawMetadata(summary.Metadata))), needle) {
+			result = append(result, summary)
+			continue
+		}
+		item, loadErr := r.Load(summary.ID)
+		if loadErr != nil || !strings.Contains(strings.ToLower(string(rawMessages(item.Messages))), needle) {
+			continue
+		}
+		result = append(result, summary)
+	}
+	return result, nil
+}
+
+func rawMetadata(metadata map[string]json.RawMessage) []byte {
+	value, _ := json.Marshal(metadata)
+	return value
+}
+
+func rawMessages(messages []json.RawMessage) []byte {
+	value, _ := json.Marshal(messages)
+	return value
+}
+
 func (r *LegacySessionReader) Load(id string) (Session, error) {
 	if err := validateID(id); err != nil {
 		return Session{}, err

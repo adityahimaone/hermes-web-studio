@@ -30,7 +30,7 @@ on contracts and sanitized behavior, not on private production state.
 |---|---|---:|---|---|
 | WebUI/CLI session sources, title/content search, date groups, project filters | session API and `SessionRail` | partial | P006/P020 | sanitized fixture list, transcript index, and browser workflow |
 | Create/load/resume, rename, pin, archive, delete, tags, projects | `backend/internal/httpapi`, session store | partial | P006/P021 | CRUD, persistence, permission/error rows |
-| Overflow actions: duplicate, fork, import/export, share, hide | session API and chat actions | gap | P019/P025 | state effects and safe downloads |
+| Overflow actions: duplicate, fork, import/export, share, hide | session API and chat actions | partial | P019/P025 | state effects and safe downloads |
 | Streaming message, reasoning, tools, subagents, approvals, usage | `backend/internal/gateway`, chat reducer | partial | P013/P014 | normalized fixtures and live side-by-side |
 | Reconnect, replay, cancel, switch-session recovery | stream service and frontend chat state | partial | P015/P026 | interruption/reconnect lifecycle |
 | Queue, interrupt, steer, clarify, compact, recovery | chat runtime | gap | P016/P018 | deterministic lifecycle rows |

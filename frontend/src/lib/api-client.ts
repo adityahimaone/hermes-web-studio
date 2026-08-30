@@ -61,6 +61,10 @@ export async function getSessions(signal?: AbortSignal) {
   return readJson<{ sessions: SessionSummary[] }>(await fetch('/api/sessions', { signal }))
 }
 
+export async function searchSessions(query: string, signal?: AbortSignal) {
+  return readJson<{ sessions: SessionSummary[] }>(await fetch(`/api/sessions?q=${encodeURIComponent(query)}`, { signal }))
+}
+
 export async function getSession(sessionId: string, signal?: AbortSignal) {
   return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { signal }))
 }

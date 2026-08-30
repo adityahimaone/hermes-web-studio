@@ -235,6 +235,7 @@ The acceptance script verifies it is visible only on Chat.
   search labeling, date grouping, batch selection, batch archive/delete, and
   preserved pin/archive/rename/delete overflow actions.
 - Automated evidence: frontend tests and production build pass.
-- P006 remains `[~]`: the current session listing does not expose transcript
-  search indexes, and duplicate/import/share/export actions still need their
+- Added bounded server-owned transcript search at `GET /api/sessions?q=...`;
+  results remain summary-only and have reader/API regression coverage.
+- P006 remains `[~]`: duplicate/import/share/export actions still need their
   server contracts and acceptance evidence.
