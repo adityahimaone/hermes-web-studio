@@ -52,9 +52,11 @@ Response:
 Supported upstream frames:
 
 - OpenAI chunks: `choices[0].delta.content`
-- Hermes `message.delta`
-- Hermes `reasoning.available`
-- Hermes `tool.started` / `tool.completed`
+- Hermes `message.delta` / `message.complete`
+- Hermes `reasoning.available` / `reasoning.delta` / `thinking.delta`
+- Hermes `tool.start` / `tool.progress` / `tool.complete` (plus legacy `tool.started` / `tool.completed`)
+- Hermes `subagent.start` / `subagent.progress` / `subagent.complete` and related lifecycle aliases
+- Hermes `approval.request`
 - Hermes `run.completed` / `run.failed`
 - `[DONE]`
 

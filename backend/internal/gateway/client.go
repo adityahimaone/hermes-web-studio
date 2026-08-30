@@ -267,7 +267,7 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		if payloadName := stringValue(payload["type"]); payloadName != "" {
 			effectiveName = payloadName
 		}
-		if effectiveName == "run.completed" && delta != "" {
+		if (effectiveName == "run.completed" || effectiveName == "message.complete") && delta != "" {
 			if sameSnapshot(answer, delta) {
 				delta = ""
 			} else {
@@ -354,8 +354,11 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 	if name == "" || name == "message" {
 		name = sseName
 	}
-	if name == "run.completed" {
+	if name == "run.completed" || name == "message.complete" {
 		completed := stringValue(payload["output"])
+		if completed == "" {
+			completed = stringValue(payload["text"])
+		}
 		if completed == "" {
 			completed = choiceText(payload)
 		}
@@ -384,17 +387,17 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 			return nil, "", nil
 		}
 		return []Event{{Name: "token", Data: map[string]any{"text": text}}}, text, nil
-	case "reasoning.available", "reasoning":
+	case "reasoning.available", "reasoning", "reasoning.delta", "thinking.delta":
 		text := stringValue(payload["delta"])
 		if text == "" {
 			text = stringValue(payload["text"])
 		}
 		return []Event{{Name: "reasoning", Data: map[string]any{"text": text}}}, "", nil
-	case "tool.started", "hermes.tool.progress":
+	case "tool.start", "tool.started", "tool.progress", "hermes.tool.progress":
 		return []Event{{Name: "tool", Data: toolData(payload, false)}}, "", nil
-	case "tool.completed":
+	case "tool.complete", "tool.completed":
 		return []Event{{Name: "tool_complete", Data: toolData(payload, true)}}, "", nil
-	case "subagent.started", "subagent.completed", "subagent.failed":
+	case "subagent.spawn_requested", "subagent.start", "subagent.started", "subagent.thinking", "subagent.tool", "subagent.progress", "subagent.complete", "subagent.completed", "subagent.failed":
 		return []Event{{Name: "subagent", Data: subagentData(payload, name)}}, "", nil
 	case "approval.request", "hermes.approval.request", "approval.requested", "approval.required", "approval":
 		return []Event{{Name: "approval", Data: approvalData(payload)}}, "", nil
@@ -446,21 +449,48 @@ func toolData(payload map[string]any, complete bool) map[string]any {
 	if name == "" {
 		name = stringValue(payload["tool"])
 	}
+	if name == "" {
+		name = stringValue(payload["tool_name"])
+	}
 	result := map[string]any{"name": name, "is_error": false}
-	if tid := stringValue(payload["tid"]); tid != "" {
+	tid := stringValue(payload["tid"])
+	if tid == "" {
+		tid = stringValue(payload["tool_id"])
+	}
+	if tid != "" {
 		result["tid"] = tid
 	}
 	if args, ok := payload["args"].(map[string]any); ok {
 		result["args"] = redact(args)
 	}
 	if complete {
-		result["is_error"] = payload["error"] != nil
+		result["is_error"] = payload["error"] != nil || boolValue(payload["is_error"])
+		if summary := stringValue(payload["summary"]); summary != "" {
+			result["result"] = summary
+		}
+	} else if preview := stringValue(payload["preview"]); preview != "" {
+		result["result"] = preview
 	}
 	return result
 }
 
 func subagentData(payload map[string]any, status string) map[string]any {
-	return map[string]any{"id": stringValue(payload["id"]), "name": stringValue(payload["name"]), "status": status, "result": redact(payload["result"])}
+	id := stringValue(payload["id"])
+	if id == "" {
+		id = stringValue(payload["subagent_id"])
+	}
+	name := stringValue(payload["name"])
+	if name == "" {
+		name = stringValue(payload["goal"])
+	}
+	state := "running"
+	if status == "subagent.complete" || status == "subagent.completed" || status == "subagent.failed" {
+		state = "complete"
+		if status == "subagent.failed" {
+			state = "error"
+		}
+	}
+	return map[string]any{"id": id, "name": name, "status": state, "task": stringValue(payload["task"]), "result": redact(payload["result"])}
 }
 
 func approvalData(payload map[string]any) map[string]any {
@@ -513,4 +543,9 @@ func redact(value any) any {
 func stringValue(value any) string {
 	text, _ := value.(string)
 	return text
+}
+
+func boolValue(value any) bool {
+	flag, _ := value.(bool)
+	return flag
 }

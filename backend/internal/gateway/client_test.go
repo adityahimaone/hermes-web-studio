@@ -123,6 +123,25 @@ func TestParseSSETranslatesActivityAndRedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestParseSSETranslatesCanonicalRunsActivityEvents(t *testing.T) {
+	input := strings.Join([]string{
+		"event: tool.start", "data: {\"tool_id\":\"t1\",\"tool_name\":\"terminal\"}", "",
+		"event: tool.progress", "data: {\"tool_id\":\"t1\",\"tool_name\":\"terminal\",\"preview\":\"working\"}", "",
+		"event: tool.complete", "data: {\"tool_id\":\"t1\",\"tool_name\":\"terminal\",\"summary\":\"finished\"}", "",
+		"event: subagent.start", "data: {\"subagent_id\":\"s1\",\"goal\":\"research\"}", "",
+		"event: subagent.complete", "data: {\"subagent_id\":\"s1\",\"summary\":\"done\"}", "",
+		"event: reasoning.delta", "data: {\"text\":\"thinking\"}", "",
+	}, "\n")
+	var events []Event
+	_, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil || len(events) != 6 {
+		t.Fatalf("events=%#v err=%v", events, err)
+	}
+	if events[0].Name != "tool" || events[1].Name != "tool" || events[2].Name != "tool_complete" || events[3].Name != "subagent" || events[4].Data["status"] != "complete" || events[5].Name != "reasoning" {
+		t.Fatalf("events=%#v", events)
+	}
+}
+
 func TestHealthRejectsUnauthorizedModelProbe(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/models" {

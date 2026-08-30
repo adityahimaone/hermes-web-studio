@@ -164,7 +164,12 @@ export function reduceChatEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'reasoning':
       return { ...state, status: 'streaming', reasoning: state.reasoning + eventText(event.data, 'text') }
     case 'tool': {
-      const id = eventText(event.data, 'tid') || `${eventText(event.data, 'name')}-${state.tools.length}`
+      const eventID = eventText(event.data, 'tid')
+      const existing = state.tools.find((tool) => eventID ? tool.id === eventID : tool.name === eventText(event.data, 'name') && tool.status === 'running')
+      const id = eventID || existing?.id || `${eventText(event.data, 'name')}-${state.tools.length}`
+      if (existing) {
+        return { ...state, status: 'streaming', tools: state.tools.map((tool) => tool.id === id ? { ...tool, args: event.data.args ?? tool.args, result: event.data.result ?? tool.result } : tool) }
+      }
       return {
         ...state,
         status: 'streaming',
@@ -185,7 +190,10 @@ export function reduceChatEvent(state: ChatState, event: ChatEvent): ChatState {
       return { ...state, tools }
     }
     case 'subagent': {
-      const id = eventText(event.data, 'sid') || eventText(event.data, 'id') || `subagent-${state.subagents.length}`
+      const eventID = eventText(event.data, 'sid') || eventText(event.data, 'id')
+      const existing = state.subagents.find((agent) => eventID ? agent.id === eventID : agent.name === eventText(event.data, 'name') && agent.status === 'running')
+      const id = eventID || existing?.id || `subagent-${state.subagents.length}`
+      if (existing) return { ...state, status: 'streaming', subagents: state.subagents.map((agent) => agent.id === id ? { ...agent, name: eventText(event.data, 'name') || agent.name, status: eventText(event.data, 'status') === 'error' ? 'error' : eventText(event.data, 'status') === 'complete' ? 'complete' : agent.status, task: eventText(event.data, 'task') || agent.task } : agent) }
       return { ...state, status: 'streaming', subagents: [...state.subagents, { id, name: eventText(event.data, 'name') || 'Hermes subagent', status: eventText(event.data, 'status') === 'error' ? 'error' : 'running', task: eventText(event.data, 'task') || undefined }] }
     }
     case 'approval': {

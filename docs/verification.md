@@ -67,3 +67,4 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 |---|---|
 | Browser reconnect/finalization | Pass: terminal handling now reduces each event once; the acceptance script confirms the streamed prefix and final answer are not rendered as duplicate assistant replies |
 | Queued attachment | Pass: an attachment selected while the first turn is streaming is retained in the queued turn and forwarded after the reconnecting turn completes |
+| Canonical Runs activity events | Pass: fixture coverage normalizes `tool.start/progress/complete`, `subagent.start/complete`, and reasoning delta aliases without duplicate activity cards |
