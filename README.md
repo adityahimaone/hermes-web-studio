@@ -19,7 +19,7 @@ The remaining WebUI features are deliberately represented in the navigation but 
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - pnpm 11+
 - Go 1.23+
 - A running Hermes Gateway/API Server, normally on `http://127.0.0.1:8642`
