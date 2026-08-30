@@ -315,7 +315,7 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 		return []Event{{Name: "tool_complete", Data: toolData(payload, true)}}, "", nil
 	case "subagent.started", "subagent.completed", "subagent.failed":
 		return []Event{{Name: "subagent", Data: subagentData(payload, name)}}, "", nil
-	case "approval.requested", "approval.required", "approval":
+	case "approval.request", "hermes.approval.request", "approval.requested", "approval.required", "approval":
 		return []Event{{Name: "approval", Data: approvalData(payload)}}, "", nil
 	case "usage", "run.usage", "usage.updated":
 		return []Event{{Name: "usage", Data: usageData(payload)}}, "", nil
