@@ -18,7 +18,123 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"name": name, "content": content})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"skills": discoverSkills(root)})
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(query) > 200 {
+		writeError(w, http.StatusBadRequest, "search_query_too_long", "The skill search query is too long.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"skills": filterSkills(discoverSkills(root), query)})
+}
+
+func (s *Server) handleSkillCreate(w http.ResponseWriter, r *http.Request) {
+	var input struct{ Name, Content string }
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	name := strings.TrimSpace(input.Name)
+	if !validSkillDirectory(name) {
+		writeError(w, http.StatusBadRequest, "invalid_skill_name", "Skill names may contain letters, numbers, dots, hyphens, and underscores.")
+		return
+	}
+	if len(input.Content) > 1<<20 {
+		writeError(w, http.StatusRequestEntityTooLarge, "skill_too_large", "The skill content is too large.")
+		return
+	}
+	path := filepath.Join(s.config.HermesHome, "skills", name, "SKILL.md")
+	if _, err := os.Stat(path); err == nil {
+		writeError(w, http.StatusConflict, "skill_exists", "The skill already exists.")
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil || os.WriteFile(path, []byte(input.Content), 0600) != nil {
+		writeError(w, http.StatusInternalServerError, "skill_write_failed", "The skill could not be created.")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"name": name, "path": filepath.ToSlash(filepath.Join(name, "SKILL.md")), "content": input.Content})
+}
+
+func (s *Server) handleSkillUpdate(w http.ResponseWriter, r *http.Request) {
+	var input struct{ Name, Content string }
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	path, ok := safeSkillPath(filepath.Join(s.config.HermesHome, "skills"), input.Name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid_skill_path", "The skill path is invalid.")
+		return
+	}
+	if len(input.Content) > 1<<20 {
+		writeError(w, http.StatusRequestEntityTooLarge, "skill_too_large", "The skill content is too large.")
+		return
+	}
+	if _, err := os.Stat(path); err != nil {
+		writeError(w, http.StatusNotFound, "skill_not_found", "The requested skill was not found.")
+		return
+	}
+	if err := os.WriteFile(path, []byte(input.Content), 0600); err != nil {
+		writeError(w, http.StatusInternalServerError, "skill_write_failed", "The skill could not be saved.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"name": input.Name, "content": input.Content})
+}
+
+func (s *Server) handleSkillDelete(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	path, ok := safeSkillPath(filepath.Join(s.config.HermesHome, "skills"), name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid_skill_path", "The skill path is invalid.")
+		return
+	}
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			writeError(w, http.StatusNotFound, "skill_not_found", "The requested skill was not found.")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "skill_delete_failed", "The skill could not be deleted.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "name": name})
+}
+
+func filterSkills(items []map[string]string, query string) []map[string]string {
+	if query == "" {
+		return items
+	}
+	query = strings.ToLower(query)
+	result := make([]map[string]string, 0, len(items))
+	for _, item := range items {
+		if strings.Contains(strings.ToLower(item["name"]+" "+item["description"]+" "+item["path"]), query) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func validSkillDirectory(name string) bool {
+	if name == "" || name == "." || name == ".." || filepath.Base(name) != name {
+		return false
+	}
+	for _, char := range name {
+		if !(char == '-' || char == '_' || char == '.' || char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func safeSkillPath(root, name string) (string, bool) {
+	clean := filepath.Clean(filepath.FromSlash(name))
+	if clean == "." || filepath.IsAbs(clean) || filepath.Base(clean) != "SKILL.md" || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", false
+	}
+	resolved, err := filepath.EvalSymlinks(filepath.Join(root, clean))
+	if err != nil {
+		return "", false
+	}
+	return resolved, resolved != resolvedRoot && strings.HasPrefix(resolved, resolvedRoot+string(filepath.Separator))
 }
 func (s *Server) handleMemory(w http.ResponseWriter, r *http.Request) {
 	root := filepath.Join(s.config.HermesHome, "memories")

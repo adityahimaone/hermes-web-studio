@@ -3,7 +3,8 @@ import { chromium, expect } from '@playwright/test'
 const browser = await chromium.launch({ headless: true })
 const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:5173'
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block' })
+  const page = await context.newPage()
   await page.route('**/api/sessions**', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -53,7 +54,8 @@ try {
   await navigationDialog.getByRole('button', { name: 'Done' }).click()
   await expect(navigationDialog).toBeHidden()
 
-  const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const mobile = await context.newPage()
+  await mobile.setViewportSize({ width: 390, height: 844 })
   await mobile.route('**/api/sessions**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"sessions":[]}' }))
   await mobile.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
   const bottomNav = mobile.getByTestId('mobile-bottom-nav')

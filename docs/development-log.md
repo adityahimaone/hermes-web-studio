@@ -319,3 +319,24 @@ The acceptance script verifies it is visible only on Chat.
 - Separated Skills/Memory preview loading, empty, success, and error states.
 - P013-P015 and P034 remain `[~]`; full source fixtures, expired-stream polling,
   live reload proof, and complete Skills parity are still open.
+
+## 2026-08-30 — Parallel remaining-task wave
+
+- Added Queue/Interrupt/Steer turn planning, visible pending intent, attachment
+  names, per-item removal, replacement behavior, and exit cleanup.
+- Added server-owned Skills query/create/update/delete with path containment and
+  separate editor/preview states.
+- Added a five-viewport MVP shell evidence runner with screenshots and DOM/
+  computed geometry output stored outside the repository.
+- Added PWA manifest/service worker/base-path registration, platform contract
+  checks, security headers, and a sanitized fixture generator that rejects
+  production state paths.
+- P012, P016, P034, P048, P054, P055, and P061 remain `[~]` pending their
+  reference, live, hosted, or independent-review gates.
+
+## 2026-08-30 — PWA API cache boundary
+
+- Prevented the service worker from caching `/api/*` responses so stale
+  session/control data cannot leak across reloads or override live server data.
+- Isolated browser acceptance contexts from service-worker cache while keeping
+  the production shell cache coverage explicit.

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
+import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
 const newId = () => crypto.randomUUID()
 const inflightTurnKey = 'hermes-web-studio:inflight-turn'
-type QueuedTurn = { content: string; files: File[] }
+type QueuedTurn = { content: string; files: File[]; attachmentNames: string[] }
 type TurnOptions = { model?: string; provider?: string }
 
 export function useChat() {
@@ -15,7 +16,7 @@ export function useChat() {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [sessionLoading, setSessionLoading] = useState(true)
   const [sessionError, setSessionError] = useState<string>()
-  const [queuedMessages, setQueuedMessages] = useState<string[]>([])
+  const [queuedMessages, setQueuedMessages] = useState<PendingTurn[]>([])
   const [draft, setDraft] = useState('')
   const sourceRef = useRef<EventSource | null>(null)
   const streamIdRef = useRef<string | null>(null)
@@ -59,7 +60,7 @@ export function useChat() {
     setStreamState(initialChatState)
     void refreshSessions().catch(() => undefined)
     const next = queueRef.current.shift()
-    setQueuedMessages(queueRef.current.map((item) => item.content))
+    setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
     if (next) pumpRef.current(next.content, next.files, undefined, next.options)
   }, [closeSource])
 
@@ -125,14 +126,23 @@ export function useChat() {
     return () => { cancelled = true }
   }, [connectStream])
 
-  const send = useCallback((content: string, files: File[] = [], options?: TurnOptions) => {
+  const send = useCallback((content: string, files: File[] = [], options?: TurnOptions, mode: TurnMode = 'queue') => {
     const clean = content.trim(); if (!clean) return
     setDraft('')
     if (streamState.status === 'streaming' || streamIdRef.current) {
-      queueRef.current.push({ content: clean, files, options })
-      setQueuedMessages(queueRef.current.map((item) => item.content))
+      const next = { content: clean, files, attachmentNames: files.map((file) => file.name), options }
+      const planned = planTurn(mode, queueRef.current, next)
+      queueRef.current = planned
+      setQueuedMessages(planned.map(({ content: itemContent, attachmentNames }) => ({ content: itemContent, attachmentNames })))
+      if (mode !== 'queue') {
+        const streamId = streamIdRef.current
+        if (streamId) {
+          void cancelChat(streamId).catch(() => undefined)
+          finish(streamId, activeSessionRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
+        }
+      }
     } else pump(clean, files, undefined, options)
-  }, [pump, streamState.status])
+  }, [finish, pump, streamState.status])
   const retry = useCallback(async (message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
@@ -162,6 +172,10 @@ export function useChat() {
     const streamId = streamIdRef.current; if (!streamId) return
     await cancelChat(streamId).catch(() => undefined); finish(streamId, activeSessionRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
   }, [finish])
+  const removeQueued = useCallback((index: number) => {
+    queueRef.current = queueRef.current.filter((_, itemIndex) => itemIndex !== index)
+    setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
+  }, [])
   const selectSession = useCallback(async (sessionId: string) => {
     closeSource(); setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try {
@@ -199,5 +213,5 @@ export function useChat() {
   }, [])
   const reset = useCallback(() => { closeSource(); window.localStorage.removeItem(inflightTurnKey); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
-  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, duplicate, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
+  return { messages, streamState, send, cancel, removeQueued, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, duplicate, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

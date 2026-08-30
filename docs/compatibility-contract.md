@@ -261,3 +261,20 @@ action, so desktop layout state cannot leak into the mobile drawer.
 The fixed mobile bottom navigation follows the same `1024px` breakpoint and
 must be hidden on desktop; the desktop primary rail remains the only persistent
 navigation surface at that width.
+
+The composer supports Queue, Interrupt, and Steer turn modes. Pending turns
+retain attachment names for visible intent, can be removed individually, and
+are cleared on session switch, reset, cancellation, and terminal stream states.
+The current browser acceptance covers the shell and responsive boundaries;
+live mode semantics remain a separate Hermes verification gate.
+
+Skills discovery supports server-owned query, create, update, and delete
+operations at `/api/skills`, with relative-path and symlink containment checks.
+The UI keeps preview and editor loading, empty, success, and error states
+separate. Grouping, activation, linked files, usage, and profile-aware refresh
+remain unimplemented until their upstream contracts are inventoried.
+
+The production frontend exposes a manifest and service worker under the Vite
+base path. Registration is production-only and uses the configured base path;
+API requests are network-only and are never placed in the offline cache;
+offline cache invalidation and browser install/bfcache evidence remain open.

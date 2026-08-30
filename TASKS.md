@@ -142,14 +142,14 @@ personal source as the new acceptance baseline.
 - [~] P009 Rebuild the Control Center section structure and primary-rail order/visibility customization without shipping non-functional controls (rail visibility/order dialog implemented; full reference section registry and broader panel evidence remain)
 - [~] P010 Implement System/Dark/Light boot without flash and the complete frozen built-in skin registry through lazy theme assets (pre-React theme boot and 21-name registry implemented; per-skin visual tuning and screenshot matrix remain)
 - [~] P011 Match mobile drawer, five-tab bottom navigation, 44px targets, safe-area/keyboard composer behavior, and panel transitions (five-tab navigation, 44px targets, safe-area composer spacing, reduced-motion panel transition, and browser navigation coverage implemented; full device/IME evidence remains)
-- [ ] P012 Add Playwright screenshot, DOM, computed-style, keyboard, and responsive shell matrices at the `MVP.md` viewports
+- [~] P012 Add Playwright screenshot, DOM, computed-style, keyboard, and responsive shell matrices at the `MVP.md` viewports (five-viewport screenshot/geometry matrix passes; reference pixel-diff and full keyboard matrix remain)
 
 ## M8 — Conversation runtime and session parity
 
 - [~] P013 Freeze personal chat/SSE/turn-journal/session contracts and deterministic fixtures before changing the Gateway adapter (validated inflight journal parser and deterministic fixtures; full personal-source fixture freeze remains)
 - [~] P014 Make Runs-first normalization cover message, reasoning, tool, progress, subagent, approval, clarification, usage, compression, recovery, and terminal events (existing normalized event path retained; clarification/compression/recovery coverage remains)
 - [~] P015 Preserve inflight turns across session switches, hard reload, reconnect backoff, cursor replay, and full-session poll fallback (journal restore, transcript restore, cursor reconnect, and stale-stream protection implemented; expired-stream polling fallback and live proof remain)
-- [ ] P016 Implement Queue/Interrupt/Steer modes, including attachments, visible pending intent, cancellation, replacement, and cleanup on every exit
+- [~] P016 Implement Queue/Interrupt/Steer modes, including attachments, visible pending intent, cancellation, replacement, and cleanup on every exit (modes, pending intent, attachment names, removal, replacement, and cleanup implemented; live/browser proof remains)
 - [ ] P017 Implement compact worklog, transparent stream, and final-answer-only modes with per-turn disclosure persistence and settled-history behavior
 - [ ] P018 Add compaction barriers, `/compact`, exhausted-context recovery, partial-message crash recovery, retry, and safe transcript repair/audit
 - [ ] P019 Complete message copy, edit/regenerate, clear watermark, branch/fork from any valid turn, duplicate, undo, and lineage reporting
@@ -187,23 +187,23 @@ personal source as the new acceptance baseline.
 - [ ] P045 Complete Control Center Conversation, Appearance, Preferences, Providers, Plugins, Extensions, System, and Help sections with searchable settings
 - [ ] P046 Implement all reference preference behaviors, including send key, activity modes, scroll, rendering, outline, notifications, token controls, voice/TTS, and tab/composer customization
 - [ ] P047 Add 15 locales with key parity, fallback accounting, RTL chat layout, CJK/IME behavior, and localized login/onboarding/error surfaces
-- [ ] P048 Add PWA manifest/service worker/offline shell, install flow, icons, update invalidation, bfcache behavior, and subpath support
+- [~] P048 Add PWA manifest/service worker/offline shell, install flow, icons, update invalidation, bfcache behavior, and subpath support (manifest, service worker, install icon, production registration, and Vite subpath support implemented; update invalidation, bfcache, and install-flow evidence remain)
 - [ ] P049 Implement MCP server/tool management and plugin settings/status using server-owned validation and secret filtering
 - [ ] P050 Implement extension registry/install/toggle/uninstall/settings, skin/TTS/nav capability registration, sidecar consent/proxy, iframe tab, and trust boundaries
 - [ ] P051 Complete push-to-talk, hands-free mode, raw audio/transcription capability, browser/server TTS engines, rate/pitch/voice, and unsupported states
 - [ ] P052 Complete update check/apply/lock recovery, shutdown/restart controls, version/health summaries, and release diagnostics
 - [ ] P053 Match Docker single/two/three-container topologies, subpath reverse proxy, multi-arch healthchecks, installer behavior, and state migration/rollback
-- [ ] P054 Add auth, onboarding, settings, locale, PWA, extension, and distribution acceptance matrices
+- [~] P054 Add auth, onboarding, settings, locale, PWA, extension, and distribution acceptance matrices (platform contract and shell matrix coverage added; full domain matrices remain)
 
 ## M11 — MVP certification and reversible cutover
 
-- [ ] P055 Build sanitized personal-state fixtures plus a copied-state migration rehearsal; never run migration against the production state directory
+- [~] P055 Build sanitized personal-state fixtures plus a copied-state migration rehearsal; never run migration against the production state directory (fixture generator refuses production Hermes paths; copied-state rehearsal remains)
 - [ ] P056 Run full contract comparison for required personal route/state effects and record every intentional alias or deviation
 - [ ] P057 Run visual matrices across required viewports, System/Dark/Light, all release skins, long lists/transcripts, active streaming, dialogs, and both side panels
 - [ ] P058 Run accessibility checks for keyboard-only flows, focus restoration, screen readers, contrast, reduced motion, touch targets, RTL, and IME
 - [ ] P059 Run live Hermes/Gateway side-by-side rows for chat, tools, subagents, approvals, clarification, compression, recovery, external channels, and scheduled work
 - [ ] P060 Prove 1,000-session and 5,000-message behavior, JS gzip, idle RSS, startup, first-token overhead, stream rendering, and no per-token full refetch
-- [ ] P061 Run independent security review for auth/proxy, SSRF, XSS/Markdown, workspace/terminal/git, uploads/extraction, extensions/sidecars, migration, and secret boundaries
+- [~] P061 Run independent security review for auth/proxy, SSRF, XSS/Markdown, workspace/terminal/git, uploads/extraction, extensions/sidecars, migration, and secret boundaries (CSP, Permissions-Policy, headers, and automated platform checks added; independent review and full threat matrix remain)
 - [ ] P062 Run hosted Linux/macOS/Windows artifact, Docker, Nix, PWA/subpath, and browser matrices from release candidates
 - [ ] P063 Complete parallel beta with the personal WebUI available for rollback and resolve every critical/major parity gap
 - [ ] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state

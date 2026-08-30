@@ -4,10 +4,11 @@ import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
 import { Badge } from '../ui/badge'
+import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/turn-control'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
-type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }) => void; onCancel: () => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: string[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
-export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDraftChange, queuedMessages, contextUsage, workspacePath = '.', onWorkspaceOpen }: Props) {
+type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
+export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStreaming, draft, onDraftChange, queuedMessages, contextUsage, workspacePath = '.', onWorkspaceOpen }: Props) {
   const [localValue, setLocalValue] = useState('')
   const value = draft ?? localValue
   const setValue = onDraftChange ?? setLocalValue
@@ -17,6 +18,7 @@ export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDr
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [profileId, setProfileId] = useState('default')
   const [model, setModel] = useState('default')
+  const [turnMode, setTurnMode] = useState<TurnMode>('queue')
   const activeProfile = profiles.find(profile => profile.id === profileId)
   useEffect(() => { void fetch('/api/profiles').then(response => response.json()).then(data => { const next = (data.profiles || []) as Profile[]; setProfiles(next); const active = typeof data.active === 'string' ? data.active : next[0]?.id || 'default'; setProfileId(active); setModel(next.find(profile => profile.id === active)?.model || 'default') }).catch(() => undefined) }, [])
 
@@ -30,7 +32,7 @@ export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDr
   function submit() {
     if (!value.trim()) return
     if (value.trim().startsWith('/') && onCommand) { onCommand(value.trim()); setValue(''); setCommandsOpen(false); return }
-    onSend(value, attachments, { model, provider: activeProfile?.provider })
+    onSend(value, attachments, { model, provider: activeProfile?.provider }, turnMode)
     setValue('')
     setAttachments([])
   }
@@ -57,6 +59,7 @@ export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDr
           <div className="composer-toolbar__controls">
           <Button type="button" variant="ghost" size="icon" aria-label="Attach files" onClick={() => document.getElementById('composer-attachments')?.click()}><Paperclip size={16} /></Button><input id="composer-attachments" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain" className="sr-only" onChange={chooseFiles} />
           <Button type="button" variant="ghost" size="sm" disabled className="gap-1.5"><TerminalSquare size={14} /> Tools</Button>
+          <label className="sr-only" htmlFor="composer-turn-mode">Turn mode</label><Select id="composer-turn-mode" aria-label="Turn mode" value={turnMode} onChange={event => setTurnMode(normalizeTurnMode(event.target.value))} className="h-8 max-w-24 px-2 text-[11px]"><option value="queue">Queue</option><option value="interrupt">Interrupt</option><option value="steer">Steer</option></Select>
           <Button type="button" variant="ghost" size="icon" aria-label="Use voice input" onClick={() => { const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return; const recognition = new Speech(); recognition.onresult = (event: Event & { results: SpeechRecognitionResultList }) => setValue(`${value} ${event.results[0][0].transcript}`.trim()); recognition.start() }}><Mic size={15} /></Button>
           <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
           <label className="sr-only" htmlFor="composer-profile">Profile</label><span className="hidden items-center gap-1 text-[10px] text-muted-foreground sm:flex"><UserRound size={12} /></span><Select id="composer-profile" aria-label="Conversation profile" value={profileId} onChange={event => { const next = profiles.find(profile => profile.id === event.target.value); setProfileId(event.target.value); setModel(next?.model || 'default'); void fetch('/api/profiles/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: event.target.value }) }) }} className="h-8 max-w-28 px-2 text-[11px]"><option value="default">Default</option>{profiles.filter(profile => profile.id !== 'default').map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</Select>
@@ -72,6 +75,7 @@ export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDr
         </div>
       </div>
       <p className="mt-2 text-center text-[10px] text-muted-foreground">{queuedMessages?.length ? `${queuedMessages.length} message${queuedMessages.length === 1 ? '' : 's'} queued` : attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'} ready` : 'Hermes can make mistakes and run tools. Review important actions.'}</p>
+      {queuedMessages?.length ? <div className="mt-2 space-y-1" aria-label="Pending messages">{queuedMessages.map((item, index) => <div key={`${item.content}-${index}`} className="flex items-center gap-2 rounded-lg border bg-card/50 px-2 py-1 text-left text-[11px]"><span className="min-w-0 flex-1 truncate">{item.content}{item.attachmentNames.length ? ` · ${item.attachmentNames.join(', ')}` : ''}</span>{onRemoveQueued && <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0" onClick={() => onRemoveQueued(index)} aria-label={`Remove queued message ${index + 1}`}><X size={12} /></Button>}</div>)}</div> : null}
     </div>
   )
 }

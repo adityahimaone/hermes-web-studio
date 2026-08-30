@@ -152,6 +152,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/crons/pause", s.handleCronPause)
 	mux.HandleFunc("POST /api/crons/resume", s.handleCronResume)
 	mux.HandleFunc("GET /api/skills", s.handleSkills)
+	mux.HandleFunc("POST /api/skills", s.handleSkillCreate)
+	mux.HandleFunc("PUT /api/skills", s.handleSkillUpdate)
+	mux.HandleFunc("DELETE /api/skills", s.handleSkillDelete)
 	mux.HandleFunc("GET /api/memory", s.handleMemory)
 	mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
 	mux.HandleFunc("GET /api/plugins", s.handlePlugins)
@@ -748,6 +751,8 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Permissions-Policy", "camera=(), geolocation=(), payment=()")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
 }

@@ -1,0 +1,15 @@
+{
+  "name": "Hermes Web Studio",
+  "short_name": "Hermes Studio",
+  "description": "A lightweight workspace for Hermes Agent",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [{
+    "src": "icons/hermes-studio.svg",
+    "sizes": "any",
+    "type": "image/svg+xml",
+    "purpose": "any maskable"
+  }]
+}

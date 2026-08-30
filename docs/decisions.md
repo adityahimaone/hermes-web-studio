@@ -261,3 +261,27 @@ recorded decision and explicit approval before MVP certification.
   never enter browser storage.
 - **Consequence:** Concurrent inflight turns and expired-stream full-session
   polling remain explicit follow-up work.
+
+## ADR-032: Keep parity evidence artifacts outside the repository
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** The MVP viewport matrix writes screenshots and computed geometry
+  to an operator-selected local evidence directory, defaulting to `/tmp`, and
+  commits only the deterministic runner and sanitized assertions.
+- **Reason:** Screenshots contain environment-dependent rendering and must not
+  capture personal session content or become mistaken for a frozen reference.
+- **Consequence:** Reference pixel-diff approval and masked visual baselines
+  remain explicit certification work.
+
+## ADR-033: Use capability-safe local platform slices before hosted certification
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Ship locally verifiable PWA, subpath, security-header, and
+  sanitized-fixture foundations while leaving hosted OS, independent security,
+  live Hermes, beta, and cutover claims open.
+- **Reason:** Local checks can prove wiring and boundaries but cannot substitute
+  for external runtime or review evidence.
+- **Consequence:** The related M10/M11 tasks remain `[~]` until their stated
+  external gates are executed.

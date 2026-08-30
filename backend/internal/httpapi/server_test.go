@@ -107,6 +107,24 @@ func TestReadyReportsLocalDependenciesWithoutContactingGateway(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersCoverBrowserBoundary(t *testing.T) {
+	api := newTestServer(t, "http://127.0.0.1:1", "")
+	defer api.Close()
+	response, err := api.Client().Get(api.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	for _, header := range []string{"X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options", "Permissions-Policy", "Content-Security-Policy"} {
+		if response.Header.Get(header) == "" {
+			t.Errorf("missing security header %s", header)
+		}
+	}
+	if strings.Contains(response.Header.Get("Content-Security-Policy"), "unsafe-eval") {
+		t.Error("CSP permits unsafe eval")
+	}
+}
+
 func TestCancelStopsUpstreamTurn(t *testing.T) {
 	requestStarted := make(chan struct{})
 	cancelled := make(chan struct{})
