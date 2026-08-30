@@ -52,6 +52,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | M1 UI contract check | Pass: `bash scripts/check-m1-ui-contract.sh` verifies labels, keyboard copy, focus rings, mobile navigation, tap sizing, and stream URL usage |
 | M1 browser acceptance | Pass: `node frontend/e2e/m1-browser-check.mjs` with temporary Chromium verifies mobile navigation, focus/labels, desktop sidebar, Shift+Enter, and Enter-to-send over mocked SSE |
 | Browser SSE interruption/reconnect | Pass: the same Playwright script closes the first mocked SSE delivery after a token, observes EventSource reconnect, then verifies the continued reply and terminal event without duplicate prefix |
+| Live approval probe | Inconclusive safely: a non-destructive `printf approval-check` request returned a textual confirmation prompt and no normalized `approval` event; no command was executed |
 | Live Hermes chat | Pass: M0 smoke proof above |
 | Current-source live attachment upload | Pass: multipart README upload returned opaque ID, canonical `text/plain`, original filename, and size |
 | Current-source live multimodal completion | Pass: source BFF started through Makefile with configured credential, real Gateway returned a streamed README summary and exactly one `done` |

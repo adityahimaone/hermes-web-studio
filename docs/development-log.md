@@ -64,3 +64,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added a repeatable static UI contract check for required labels, keyboard guidance, focus styles, mobile navigation, tap sizing, and EventSource wiring; it complements but does not replace browser-level verification.
 - Added official `@playwright/test` dev tooling and a browser acceptance script; Chromium verification passes for mobile navigation, focus/labels, desktop layout, Shift+Enter, and Enter-to-send against mocked SSE.
 - Extended browser coverage to simulate an interrupted SSE connection and verify automatic EventSource reconnect, cursor progression, continued output, and no duplicated prefix.
+- Live approval probe used only a non-destructive `printf` request; the configured Gateway returned a textual confirmation prompt rather than a Runs approval event, so no command was executed and the approval item remains `[~]`.
