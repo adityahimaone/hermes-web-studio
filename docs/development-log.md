@@ -155,6 +155,17 @@ The acceptance script verifies it is visible only on Chat.
   opens the shared Dialog.
 - Added Escape and outside-click dismissal to the shared dropdown menu.
 
+## 2026-08-30 - M5 distribution checklist closure
+
+- Revalidated the complete local `make release-gate`: backend tests/vet/build,
+  frontend tests/build, embedded artifact scan, secret boundary, and
+  performance budget all pass.
+- Added a multi-stage Docker Compose baseline with an explicit required Gateway
+  key, host Gateway mapping, restart policy, and `/ready` healthcheck.
+- Synced M5 task statuses with evidence. Local distribution surfaces are
+  `[x]`; hosted release matrix, Nix runtime, visual comparison, independent
+  security review, beta, and cutover sign-off remain `[~]`.
+
 ## 2026-08-30 - Control-center menu audit and Hermes discovery fix
 
 - Audited every sidebar menu and found empty control collections serialized as

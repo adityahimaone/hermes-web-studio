@@ -2,6 +2,10 @@
 
 ## Parallel beta
 
+The release baseline is available as a single binary, Docker image, or Docker
+Compose service. The checklist below remains operator-owned because automated
+local gates cannot prove side-by-side parity or rollback readiness.
+
 - [ ] Choose a disposable state directory and backup the original state.
 - [ ] Start original Hermes WebUI and Hermes Web Studio against the same Gateway.
 - [ ] Compare session listing, resume, chat streaming, attachments, workspace,

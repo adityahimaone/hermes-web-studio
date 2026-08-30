@@ -70,18 +70,22 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 ## M5 — Distribution and cutover
 
-- [ ] Embed `frontend/dist` in the Go binary
-- [ ] Legacy state migration and rollback tool
-- [ ] One-command developer install
-- [ ] Linux/macOS/Windows release matrix
-- [ ] Multi-stage Docker image and compose compatibility
-- [ ] Nix package
-- [ ] Visual regression matrix and performance budgets
-- [ ] Security review and threat model
-- [ ] Parallel beta against original WebUI
-- [ ] Cutover checklist; archive Python only after parity sign-off
+- [x] Embed `frontend/dist` in the Go binary
+- [x] Legacy state migration and rollback tool
+- [x] One-command developer install
+- [~] Linux/macOS/Windows release matrix (workflow committed; hosted matrix execution remains)
+- [x] Multi-stage Docker image and compose compatibility baseline
+- [~] Nix package (package definition committed; Nix runtime verification remains)
+- [~] Visual regression matrix and performance budgets (performance check passes; visual baseline comparison remains)
+- [~] Security review and threat model (threat model and automated boundary checks pass; independent review remains)
+- [~] Parallel beta against original WebUI (runbook committed; operator comparison remains)
+- [~] Cutover checklist; archive Python only after parity sign-off (checklist committed; sign-off remains)
 
-M5 implementation status: embedded frontend, recoverable backup/restore migration, install script, Docker integration, and release artifacts are implemented. Hosted release matrix execution, Nix runtime verification, visual regression, formal security review, beta, and cutover remain pending evidence.
+M5 implementation status: embedded frontend, recoverable backup/restore migration,
+install script, Docker/Compose integration, and release artifacts are
+implemented. Hosted release matrix execution, Nix runtime verification, visual
+regression comparison, formal security review, beta, and cutover remain `[~]`
+until their external evidence is recorded.
 
 M5 verification follow-up: performance budget script, browser control-center acceptance script, formal threat model, and beta/cutover runbook are now committed. Hosted release execution, Docker/Nix runtime checks, visual capture comparison, beta, and cutover sign-off remain pending.
 
