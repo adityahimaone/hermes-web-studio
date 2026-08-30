@@ -54,3 +54,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Corrected multimodal mapping so image, PDF, and plain-text attachments use distinct Gateway content parts instead of treating every file as an image.
 - Live check against the current source BFF proved attachment upload; completion was safely rejected because the isolated verification process did not have the operator Gateway credential. The existing operator process was left untouched.
 - Attachment original name/MIME metadata is now persisted in a restrictive sidecar so resumed turns keep the file contract.
+- Added functional mobile navigation open/close behavior and session action controls with accessible labels and focus rings; frontend test/build remain green.

@@ -27,7 +27,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 - [~] Persist sessions using existing `~/.hermes/webui` data where possible (JSON CRUD and chat transcript append implemented; legacy CLI/SQLite bridge deferred)
 - [x] Add read-only sessions API contract and integration tests
-- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes and search/date grouping implemented; tags/projects remain metadata-compatible without dedicated UI)
+- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, and session actions implemented; tags/projects remain metadata-compatible without dedicated UI)
 - [x] Load and resume existing session history
 - [~] Edit/regenerate/retry and queue while processing (server-side edit truncation, queue, and retry implemented; live parity proof remains)
 - [x] Markdown, code highlight/copy, Mermaid, safe links
@@ -36,7 +36,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [~] Attachments and multimodal messages (validated upload/download and Gateway multimodal transport implemented; live model acceptance remains)
 - [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and terminal dedup implemented; browser interruption proof remains)
 - [x] Context/token usage indicator
-- [~] Chat keyboard, focus, screen-reader, and mobile acceptance tests (keyboard/focus states implemented; browser matrix remains)
+- [~] Chat keyboard, focus, screen-reader, and mobile acceptance tests (keyboard/focus states and functional mobile navigation implemented; browser matrix remains)
 
 ## M2 — Workspace composition
 
