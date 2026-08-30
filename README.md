@@ -59,6 +59,16 @@ HERMES_WEBUI_GATEWAY_API_KEY=your-gateway-key \
 ./scripts/smoke-hermes.sh
 ```
 
+Run the safe M1 session/chat parity probe with the BFF and Gateway running:
+
+```bash
+./scripts/m1-live-parity.sh
+```
+
+It uses an isolated timestamped session, exercises session metadata actions and
+transcript truncation, sends a no-tools prompt, and deletes the temporary
+session on exit. It does not verify structured approval or tool execution.
+
 ## Production baseline
 
 Build the multi-stage image and run it behind your TLS-terminating ingress:
