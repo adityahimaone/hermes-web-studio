@@ -252,3 +252,8 @@ control services without contacting Hermes Gateway. It returns `200` with
 details when initialization failed. Gateway reachability remains a separate
 `/api/health/hermes` diagnostic so a temporarily offline Gateway does not make
 the BFF process appear dead.
+
+The mobile navigation drawer is an ephemeral responsive surface: when an open
+drawer crosses into the desktop breakpoint, it closes and the compact primary
+rail is restored. Resizing back to mobile still requires the explicit menu
+action, so desktop layout state cannot leak into the mobile drawer.

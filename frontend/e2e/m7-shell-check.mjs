@@ -63,7 +63,9 @@ try {
   await expect(mobile.getByRole('button', { name: 'Open navigation' })).toBeVisible()
   await mobile.getByRole('button', { name: 'Open navigation' }).click()
   await expect(mobile.getByTestId('primary-rail')).toBeVisible()
-  await mobile.getByRole('button', { name: 'Close navigation' }).click()
+  await mobile.setViewportSize({ width: 1280, height: 900 })
+  await expect(mobile.getByTestId('primary-rail')).toHaveCSS('width', '72px')
+  await expect(mobile.getByRole('button', { name: 'Open navigation' })).toBeHidden()
   console.log('M7 shell browser acceptance passed.')
 } finally {
   await browser.close()

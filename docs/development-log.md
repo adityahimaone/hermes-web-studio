@@ -293,3 +293,11 @@ The acceptance script verifies it is visible only on Chat.
 - Browser acceptance covers mobile tab navigation and target sizing.
 - P011 remains `[~]` pending device-level IME, safe-area, and full transition
   evidence.
+
+## 2026-08-30 — Responsive drawer regression
+
+- Closed the mobile navigation state when `matchMedia('(min-width: 1024px)')`
+  changes to desktop, preventing the fixed drawer from leaking into desktop.
+- Added browser acceptance for mobile-open followed by desktop resize.
+- P011 remains `[~]` pending device-level IME, safe-area, and full transition
+  evidence.

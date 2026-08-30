@@ -225,3 +225,14 @@ recorded decision and explicit approval before MVP certification.
   chat workflow.
 - **Consequence:** Device-specific IME, PWA, and complete transition evidence
   remain P011/P048 work.
+
+## ADR-029: Close the responsive drawer at the desktop breakpoint
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Close the mobile navigation drawer when the viewport enters
+  the desktop breakpoint, and keep the desktop primary rail compact.
+- **Reason:** A drawer opened on mobile must not remain fixed and expanded after
+  a resize or device rotation into desktop layout.
+- **Consequence:** Returning to mobile requires the normal explicit menu action;
+  no navigation destination or workflow is removed.

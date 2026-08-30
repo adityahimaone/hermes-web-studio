@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, MessageSquareText, Settings2, SlidersHorizontal, Sparkles, UsersRound, Wrench, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
 import { Tooltip } from '../ui/tooltip'
 import { Dialog } from '../ui/dialog'
@@ -36,6 +36,7 @@ export function Sidebar({ onNewChat, onNavigate, currentView, mobileOpen, onClos
   const persist = (next: NavItem[]) => { setItems(next); window.localStorage.setItem(navigationKey, JSON.stringify(next.map(item => item.label))) }
   const persistVisible = (next: Set<string>) => { setVisible(next); window.localStorage.setItem(`${navigationKey}-visibility`, JSON.stringify([...next])) }
   const move = (index: number, direction: -1 | 1) => { const next = [...items]; const target = index + direction; if (target < 0 || target >= next.length) return; [next[index], next[target]] = [next[target], next[index]]; persist(next) }
+  useEffect(() => { if (!onClose) return; const media = window.matchMedia('(min-width: 1024px)'); const closeOnDesktop = () => { if (media.matches) onClose() }; closeOnDesktop(); media.addEventListener('change', closeOnDesktop); return () => media.removeEventListener('change', closeOnDesktop) }, [onClose])
   return <aside data-testid="primary-rail" className={cn('h-screen w-[72px] shrink-0 flex-col items-center border-r bg-card/55 px-2 py-3 backdrop-blur-xl', mobileOpen ? 'fixed inset-y-0 left-0 z-50 flex w-[264px] items-stretch px-3 shadow-2xl' : 'hidden lg:flex')}>
     <div className={cn('flex h-12 items-center', mobileOpen ? 'gap-3 px-2' : 'justify-center')}><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_30px_rgb(139_92_246/0.25)]"><Sparkles size={20} /></div><div className={cn('min-w-0', mobileOpen ? 'block' : 'hidden')}><div className="truncate text-sm font-semibold tracking-tight">Hermes Studio</div><div className="text-[11px] text-muted-foreground">Agent workspace</div></div>{mobileOpen && onClose && <Button variant="ghost" size="icon" className="ml-auto lg:hidden" onClick={onClose} aria-label="Close navigation"><X size={16} /></Button>}</div>
     <Tooltip label="New conversation"><Button className={cn('mt-4', mobileOpen ? 'w-full justify-start' : 'size-11 px-0')} onClick={() => { onNewChat(); onClose?.() }} aria-label="New conversation"><Sparkles size={20} /><span className={cn(mobileOpen ? 'inline' : 'hidden')}>New conversation</span></Button></Tooltip>
