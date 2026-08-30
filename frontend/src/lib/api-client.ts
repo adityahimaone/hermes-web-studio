@@ -90,8 +90,10 @@ export async function updateSession(sessionId: string, patch: Record<string, unk
   }))
 }
 
-export async function resolveApproval(runId: string, decision: 'approved' | 'denied') {
-  return readJson<{ ok: boolean }>(await fetch(`/api/runs/${encodeURIComponent(runId)}/approval`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }))
+export type ApprovalChoice = 'once' | 'session' | 'always' | 'deny'
+
+export async function resolveApproval(runId: string, choice: ApprovalChoice) {
+  return readJson<{ ok: boolean }>(await fetch(`/api/runs/${encodeURIComponent(runId)}/approval`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ choice }) }))
 }
 
 export function streamUrl(streamId: string, lastEventId?: string): string {

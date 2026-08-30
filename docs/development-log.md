@@ -66,3 +66,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Extended browser coverage to simulate an interrupted SSE connection and verify automatic EventSource reconnect, cursor progression, continued output, and no duplicated prefix.
 - Live approval probe used only a non-destructive `printf` request; the configured Gateway returned a textual confirmation prompt rather than a Runs approval event, so no command was executed and the approval item remains `[~]`.
 - Local Gateway contract inspection confirmed `POST /v1/runs` is exposed, while the safe live prompt did not create an approval run; the BFF forwarding route remains tested and live approval interaction remains intentionally unclaimed.
+- Aligned approval choices with the Gateway Runs contract (`once`, `session`, `always`, `deny`) and retained backwards-compatible approved/denied aliases; the UI now exposes all four choices.

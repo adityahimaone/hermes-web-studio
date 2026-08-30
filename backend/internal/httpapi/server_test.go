@@ -226,7 +226,7 @@ func TestApprovalRouteForwardsDecision(t *testing.T) {
 	_ = response.Body.Close()
 	select {
 	case payload := <-seen:
-		if payload != `{"decision":"approved"}` {
+		if payload != `{"choice":"once"}` {
 			t.Fatalf("payload=%s", payload)
 		}
 	case <-time.After(2 * time.Second):

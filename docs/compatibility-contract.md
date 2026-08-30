@@ -84,7 +84,7 @@ The current resolved state directory was inventoried on 2026-08-30: chat data is
 
 Start requests may include `attachment_ids`, returned by `POST /api/attachments`. Stream events carry monotonically increasing numeric SSE IDs. Clients may reconnect with `Last-Event-ID` or `after=<id>`; completed turns remain replayable for five minutes. The browser also ignores any event whose ID is not newer than its local cursor, protecting the transcript from duplicate delivery during reconnect.
 
-The normalized event set also includes `subagent`, `approval`, and `usage`. Approval decisions use `POST /api/runs/{run_id}/approval` with `{"decision":"approved"}` or `{"decision":"denied"}`. The BFF forwards this using its server-side Gateway credential.
+The normalized event set also includes `subagent`, `approval`, and `usage`. Approval decisions use `POST /api/runs/{run_id}/approval` with `{"choice":"once"}`, `{"choice":"session"}`, `{"choice":"always"}`, or `{"choice":"deny"}`. The BFF also accepts the older `decision: approved|denied` aliases and maps them to `once|deny`. It forwards the canonical choice using its server-side Gateway credential.
 
 Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PDF/plain-text MIME types. Files are stored with `0600` permissions under the resolved WebUI state directory and are addressed by opaque IDs. The Gateway adapter maps images to `image_url`, PDFs to `file`, and text files to text content. Browser code never receives Gateway or provider credentials.
 

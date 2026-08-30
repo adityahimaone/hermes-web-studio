@@ -40,11 +40,11 @@ type Attachment struct {
 	Data []byte
 }
 
-func (c *Client) ResolveApproval(ctx context.Context, runID, decision string) error {
-	if strings.TrimSpace(runID) == "" || (decision != "approved" && decision != "denied") {
+func (c *Client) ResolveApproval(ctx context.Context, runID, choice string) error {
+	if strings.TrimSpace(runID) == "" || (choice != "once" && choice != "session" && choice != "always" && choice != "deny") {
 		return errors.New("invalid approval decision")
 	}
-	body, err := json.Marshal(map[string]string{"decision": decision})
+	body, err := json.Marshal(map[string]string{"choice": choice})
 	if err != nil {
 		return err
 	}

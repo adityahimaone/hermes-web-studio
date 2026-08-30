@@ -433,16 +433,27 @@ func (s *Server) handleAttachmentDownload(w http.ResponseWriter, r *http.Request
 
 func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
 	var input struct {
+		Choice   string `json:"choice"`
 		Decision string `json:"decision"`
 	}
 	if !decodeBody(w, r, &input) {
 		return
 	}
-	if err := s.gateway.ResolveApproval(r.Context(), r.PathValue("run_id"), input.Decision); err != nil {
+	choice := input.Choice
+	if choice == "" {
+		choice = input.Decision
+	}
+	if choice == "approved" {
+		choice = "once"
+	}
+	if choice == "denied" {
+		choice = "deny"
+	}
+	if err := s.gateway.ResolveApproval(r.Context(), r.PathValue("run_id"), choice); err != nil {
 		writeError(w, http.StatusBadGateway, "approval_failed", "Hermes could not apply the approval decision.")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": r.PathValue("run_id"), "decision": input.Decision})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": r.PathValue("run_id"), "choice": choice})
 }
 
 func mustMessage(role, content string) json.RawMessage {

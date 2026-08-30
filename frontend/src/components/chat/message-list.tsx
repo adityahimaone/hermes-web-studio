@@ -2,6 +2,7 @@ import { Bot, LoaderCircle, Pencil, RotateCcw } from 'lucide-react'
 import type { ChatMessage, ChatState } from '../../lib/chat-contract'
 import { SafeMarkdown } from '../../lib/markdown'
 import { ActivityCards } from './activity-cards'
+import type { ApprovalChoice } from '../../lib/api-client'
 import { MermaidDiagram, splitMermaidBlocks } from './mermaid'
 
 function RichContent({ content }: { content: string }) {
@@ -26,7 +27,7 @@ function EmptyState() {
   )
 }
 
-export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (message: ChatMessage) => void; onRetry?: (message: ChatMessage) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
+export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (message: ChatMessage) => void; onRetry?: (message: ChatMessage) => void; onApproval?: (id: string, choice: ApprovalChoice) => void }) {
   if (!messages.length && stream.status === 'idle') return <EmptyState />
 
   return (
