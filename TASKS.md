@@ -114,3 +114,7 @@ Navigation polish follow-up: the primary rail is icon-only on desktop with
 keyboard/focus tooltips. Chat toggles its in-content Recent sessions rail when
 activated while already on Chat; the panel can also be collapsed from its
 header, and the session title/action layout reserves space for the toolbar.
+
+Navigation refinement follow-up: primary rail targets are now larger, the
+Gateway-first status card is removed from the rail, the session panel is
+narrower, and per-session actions are grouped under an overflow menu.

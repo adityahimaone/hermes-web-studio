@@ -144,6 +144,17 @@ The acceptance script verifies it is visible only on Chat.
   transports only.
 - Frontend tests, production build, and browser acceptance pass.
 
+## 2026-08-30 - Session toolbar refinement
+
+- Increased primary rail icon/button targets for clearer desktop navigation
+  while removing the non-navigation Gateway-first status card.
+- Reduced the Chat session rail width to give the conversation canvas more
+  room.
+- Replaced the hover action toolbar with a per-session three-dot overflow menu;
+  rename, pin, archive, and delete behavior remain unchanged and delete still
+  opens the shared Dialog.
+- Added Escape and outside-click dismissal to the shared dropdown menu.
+
 ## 2026-08-30 - Control-center menu audit and Hermes discovery fix
 
 - Audited every sidebar menu and found empty control collections serialized as

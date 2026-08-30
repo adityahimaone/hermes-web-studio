@@ -104,6 +104,13 @@ Chat again while already there toggles the secondary Recent sessions rail.
 This preserves the session-first workflow while giving the conversation canvas
 the full available width when the session list is not needed.
 
+## ADR-020 - Session actions use a per-row overflow menu
+
+Session rows keep the title and metadata as the primary scan target. Rename,
+pin, archive, and delete remain available but are grouped under a three-dot
+menu per row. The shared menu closes on selection, outside click, or Escape;
+destructive confirmation continues to use the shared Dialog.
+
 ## ADR-016 - Separate Hermes runtime state from Web Studio metadata
 
 The Web Studio state directory remains the owner of sessions, attachments,
