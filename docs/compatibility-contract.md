@@ -257,3 +257,7 @@ The mobile navigation drawer is an ephemeral responsive surface: when an open
 drawer crosses into the desktop breakpoint, it closes and the compact primary
 rail is restored. Resizing back to mobile still requires the explicit menu
 action, so desktop layout state cannot leak into the mobile drawer.
+
+The fixed mobile bottom navigation follows the same `1024px` breakpoint and
+must be hidden on desktop; the desktop primary rail remains the only persistent
+navigation surface at that width.

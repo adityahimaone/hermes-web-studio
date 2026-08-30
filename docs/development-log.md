@@ -294,6 +294,14 @@ The acceptance script verifies it is visible only on Chat.
 - P011 remains `[~]` pending device-level IME, safe-area, and full transition
   evidence.
 
+## 2026-08-30 — Desktop mobile-nav visibility and composer toolbar
+
+- Fixed the custom bottom navigation CSS overriding `lg:hidden`, so it is
+  hidden at the desktop breakpoint while remaining available on mobile.
+- Split composer controls from composer actions to keep profile, model,
+  workspace, hint, cancel, and send controls readable without overlap.
+- Added desktop browser coverage for the hidden bottom navigation state.
+
 ## 2026-08-30 — Responsive drawer regression
 
 - Closed the mobile navigation state when `matchMedia('(min-width: 1024px)')`

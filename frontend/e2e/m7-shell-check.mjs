@@ -17,6 +17,7 @@ try {
 
   const rail = page.getByTestId('primary-rail')
   await expect(rail).toBeVisible()
+  await expect(page.getByTestId('mobile-bottom-nav')).toBeHidden()
   await expect(page.getByTestId('titlebar')).toBeVisible()
   const chatButton = page.getByTestId('primary-navigation').getByRole('button', { name: 'Chat' })
   await expect(chatButton).toHaveAttribute('aria-describedby', /.+/)
