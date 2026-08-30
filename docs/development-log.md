@@ -103,5 +103,6 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 
 - Added embedded frontend serving for the Go binary, reproducible `make build` artifact injection, standalone backup/restore migrator, install script, release CI matrix, Nix package expression, and embedded-artifact secret scan.
 - M5 remains partial for hosted visual regression, external security review, parallel beta, and final cutover sign-off. Docker and Nix cannot be executed locally because those CLIs are unavailable.
+- Added a performance budget gate, M5 Playwright control-center acceptance script, formal threat model, beta runbook, cutover checklist, and CI binary build coverage.
 - Added local `/help` and `/clear` command affordances, browser Speech Recognition input with unsupported-browser fallback, and server-persisted theme/locale preference controls.
 - Audited `hermes-webui-personal` and aligned the M4 route shape with its cron, settings, and plugin contracts. Added bounded cron run history and pause/resume lifecycle routes while keeping wall-clock execution and plugin loading explicitly gated.

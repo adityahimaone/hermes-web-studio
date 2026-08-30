@@ -82,3 +82,5 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [ ] Cutover checklist; archive Python only after parity sign-off
 
 M5 implementation status: embedded frontend, recoverable backup/restore migration, install script, Docker integration, and release artifacts are implemented. Hosted release matrix execution, Nix runtime verification, visual regression, formal security review, beta, and cutover remain pending evidence.
+
+M5 verification follow-up: performance budget script, browser control-center acceptance script, formal threat model, and beta/cutover runbook are now committed. Hosted release execution, Docker/Nix runtime checks, visual capture comparison, beta, and cutover sign-off remain pending.

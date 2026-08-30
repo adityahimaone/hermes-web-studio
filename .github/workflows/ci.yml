@@ -27,3 +27,6 @@ jobs:
         working-directory: frontend
       - run: pnpm build
         working-directory: frontend
+      - run: sh scripts/check-performance-budget.sh frontend/dist
+      - run: GOCACHE=/tmp/hermes-webui-go-cache go test ./... && GOCACHE=/tmp/hermes-webui-go-cache go build -trimpath -o hermes-web-studio ./cmd/hermes-web-studio
+        working-directory: backend

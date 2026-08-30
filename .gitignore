@@ -1,5 +1,6 @@
 node_modules/
 frontend/dist/
+backend/internal/web/dist/assets/
 frontend/coverage/
 .pnpm-store/
 *.tsbuildinfo

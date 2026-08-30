@@ -91,3 +91,6 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Frontend lockfile production rebuild | Blocked: pnpm registry DNS failed while recreating `node_modules`; existing frontend build was validated separately |
 | Docker image | Not run: Docker CLI unavailable locally |
 | Nix package | Not run: Nix CLI unavailable locally |
+
+| Performance budget script | Pass against the existing frontend/dist artifact |
+| M5 browser acceptance | Ready: `node frontend/e2e/m5-browser-check.mjs`; requires Vite on port 5173 and is pending hosted/manual execution |
