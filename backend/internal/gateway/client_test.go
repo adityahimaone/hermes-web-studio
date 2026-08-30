@@ -60,6 +60,21 @@ func TestParseSSERunCompletedDoesNotRepeatStreamedAnswer(t *testing.T) {
 	}
 }
 
+func TestParseSSETranslatesActivityAndRedactsSecrets(t *testing.T) {
+	input := strings.Join([]string{
+		"event: subagent.started", "data: {\"id\":\"s1\",\"name\":\"research\"}", "",
+		"event: approval.required", "data: {\"run_id\":\"r1\",\"command\":\"echo hi\",\"api_key\":\"do-not-send\"}", "",
+		"event: usage", "data: {\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":3,\"total_tokens\":7}}", "",
+	}, "\n")
+	var events []Event
+	_, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil { t.Fatal(err) }
+	if len(events) != 3 || events[0].Name != "subagent" || events[1].Name != "approval" || events[2].Name != "usage" { t.Fatalf("events=%#v", events) }
+	if events[1].Data["id"] != "r1" || events[1].Data["api_key"] != nil { t.Fatalf("approval=%#v", events[1].Data) }
+	usage, ok := events[2].Data["total_tokens"]
+	if !ok || usage != float64(7) { t.Fatalf("usage=%#v", events[2].Data) }
+}
+
 func TestHealthRejectsUnauthorizedModelProbe(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/models" {

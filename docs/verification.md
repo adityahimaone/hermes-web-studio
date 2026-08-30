@@ -49,6 +49,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Frontend reducer/contract tests | Pass: 6 tests |
 | Frontend production build | Pass: Vite output generated successfully |
 | Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
+| M1 UI contract check | Pass: `bash scripts/check-m1-ui-contract.sh` verifies labels, keyboard copy, focus rings, mobile navigation, tap sizing, and stream URL usage |
 | Live Hermes chat | Pass: M0 smoke proof above |
 | Current-source live attachment upload | Pass: multipart README upload returned opaque ID, canonical `text/plain`, original filename, and size |
 | Current-source live multimodal completion | Pass: source BFF started through Makefile with configured credential, real Gateway returned a streamed README summary and exactly one `done` |
