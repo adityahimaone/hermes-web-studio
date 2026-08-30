@@ -39,6 +39,81 @@ func TestPasswordAuthProtectsAPIAndSetsHttpOnlyCookie(t *testing.T) {
 	_ = json.Unmarshal(recorder.Body.Bytes(), &payload)
 }
 
+func TestOnboardingSetupCanRecoverAfterValidationFailure(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	handler := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+
+	request := httptest.NewRequest(http.MethodPost, "/api/onboarding/password", strings.NewReader(`{"password":"too-short"}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", "http://attacker.example")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "origin_rejected") {
+		t.Fatalf("cross-origin setup=%d %s", recorder.Code, recorder.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodPost, "/api/onboarding/password", strings.NewReader(`{"password":"too-short"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "password_setup_failed") {
+		t.Fatalf("invalid setup=%d %s", recorder.Code, recorder.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodPost, "/api/onboarding/password", strings.NewReader(`{"password":"correct horse battery"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("recovered setup=%d %s", recorder.Code, recorder.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/api/onboarding", nil)
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"configured":true`) {
+		t.Fatalf("onboarding after recovery=%d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestLoginRotatesCookieAndLogoutRejectsCrossOrigin(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	handler := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	setup := httptest.NewRequest(http.MethodPost, "/api/onboarding/password", strings.NewReader(`{"password":"correct horse battery"}`))
+	setup.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(httptest.NewRecorder(), setup)
+
+	login := func() *http.Cookie {
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"password":"correct horse battery"}`))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("X-Forwarded-Proto", "https")
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("login=%d %s", recorder.Code, recorder.Body.String())
+		}
+		parsed := &http.Cookie{Name: sessionCookie}
+		parsed.Value = strings.TrimPrefix(strings.Split(recorder.Header().Get("Set-Cookie"), ";")[0], sessionCookie+"=")
+		if !strings.Contains(recorder.Header().Get("Set-Cookie"), "Secure") || !strings.Contains(recorder.Header().Get("Set-Cookie"), "HttpOnly") {
+			t.Fatalf("proxy cookie flags=%q", recorder.Header().Get("Set-Cookie"))
+		}
+		return parsed
+	}
+	first, second := login(), login()
+	if first.Value == second.Value {
+		t.Fatal("login did not rotate the cookie")
+	}
+
+	logout := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	logout.AddCookie(second)
+	logout.Header.Set("Origin", "http://attacker.example")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, logout)
+	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "origin_rejected") {
+		t.Fatalf("cross-origin logout=%d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestProfileAndProviderCRUDRedactsCredentials(t *testing.T) {
 	api := newTestServer(t, "http://127.0.0.1:1", "")
 	defer api.Close()

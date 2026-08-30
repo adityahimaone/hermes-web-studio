@@ -297,3 +297,26 @@ recorded decision and explicit approval before MVP certification.
   inventing unsupported Hermes events or persisting browser-only state.
 - **Consequence:** P017-P026 remain partial until their UI, server effects, and
   live side-by-side rows are proven.
+
+## ADR-035: Expose honest operator capability states
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Expose Insights from server-owned facts and expose Terminal as
+  explicitly unavailable until a contained process lifecycle is implemented.
+- **Reason:** Operational dashboards must not invent cost or health metrics, and
+  a terminal control without ownership and cleanup guarantees is unsafe.
+- **Consequence:** Cost-backed Insights and terminal process operations remain
+  explicit follow-up tasks with live and hostile-path acceptance.
+
+## ADR-036: Rotate authentication state on every successful login
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Add per-login nonce entropy to signed session cookies and honor
+  HTTPS reverse-proxy context only through the configured forwarding signal.
+- **Reason:** Reusing a same-second deterministic cookie weakens session
+  rotation, while incorrect Secure flags break or weaken deployments behind TLS
+  termination.
+- **Consequence:** Existing cookie verification remains compatible; passkey,
+  OIDC, and independent threat review remain open.

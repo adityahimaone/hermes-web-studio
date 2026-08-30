@@ -289,3 +289,13 @@ The production frontend exposes a manifest and service worker under the Vite
 base path. Registration is production-only and uses the configured base path;
 API requests are network-only and are never placed in the offline cache;
 offline cache invalidation and browser install/bfcache evidence remain open.
+
+Operator Insights reads server-owned session facts and reports usage,
+provider-history, synchronization, and an explicit cost-unavailable state when
+no authoritative cost source exists. Terminal is reported as unavailable until
+the server has a contained process contract; the UI never fabricates terminal
+output or a successful capability.
+
+Authentication rotates the signed session cookie with per-login entropy, marks
+cookies Secure behind TLS or an explicitly trusted HTTPS reverse proxy, and
+rejects cross-origin logout requests under the same-origin policy.

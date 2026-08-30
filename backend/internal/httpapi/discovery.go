@@ -226,6 +226,16 @@ func (s *Server) handleMemoryDelete(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"tasks": true, "skills": true, "memory": true, "todos": true, "goals": true, "spaces": true, "preferences": true, "background": false, "voice": false, "terminal": false, "extensions": false, "reason": "Runtime integrations require an explicit Hermes provider contract."})
 }
+
+func (s *Server) handleTerminalCapability(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":        "terminal",
+		"available": false,
+		"state":     "unavailable",
+		"reason":    "sandbox_required",
+		"message":   "Terminal access is unavailable until a contained process runtime can prove ownership, cleanup, and resize safety.",
+	})
+}
 func (s *Server) handlePlugins(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"plugins": discoverFiles(filepath.Join(s.config.StateDir, "plugins"), ""), "empty": true, "supported_hooks": []string{"pre_tool_call", "post_tool_call", "pre_llm_call", "post_llm_call"}})
 }

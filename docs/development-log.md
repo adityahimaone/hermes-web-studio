@@ -352,3 +352,15 @@ The acceptance script verifies it is visible only on Chat.
   session/control data cannot leak across reloads or override live server data.
 - Isolated browser acceptance contexts from service-worker cache while keeping
   the production shell cache coverage explicit.
+
+## 2026-08-31 — Remaining-task operator and auth wave
+
+- Added server-owned Insights with usage, provider history, synchronization,
+  loading/empty/error states, and an honest cost-unavailable state.
+- Added explicit Terminal unavailable capability handling and tests instead of
+  exposing an unsafe fake process surface.
+- Hardened auth cookie rotation, HTTPS reverse-proxy Secure behavior, logout
+  origin checks, and onboarding validation recovery.
+- P030, P037, P043, and P044 are now `[~]`; contained terminal lifecycle,
+  authoritative cost data, passkey/OIDC, branded onboarding, and external
+  review gates remain open.

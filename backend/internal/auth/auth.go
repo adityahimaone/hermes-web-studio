@@ -94,7 +94,7 @@ func (s *Service) Login(ip, password string) (string, error) {
 	if s.data.PasswordHash == "" || !hmac.Equal([]byte(s.data.PasswordHash), []byte(hash(password, s.data.Secret))) {
 		return "", errors.New("invalid credentials")
 	}
-	return s.sign(now.Add(24 * time.Hour)), nil
+	return s.sign(now.Add(24 * time.Hour))
 }
 func (s *Service) Verify(cookie string) bool {
 	s.mu.RLock()
@@ -107,16 +107,22 @@ func (s *Service) Verify(cookie string) bool {
 	if err != nil {
 		return false
 	}
-	expiry, err := strconv.ParseInt(string(raw), 10, 64)
+	payload := string(raw)
+	expiryText, _, _ := strings.Cut(payload, ".")
+	expiry, err := strconv.ParseInt(expiryText, 10, 64)
 	if err != nil || time.Now().Unix() > expiry {
 		return false
 	}
 	expected := s.signature(parts[0])
 	return hmac.Equal([]byte(parts[1]), []byte(expected))
 }
-func (s *Service) sign(expiry time.Time) string {
-	payload := base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(expiry.Unix(), 10)))
-	return payload + "." + s.signature(payload)
+func (s *Service) sign(expiry time.Time) (string, error) {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+	payload := base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(expiry.Unix(), 10) + "." + hex.EncodeToString(nonce)))
+	return payload + "." + s.signature(payload), nil
 }
 func (s *Service) signature(value string) string {
 	mac := hmac.New(sha256.New, []byte(s.data.Secret))

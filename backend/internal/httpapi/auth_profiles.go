@@ -109,12 +109,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: 86400})
+	http.SetCookie(w, sessionCookieFor(r, token, 86400))
 	writeJSON(w, 200, map[string]any{"authenticated": true})
 }
-func (s *Server) handleLogout(w http.ResponseWriter, _ *http.Request) {
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if !sameOrigin(w, r) {
+		return
+	}
+	http.SetCookie(w, sessionCookieFor(r, "", -1))
 	writeJSON(w, 200, map[string]any{"authenticated": false})
+}
+
+func sessionCookieFor(r *http.Request, value string, maxAge int) *http.Cookie {
+	secure := r.TLS != nil || strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
+	return &http.Cookie{Name: sessionCookie, Value: value, Path: "/", HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode, MaxAge: maxAge}
 }
 func (s *Server) handleAuthMe(w http.ResponseWriter, r *http.Request) {
 	authenticated := false

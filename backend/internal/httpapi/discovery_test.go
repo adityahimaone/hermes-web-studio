@@ -104,3 +104,22 @@ func TestMemoryCRUDStaysInsideMemoryRoot(t *testing.T) {
 		t.Fatalf("unsafe=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestTerminalCapabilityIsExplicitlyUnavailableWithoutProcessRoutes(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), HermesHome: t.TempDir()}
+	h := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/terminal", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"available":false`) || !strings.Contains(rec.Body.String(), `"reason":"sandbox_required"`) {
+		t.Fatalf("capability=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	for _, path := range []string{"/api/terminal/start", "/api/terminal/input", "/api/terminal/output", "/api/terminal/resize", "/api/terminal/close"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`)))
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("unsafe process route %s returned %d body=%s", path, rec.Code, rec.Body.String())
+		}
+	}
+}

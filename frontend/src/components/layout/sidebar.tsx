@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, MessageSquareText, Settings2, SlidersHorizontal, Sparkles, UsersRound, Wrench, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, MessageSquareText, Settings2, SlidersHorizontal, Sparkles, Terminal, UsersRound, Wrench, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
 import { Tooltip } from '../ui/tooltip'
@@ -14,6 +14,8 @@ const defaultNavigation = [
   { label: 'Todos', icon: CheckSquare2 },
   { label: 'Goals', icon: CircleStar },
   { label: 'Spaces', icon: FolderKanban },
+  { label: 'Insights', icon: BarChart3 },
+  { label: 'Terminal', icon: Terminal },
 ]
 const navigationKey = 'hermes-primary-navigation'
 type NavItem = (typeof defaultNavigation)[number]

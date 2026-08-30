@@ -1,12 +1,157 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 )
+
+type insightsUsage struct {
+	Input     int64 `json:"input_tokens"`
+	Output    int64 `json:"output_tokens"`
+	Total     int64 `json:"total_tokens"`
+	Available bool  `json:"available"`
+}
+
+type insightsProvider struct {
+	Provider string        `json:"provider"`
+	Model    string        `json:"model,omitempty"`
+	Sessions int           `json:"sessions"`
+	Messages int           `json:"messages"`
+	Usage    insightsUsage `json:"usage"`
+}
+
+func (s *Server) handleOperatorInsights(w http.ResponseWriter, _ *http.Request) {
+	if s.sessions == nil {
+		writeError(w, http.StatusServiceUnavailable, "insights_unavailable", "Insights state is unavailable.")
+		return
+	}
+	summaries, err := s.sessions.List()
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "insights_unavailable", "Insights state could not be read.")
+		return
+	}
+	providers := map[string]*insightsProvider{}
+	var usage insightsUsage
+	var userMessages, assistantMessages, messageCount, readableSessions int
+	var lastActivity time.Time
+	for _, summary := range summaries {
+		item, loadErr := s.sessions.Load(summary.ID)
+		if loadErr != nil {
+			continue
+		}
+		readableSessions++
+		if updated := insightTime(summary.Metadata, "updated_at"); updated.After(lastActivity) {
+			lastActivity = updated
+		}
+		provider := insightString(summary.Metadata, "provider", "provider_id")
+		model := insightString(summary.Metadata, "model")
+		for _, raw := range item.Messages {
+			var message map[string]json.RawMessage
+			if json.Unmarshal(raw, &message) != nil {
+				continue
+			}
+			messageCount++
+			switch insightString(message, "role") {
+			case "user":
+				userMessages++
+			case "assistant":
+				assistantMessages++
+			}
+			if provider == "" {
+				provider = insightString(message, "provider", "provider_id")
+			}
+			if model == "" {
+				model = insightString(message, "model")
+			}
+			insightAddUsage(&usage, message)
+		}
+		if provider != "" {
+			key := provider + "\x00" + model
+			row := providers[key]
+			if row == nil {
+				row = &insightsProvider{Provider: provider, Model: model}
+				providers[key] = row
+			}
+			row.Sessions++
+			row.Messages += len(item.Messages)
+			insightAddUsage(&row.Usage, summary.Metadata)
+			for _, raw := range item.Messages {
+				var message map[string]json.RawMessage
+				if json.Unmarshal(raw, &message) == nil {
+					insightAddUsage(&row.Usage, message)
+				}
+			}
+		}
+	}
+	providerRows := make([]insightsProvider, 0, len(providers))
+	for _, row := range providers {
+		providerRows = append(providerRows, *row)
+	}
+	if usage.Total == 0 && (usage.Input > 0 || usage.Output > 0) {
+		usage.Total = usage.Input + usage.Output
+	}
+	usage.Available = usage.Input > 0 || usage.Output > 0 || usage.Total > 0
+	for i := range providerRows {
+		if providerRows[i].Usage.Total == 0 && (providerRows[i].Usage.Input > 0 || providerRows[i].Usage.Output > 0) {
+			providerRows[i].Usage.Total = providerRows[i].Usage.Input + providerRows[i].Usage.Output
+		}
+		providerRows[i].Usage.Available = providerRows[i].Usage.Input > 0 || providerRows[i].Usage.Output > 0 || providerRows[i].Usage.Total > 0
+	}
+	lastActivityValue := any(nil)
+	if !lastActivity.IsZero() {
+		lastActivityValue = lastActivity.Format(time.RFC3339Nano)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"generated_at":     time.Now().UTC().Format(time.RFC3339Nano),
+		"source":           "server-owned Hermes session state",
+		"synchronization":  map[string]any{"status": "synchronized", "sessions_scanned": len(summaries), "sessions_read": readableSessions, "last_activity_at": lastActivityValue},
+		"summary":          map[string]any{"sessions": readableSessions, "messages": messageCount, "user_messages": userMessages, "assistant_messages": assistantMessages},
+		"usage":            usage,
+		"provider_history": providerRows,
+		"cost":             map[string]any{"available": false, "reason": "No persisted billing data is available from Hermes session state."},
+	})
+}
+
+func insightString(values map[string]json.RawMessage, keys ...string) string {
+	for _, key := range keys {
+		var value string
+		if json.Unmarshal(values[key], &value) == nil && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func insightNumber(values map[string]json.RawMessage, keys ...string) int64 {
+	for _, key := range keys {
+		var value float64
+		if json.Unmarshal(values[key], &value) == nil && value >= 0 {
+			return int64(value)
+		}
+	}
+	return 0
+}
+
+func insightAddUsage(usage *insightsUsage, values map[string]json.RawMessage) {
+	usage.Input += insightNumber(values, "input_tokens", "prompt_tokens", "input")
+	usage.Output += insightNumber(values, "output_tokens", "completion_tokens", "output")
+	usage.Total += insightNumber(values, "total_tokens", "total")
+	var nested map[string]json.RawMessage
+	if json.Unmarshal(values["usage"], &nested) == nil {
+		insightAddUsage(usage, nested)
+	}
+}
+
+func insightTime(values map[string]json.RawMessage, key string) time.Time {
+	value := insightString(values, key)
+	parsed, _ := time.Parse(time.RFC3339Nano, value)
+	return parsed
+}
 
 func (s *Server) handleSpaces(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.controlReady(w)

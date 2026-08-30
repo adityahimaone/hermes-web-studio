@@ -1,4 +1,4 @@
-import { BrainCircuit, Clock3, Menu, MessageSquareText, PanelRight, RotateCcw, Settings2, Wrench } from 'lucide-react'
+import { BarChart3, BrainCircuit, Clock3, Menu, MessageSquareText, PanelRight, RotateCcw, Settings2, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { Sidebar } from './components/layout/sidebar'
 import { Button } from './components/ui/button'
@@ -19,7 +19,7 @@ export function App() {
   const [workspaceWidth, setWorkspaceWidth] = useState(() => Number(window.localStorage.getItem('hermes-workspace-width')) || 360)
   const [view, setView] = useState('chat')
   const [chatSessionsOpen, setChatSessionsOpen] = useState(true)
-  const mobileNavigation = [{ label: 'Chat', view: 'chat', icon: MessageSquareText }, { label: 'Tasks', view: 'tasks', icon: Clock3 }, { label: 'Skills', view: 'skills', icon: Wrench }, { label: 'Memory', view: 'memory', icon: BrainCircuit }, { label: 'Settings', view: 'settings', icon: Settings2 }]
+  const mobileNavigation = [{ label: 'Chat', view: 'chat', icon: MessageSquareText }, { label: 'Tasks', view: 'tasks', icon: Clock3 }, { label: 'Insights', view: 'insights', icon: BarChart3 }, { label: 'Skills', view: 'skills', icon: Wrench }, { label: 'Memory', view: 'memory', icon: BrainCircuit }, { label: 'Settings', view: 'settings', icon: Settings2 }]
   const handleNavigate = (nextView: string) => {
     if (nextView === 'chat' && view === 'chat') {
       setChatSessionsOpen(open => !open)

@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState } from 'react'
-import { Check, CirclePlus, Pencil, Search, Trash2, Play, Pause, History, Activity } from 'lucide-react'
+import { Check, CirclePlus, Pencil, Search, Trash2, Play, Pause, History, Activity, Terminal } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Select } from '../ui/select'
@@ -8,6 +8,8 @@ import { Dialog } from '../ui/dialog'
 import { createControl, deleteControl, getControl, updateControl, type ControlItem } from '../../lib/control-client'
 import { applyTheme, skins, type ThemePreference } from '../../lib/theme'
 import { initialDiscoveryState, reduceDiscoveryState } from '../../lib/discovery-state'
+import { terminalCapability, type TerminalCapability } from '../../lib/terminal-contract'
+import { InsightsView } from './insights-view'
 
 const collections = ['tasks', 'todos', 'goals', 'spaces'] as const
 type Props = { view: string }
@@ -17,7 +19,25 @@ export function ControlCenter({ view }: Props) {
   if (view === 'profiles') return <ProfilesView />
   if (view === 'tasks') return <TasksView />
   if (view === 'spaces') return <SpacesView />
+  if (view === 'terminal') return <TerminalView />
+  if (view === 'insights') return <InsightsView />
   return <CollectionView view={view} />
+}
+
+function TerminalView() {
+  const [capability, setCapability] = useState<TerminalCapability | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    void fetch('/api/terminal').then(async response => {
+      const data: unknown = await response.json()
+      if (!response.ok) throw new Error('Terminal capability could not be checked.')
+      setCapability(terminalCapability(data))
+    }).catch(err => setError(err instanceof Error ? err.message : 'Terminal capability could not be checked.')).finally(() => setLoading(false))
+  }, [])
+
+  return <section className="mx-auto w-full max-w-3xl p-5 sm:p-8"><div className="mb-8"><p className="text-[11px] uppercase tracking-[0.18em] text-primary">Operator surface</p><h1 className="mt-2 text-2xl font-semibold">Terminal</h1><p className="mt-1 text-sm text-muted-foreground">Process access is gated by a server-owned containment contract.</p></div>{loading && <p role="status" className="text-sm text-muted-foreground">Checking terminal capability...</p>}{error && <p role="alert" className="rounded border border-destructive/40 p-3 text-sm text-red-300">{error}</p>}{capability && <article className="rounded-lg border border-amber-400/40 bg-card p-5" role="status"><div className="flex items-start gap-3"><Terminal aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" size={20} /><div><h2 className="text-sm font-medium">Terminal unavailable</h2><p className="mt-2 text-sm text-muted-foreground">{capability.message}</p><p className="mt-3 text-xs text-muted-foreground">No process was started, and no terminal output is available.</p></div></div></article>}</section>
 }
 
 function CollectionView({ view }: Props) {
