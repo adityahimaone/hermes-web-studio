@@ -97,4 +97,21 @@ func TestStoreWritesLegacyIndexAndSafePermissions(t *testing.T) {
 	}
 }
 
+func TestStoreTruncatesMessagesAndPreservesMetadata(t *testing.T) {
+	store := NewStore(t.TempDir())
+	if _, err := store.Create("session-1", "Draft", []json.RawMessage{raw(`{"role":"user","content":"one"}`), raw(`{"role":"assistant","content":"two"}`)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.TruncateMessages("session-1", 1); err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.Load("session-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Title != "Draft" || len(item.Messages) != 1 {
+		t.Fatalf("item=%#v", item)
+	}
+}
+
 func raw(value string) json.RawMessage { return json.RawMessage(value) }

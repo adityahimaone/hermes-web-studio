@@ -50,3 +50,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Automated evidence: backend tests, frontend tests, frontend production build, and diff checks pass. Live approval, multimodal, network interruption replay, and browser keyboard/mobile matrix proof remain required before final M1 parity sign-off.
 - Follow-up acceptance coverage added for attachment validation and multimodal payloads, replay after `Last-Event-ID`, and Runs approval forwarding. A MIME parameter bug found by the attachment test was fixed by canonicalizing detected media types.
 - Frontend contract coverage expanded to six tests for session search/date grouping, usage normalization, and approval identity mapping.
+- Closed the edit/regenerate persistence gap with a tested truncate route and server-side transcript prefix semantics; pushed after the full backend/frontend verification pass.

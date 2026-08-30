@@ -80,6 +80,10 @@ export async function deleteSession(sessionId: string) {
   return readJson<{ ok: boolean; session_id: string }>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }))
 }
 
+export async function truncateSession(sessionId: string, count: number) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/truncate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ count }) }))
+}
+
 export async function updateSession(sessionId: string, patch: Record<string, unknown>) {
   return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),

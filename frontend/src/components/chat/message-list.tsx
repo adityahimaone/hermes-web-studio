@@ -26,7 +26,7 @@ function EmptyState() {
   )
 }
 
-export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (content: string) => void; onRetry?: (content: string) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
+export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (message: ChatMessage) => void; onRetry?: (content: string) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
   if (!messages.length && stream.status === 'idle') return <EmptyState />
 
   return (
@@ -34,7 +34,7 @@ export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: {
       {messages.map((message) => (
         message.role === 'user' ? (
           <article key={message.id} className="group flex justify-end gap-2">
-            {onEdit && <button type="button" className="message-action" onClick={() => onEdit(message.content)} aria-label="Edit message"><Pencil size={14} /></button>}
+            {onEdit && <button type="button" className="message-action" onClick={() => onEdit(message)} aria-label="Edit message"><Pencil size={14} /></button>}
             <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
           </article>
         ) : (

@@ -39,3 +39,7 @@ The BFF keeps normalized SSE events in memory, assigns monotonic IDs, and replay
 ## ADR-009 - Server-owned attachment ingress
 
 The browser uploads files to the BFF using opaque attachment IDs. The BFF validates size and MIME, writes restrictive files, and converts them to multimodal Gateway payloads. Credentials remain server-side.
+
+## ADR-010 - Edit as transcript prefix truncation
+
+Edit/regenerate is represented as a deterministic prefix operation against the durable JSON transcript. The browser sends a message count, the BFF truncates only the transcript array, and all other top-level legacy metadata remains intact. This avoids inventing message IDs in the persisted compatibility format.

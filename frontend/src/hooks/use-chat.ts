@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, getSession, getSessions, resolveApproval, startChat, uploadAttachment } from '../lib/api-client'
+import { cancelChat, getSession, getSessions, resolveApproval, startChat, truncateSession, uploadAttachment } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -89,7 +89,13 @@ export function useChat() {
     if (streamState.status === 'streaming' || streamIdRef.current) { queueRef.current.push(clean); setQueuedMessages([...queueRef.current]) } else pump(clean, files)
   }, [pump, streamState.status])
   const retry = useCallback((content: string) => send(content), [send])
-  const edit = useCallback((content: string) => setDraft(content), [])
+  const edit = useCallback((message: ChatMessage) => {
+    const index = messages.findIndex((item) => item.id === message.id)
+    if (index < 0) return
+    void truncateSession(activeSessionRef.current, index).catch(() => undefined)
+    setMessages((current) => current.slice(0, index))
+    setDraft(message.content)
+  }, [messages])
   const approve = useCallback(async (id: string, decision: 'approved' | 'denied') => {
     await resolveApproval(id, decision)
     setStreamState((state) => ({ ...state, approvals: state.approvals.map((item) => item.id === id ? { ...item, status: decision } : item) }))

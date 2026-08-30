@@ -78,6 +78,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/sessions/{session_id}/rename", s.handleSessionRename)
 	mux.HandleFunc("POST /api/sessions/{session_id}/pin", s.handleSessionPin)
 	mux.HandleFunc("POST /api/sessions/{session_id}/archive", s.handleSessionArchive)
+	mux.HandleFunc("POST /api/sessions/{session_id}/truncate", s.handleSessionTruncate)
 	mux.HandleFunc("DELETE /api/sessions/{session_id}", s.handleSessionDelete)
 	mux.HandleFunc("POST /api/chat/start", s.handleChatStart)
 	mux.HandleFunc("GET /api/chat/stream", s.handleChatStream)
@@ -204,6 +205,28 @@ func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "session_id": r.PathValue("session_id")})
+}
+
+func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Count *int `json:"count"`
+	}
+	if !decodeBody(w, r, &input) || input.Count == nil {
+		if input.Count == nil {
+			writeError(w, http.StatusBadRequest, "count_required", "Message count is required.")
+		}
+		return
+	}
+	if err := s.sessions.TruncateMessages(r.PathValue("session_id"), *input.Count); err != nil {
+		sessionError(w, err)
+		return
+	}
+	item, err := s.sessions.Load(r.PathValue("session_id"))
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
 }
 
 func sessionError(w http.ResponseWriter, err error) {

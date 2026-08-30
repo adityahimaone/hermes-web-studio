@@ -101,6 +101,28 @@ func (s *Store) AppendMessages(id string, additions ...json.RawMessage) error {
 	return s.writeFields(id, fields)
 }
 
+// TruncateMessages keeps the first count transcript messages and preserves all
+// other top-level session metadata.
+func (s *Store) TruncateMessages(id string, count int) error {
+	if err := validateID(id); err != nil {
+		return err
+	}
+	item, err := s.Load(id)
+	if err != nil {
+		return err
+	}
+	if count < 0 || count > len(item.Messages) {
+		return errors.New("message count is out of range")
+	}
+	fields, err := readObject(s.sessionPath(id))
+	if err != nil {
+		return err
+	}
+	fields["messages"] = mustJSON(item.Messages[:count])
+	fields["updated_at"] = mustJSON(time.Now().UTC().Format(time.RFC3339Nano))
+	return s.writeFields(id, fields)
+}
+
 func (s *Store) sessionPath(id string) string {
 	return filepath.Join(s.stateDir, "sessions", id+".json")
 }

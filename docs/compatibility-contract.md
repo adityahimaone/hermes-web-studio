@@ -85,3 +85,5 @@ Start requests may include `attachment_ids`, returned by `POST /api/attachments`
 The normalized event set also includes `subagent`, `approval`, and `usage`. Approval decisions use `POST /api/runs/{run_id}/approval` with `{"decision":"approved"}` or `{"decision":"denied"}`. The BFF forwards this using its server-side Gateway credential.
 
 Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PDF/plain-text MIME types. Files are stored with `0600` permissions under the resolved WebUI state directory and are addressed by opaque IDs. Browser code never receives Gateway or provider credentials.
+
+Editing a persisted user message uses `POST /api/sessions/{session_id}/truncate` with `{"count":<message-count>}`. The BFF keeps the transcript prefix, preserves session metadata, and the next composer send creates the replacement branch.
