@@ -6,7 +6,7 @@
 
 The Go service connects to the Hermes Gateway/API Server instead of importing the Python agent runtime or spawning the Hermes CLI. This is the cleanest runtime boundary for a non-Python rewrite and matches the bridge already supported by the original WebUI.
 
-The adapter uses `POST /v1/chat/completions` with streaming enabled. Runs API support (`POST /v1/runs`) will be added when approval parity starts.
+The adapter uses `POST /v1/chat/completions` with streaming enabled. Approval decisions use the Gateway Runs API at `POST /v1/runs/{run_id}/approval`; run creation remains owned by Hermes and is not duplicated in the BFF.
 
 ## ADR-002 — Compatibility BFF
 
