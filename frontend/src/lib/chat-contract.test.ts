@@ -16,6 +16,16 @@ describe('chat event reducer', () => {
     expect(state.tools).toEqual([{ id: 't1', name: 'terminal', status: 'complete' }])
   })
 
+  it('upserts progress frames and settles a subagent by its stable id', () => {
+    let state = reduceChatEvent(initialChatState, { type: 'tool', data: { tid: 't1', name: 'terminal' } })
+    state = reduceChatEvent(state, { type: 'tool', data: { tid: 't1', name: 'terminal', result: 'working' } })
+    state = reduceChatEvent(state, { type: 'subagent', data: { id: 's1', name: 'research', status: 'running' } })
+    state = reduceChatEvent(state, { type: 'subagent', data: { id: 's1', name: 'research', status: 'complete' } })
+    expect(state.tools).toHaveLength(1)
+    expect(state.tools[0].result).toBe('working')
+    expect(state.subagents).toEqual([{ id: 's1', name: 'research', status: 'complete', task: undefined }])
+  })
+
   it('surfaces safe application errors', () => {
     const state = reduceChatEvent(initialChatState, { type: 'apperror', data: { message: 'Gateway unavailable' } })
     expect(state.status).toBe('error')
