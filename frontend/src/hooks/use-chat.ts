@@ -41,7 +41,14 @@ export function useChat() {
           const message = raw as MessageEvent<string>
           let data: Record<string, unknown> = {}
           try { data = JSON.parse(message.data) as Record<string, unknown> } catch { data = { message: message.data } }
-          setStreamState((state) => reduceChatEvent(state, { type, data } as ChatEvent))
+          setStreamState((state) => {
+            const next = reduceChatEvent(state, { type, data } as ChatEvent)
+            if (type === 'done' && next.answer) {
+              setMessages((current) => [...current, { id: id(), role: 'assistant', content: next.answer, status: 'complete' }])
+              return initialChatState
+            }
+            return next
+          })
           if (type === 'done' || type === 'cancel' || type === 'apperror') closeSource()
         })
       })
@@ -74,4 +81,3 @@ export function useChat() {
 
   return { messages, streamState, send, cancel, reset, isStreaming: streamState.status === 'streaming' }
 }
-

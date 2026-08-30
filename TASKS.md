@@ -13,7 +13,7 @@ Status legend: `[x]` implemented and verified with automated tests, `[~]` implem
 - [x] Translate OpenAI and Hermes Gateway SSE variants
 - [x] Add mock Gateway integration tests for streaming, errors, headers, and cancel
 - [x] Add frontend parser/reducer tests
-- [x] Verify production frontend build (114.22 KiB gzip JS at M0)
+- [x] Verify production frontend build (114.27 KiB gzip JS at M0)
 - [ ] Run live Hermes smoke test using operator credentials
 - [ ] Record live proof: date, Hermes version, model/provider, first-token latency, final response
 

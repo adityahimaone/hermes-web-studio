@@ -26,9 +26,16 @@ export function MessageList({ messages, stream }: { messages: ChatMessage[]; str
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8 sm:px-8">
       {messages.map((message) => (
-        <article key={message.id} className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
-        </article>
+        message.role === 'user' ? (
+          <article key={message.id} className="flex justify-end">
+            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
+          </article>
+        ) : (
+          <article key={message.id} className="flex gap-3">
+            <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><Markdown>{message.content}</Markdown></div>
+          </article>
+        )
       ))}
 
       {stream.status !== 'idle' && (
@@ -66,4 +73,3 @@ export function MessageList({ messages, stream }: { messages: ChatMessage[]; str
     </div>
   )
 }
-

@@ -1,7 +1,12 @@
 .PHONY: dev dev-api dev-ui test test-api test-ui build build-ui build-api clean
 
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
 dev:
-	@trap 'kill 0' INT TERM EXIT; $(MAKE) dev-api & $(MAKE) dev-ui
+	@$(MAKE) dev-api & api_pid=$$!; trap 'kill $$api_pid 2>/dev/null || true' EXIT INT TERM; $(MAKE) dev-ui
 
 dev-api:
 	cd backend && go run ./cmd/hermes-web-studio

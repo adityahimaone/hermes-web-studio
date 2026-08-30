@@ -58,6 +58,9 @@ func (c *Client) Configured() bool { return strings.TrimSpace(c.config.BaseURL) 
 
 func (c *Client) Health(ctx context.Context) error {
 	paths := []string{"/health", "/v1/models"}
+	if c.config.APIKey != "" {
+		paths = []string{"/v1/models", "/health"}
+	}
 	var last error
 	for _, path := range paths {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.config.BaseURL+path, nil)
@@ -72,6 +75,9 @@ func (c *Client) Health(ctx context.Context) error {
 		}
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusUnauthorized {
+			return &HTTPError{StatusCode: resp.StatusCode, Code: "gateway_auth_error", Message: "Hermes Gateway rejected the configured API key."}
+		}
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return nil
 		}

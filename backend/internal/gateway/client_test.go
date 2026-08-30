@@ -1,8 +1,12 @@
 package gateway
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseSSETranslatesOpenAIAndHermesFrames(t *testing.T) {
@@ -35,4 +39,30 @@ func TestParseSSESurfacesRunFailure(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "provider failed") {
 		t.Fatalf("err = %v", err)
 	}
+}
+
+func TestHealthRejectsUnauthorizedModelProbe(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/models" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+	client := New(Config{BaseURL: server.URL, APIKey: "wrong", ReadTimeout: time.Second})
+	err := client.Health(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "rejected") {
+		t.Fatalf("expected safe auth error, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "API key") || !strings.Contains(authErrString(err), "gateway_auth_error") {
+		t.Fatalf("unexpected auth error: %v", err)
+	}
+}
+
+func authErrString(err error) string {
+	if typed, ok := err.(*HTTPError); ok {
+		return typed.Code
+	}
+	return ""
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -69,12 +70,23 @@ func (s *Server) handleHermesHealth(w http.ResponseWriter, r *http.Request) {
 	err := s.gateway.Health(ctx)
 	payload := map[string]any{
 		"ok": err == nil, "configured": s.gateway.Configured(), "reachable": err == nil,
-		"base_url": s.gateway.BaseURL(),
+		"base_url": publicGatewayURL(s.gateway.BaseURL()),
 	}
 	if err != nil {
 		payload["message"] = "Hermes Gateway is not reachable. Start Hermes or check HERMES_WEBUI_GATEWAY_BASE_URL."
 	}
 	writeJSON(w, http.StatusOK, payload)
+}
+
+func publicGatewayURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "configured"
+	}
+	parsed.User = nil
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.String()
 }
 
 func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
