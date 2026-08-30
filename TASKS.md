@@ -80,3 +80,5 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [ ] Security review and threat model
 - [ ] Parallel beta against original WebUI
 - [ ] Cutover checklist; archive Python only after parity sign-off
+
+M5 implementation status: embedded frontend, recoverable backup/restore migration, install script, Docker integration, and release artifacts are implemented. Hosted release matrix execution, Nix runtime verification, visual regression, formal security review, beta, and cutover remain pending evidence.

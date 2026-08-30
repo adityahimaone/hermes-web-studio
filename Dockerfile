@@ -11,6 +11,7 @@ WORKDIR /src
 COPY backend/go.mod ./backend/
 RUN cd backend && go mod download
 COPY backend ./backend
+COPY --from=frontend-build /src/frontend/dist ./backend/internal/web/dist
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/hermes-web-studio ./backend/cmd/hermes-web-studio
 
 FROM nginx:1.27-alpine

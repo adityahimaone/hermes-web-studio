@@ -1,6 +1,7 @@
 node_modules/
 frontend/dist/
 frontend/coverage/
+.pnpm-store/
 *.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts

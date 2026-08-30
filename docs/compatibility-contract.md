@@ -155,6 +155,17 @@ return empty arrays when no source is configured. `GET /api/capabilities`
 declares runtime-dependent surfaces such as terminal, voice, background work,
 and extensions instead of exposing non-functional controls.
 
+## M5 distribution contract
+
+`make build` produces a Go binary that serves the compiled frontend from an
+embedded filesystem. `make migrate-backup` creates a timestamped private copy
+of the state directory and `make migrate-restore` restores the newest copy;
+neither command performs an implicit destructive migration. `install.sh`
+installs the binary under `$HOME/.local/bin` by default. Release CI covers
+Linux amd64, macOS arm64, and Windows amd64 artifacts. Docker and Nix consume
+the same frontend build contract, while hosted visual/security/beta sign-off
+remains a release process rather than a local mock claim.
+
 The upstream scheduled-task route names are retained as compatibility aliases:
 `GET /api/crons`, `GET /api/crons/history`, `POST /api/crons/create`,
 `POST /api/crons/run`, `POST /api/crons/pause`, and

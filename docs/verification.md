@@ -80,3 +80,14 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Live edit/retry branch semantics | Pass: an isolated session completed an old no-tools turn, was truncated to its user-message prefix, then completed a replacement turn; persisted history contained the replacement assistant response and no old assistant response |
 | Gateway capability discovery | Pass: the live Gateway advertised `run_approval`, `approval_events`, `tool_progress_events`, and delegation-capable toolsets; capability advertisement is recorded separately from observed event delivery |
 | Explicit live delegation probe | Inconclusive capability check: an explicit harmless delegation request produced normalized tool events and the safe result but no structured `subagent` event |
+
+## 2026-08-30 - M5 distribution verification
+
+| Check | Result |
+|---|---|
+| Go tests, vet, embedded binary compile | Pass |
+| Embedded frontend and secret scan | Pass with `scripts/check-m5-artifact.sh` |
+| Backup/restore migrator | Pass: dedicated unit test restores the newest backup without in-place migration |
+| Frontend lockfile production rebuild | Blocked: pnpm registry DNS failed while recreating `node_modules`; existing frontend build was validated separately |
+| Docker image | Not run: Docker CLI unavailable locally |
+| Nix package | Not run: Nix CLI unavailable locally |

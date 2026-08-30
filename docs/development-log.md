@@ -98,5 +98,10 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added safe skills and memory discovery endpoints plus explicit capability reporting for runtime-dependent voice, background, extension, and terminal surfaces.
 - Replaced dead Soon navigation buttons with accessible control-center views for tasks, todos, goals, spaces, skills, and memory, including loading, empty, error, create, complete, and delete states.
 - M4 remains partial by design: cron execution/history, external memory adapters, voice, scheduler wakeups, plugin loading, and terminal execution are not represented as working until their runtime and sandbox contracts are implemented.
+
+## 2026-08-30 - M5 distribution baseline
+
+- Added embedded frontend serving for the Go binary, reproducible `make build` artifact injection, standalone backup/restore migrator, install script, release CI matrix, Nix package expression, and embedded-artifact secret scan.
+- M5 remains partial for hosted visual regression, external security review, parallel beta, and final cutover sign-off. Docker and Nix cannot be executed locally because those CLIs are unavailable.
 - Added local `/help` and `/clear` command affordances, browser Speech Recognition input with unsupported-browser fallback, and server-persisted theme/locale preference controls.
 - Audited `hermes-webui-personal` and aligned the M4 route shape with its cron, settings, and plugin contracts. Added bounded cron run history and pause/resume lifecycle routes while keeping wall-clock execution and plugin loading explicitly gated.

@@ -12,6 +12,7 @@ import (
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/httpapi"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/web"
 )
 
 func main() {
@@ -20,7 +21,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           httpapi.New(cfg).Handler(),
+		Handler:           web.Handler(httpapi.New(cfg).Handler()),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      0,

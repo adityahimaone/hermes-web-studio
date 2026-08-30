@@ -94,3 +94,9 @@ flowchart LR
 ```
 
 The BFF owns credentials, cancellation, event normalization, and future persistence. The frontend consumes a stable compatibility contract rather than coupling components directly to Gateway event variants.
+## Single-binary release
+
+Run `make build` to build the locked frontend, embed `frontend/dist` into the
+Go binary, and write `./hermes-web-studio`. Use `./install.sh` for a local user
+install. Before any legacy-state migration, run `make migrate-backup`;
+`make migrate-restore` restores the newest private backup.

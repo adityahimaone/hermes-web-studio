@@ -60,3 +60,11 @@ Remote binding is refused until authentication is configured. Trusted-header
 identity is opt-in for an already authenticated reverse proxy, while OIDC and
 WebAuthn remain explicit capability states until provider registration is
 configured.
+
+## ADR-014 - Embedded frontend with recoverable state migration
+
+The release binary embeds the Vite output so production does not require a
+separate frontend server. `make build` refreshes the embedded package after a
+locked frontend build; a tiny checked-in fallback keeps direct Go compilation
+valid. Legacy Hermes state is never migrated in place: the separate migrator
+creates a timestamped private backup and can restore the newest backup.

@@ -1,0 +1,38 @@
+name: release-build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  binaries:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23' }
+      - run: make build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hermes-web-studio-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: hermes-web-studio*
