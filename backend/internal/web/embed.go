@@ -18,7 +18,7 @@ func Handler(api http.Handler) http.Handler {
 	static, _ := fs.Sub(files, "dist")
 	serve := http.FileServer(http.FS(static))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/api/") {
+		if r.URL.Path == "/health" || r.URL.Path == "/ready" || strings.HasPrefix(r.URL.Path, "/api/") {
 			api.ServeHTTP(w, r)
 			return
 		}

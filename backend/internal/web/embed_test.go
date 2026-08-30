@@ -19,4 +19,9 @@ func TestHandlerServesEmbeddedFallbackAndAPIRoutes(t *testing.T) {
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("api status=%d", response.Code)
 	}
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/ready", nil))
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("ready status=%d", response.Code)
+	}
 }

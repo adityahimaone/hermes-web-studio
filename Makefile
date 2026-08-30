@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-ui test test-api test-ui build build-ui build-api migrate-backup migrate-restore prod-image clean
+.PHONY: dev dev-api dev-ui test test-api test-ui build build-ui build-api release-gate migrate-backup migrate-restore prod-image clean
 
 ifneq (,$(wildcard .env))
 include .env
@@ -30,6 +30,9 @@ build-ui:
 build-api: build-ui
 	cp -R frontend/dist/. backend/internal/web/dist/
 	cd backend && go build -trimpath -ldflags='-s -w' -o ../hermes-web-studio ./cmd/hermes-web-studio
+
+release-gate:
+	sh scripts/release-gate.sh
 
 migrate-backup:
 	cd backend && go run ./cmd/hermes-web-studio-migrate -state-dir "$${HERMES_WEBUI_STATE_DIR:-$$HOME/.hermes/webui}"

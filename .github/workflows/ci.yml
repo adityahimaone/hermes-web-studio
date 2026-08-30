@@ -28,5 +28,28 @@ jobs:
       - run: pnpm build
         working-directory: frontend
       - run: sh scripts/check-performance-budget.sh frontend/dist
-      - run: GOCACHE=/tmp/hermes-webui-go-cache go test ./... && GOCACHE=/tmp/hermes-webui-go-cache go build -trimpath -o hermes-web-studio ./cmd/hermes-web-studio
+      - run: sh scripts/check-secret-boundary.sh
+      - run: GOCACHE=/tmp/hermes-webui-go-cache go test ./... && GOCACHE=/tmp/hermes-webui-go-cache go vet ./... && GOCACHE=/tmp/hermes-webui-go-cache go build -trimpath -o hermes-web-studio ./cmd/hermes-web-studio
         working-directory: backend
+      - run: sh scripts/check-m5-artifact.sh backend/hermes-web-studio
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+      - run: pnpm dev --host 127.0.0.1 > /tmp/hermes-web-studio-vite.log 2>&1 & for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done
+        working-directory: frontend
+      - run: node e2e/m5-browser-check.mjs
+        working-directory: frontend

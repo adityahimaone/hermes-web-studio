@@ -84,3 +84,15 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 M5 implementation status: embedded frontend, recoverable backup/restore migration, install script, Docker integration, and release artifacts are implemented. Hosted release matrix execution, Nix runtime verification, visual regression, formal security review, beta, and cutover remain pending evidence.
 
 M5 verification follow-up: performance budget script, browser control-center acceptance script, formal threat model, and beta/cutover runbook are now committed. Hosted release execution, Docker/Nix runtime checks, visual capture comparison, beta, and cutover sign-off remain pending.
+
+## M6 — Release hardening and operations
+
+- [x] Separate liveness and local readiness probes, with deployment routing and tests
+- [x] Add one-command release gate for formatting, tests, vet, build, artifact, performance, and secret-boundary checks
+- [x] Enforce the browser credential boundary with a regression scan
+- [~] Run backend artifact and browser control-center acceptance checks in CI (workflow committed; hosted run pending)
+- [x] Document M6 compatibility, decision, and operator verification flow
+
+M6 status: implementation and local automated checks are complete. Hosted CI
+execution and live Hermes deployment verification remain evidence gates, not
+claims inferred from local tests.

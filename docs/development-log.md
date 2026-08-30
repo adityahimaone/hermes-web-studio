@@ -106,3 +106,15 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added a performance budget gate, M5 Playwright control-center acceptance script, formal threat model, beta runbook, cutover checklist, and CI binary build coverage.
 - Added local `/help` and `/clear` command affordances, browser Speech Recognition input with unsupported-browser fallback, and server-persisted theme/locale preference controls.
 - Audited `hermes-webui-personal` and aligned the M4 route shape with its cron, settings, and plugin contracts. Added bounded cron run history and pause/resume lifecycle routes while keeping wall-clock execution and plugin loading explicitly gated.
+
+## 2026-08-30 - M6 release hardening and operations
+
+- Added a local-only `/ready` probe that reports BFF initialization separately
+  from Hermes Gateway reachability, and routed it through the production Nginx
+  baseline.
+- Added `make release-gate` with backend tests/vet/build, embedded artifact
+  scanning, performance budgets, secret-boundary scanning, and frontend tests/build.
+- CI now runs the secret/artifact gates and a Chromium control-center acceptance
+  job. Hosted execution remains the source of CI evidence.
+- M6 implementation is complete locally; live Hermes deployment, hosted CI, and
+  external beta/security sign-off remain explicitly outside automated claims.

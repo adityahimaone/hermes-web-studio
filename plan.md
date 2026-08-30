@@ -231,6 +231,18 @@ Complete state migration, rollback, single-command install, release binaries, Do
 
 Exit proof: existing users can upgrade, preserve state, validate the new UI, and roll back safely.
 
+### M6 — Release hardening and operations
+
+Close the repeatable release checks after distribution work: distinguish
+liveness from local readiness, enforce the browser credential boundary, run the
+same artifact and performance checks in CI, and keep a browser acceptance job
+for the control-center surfaces. M6 does not turn hosted beta, live Hermes
+parity, or external security review into automated claims.
+
+Exit proof: `make release-gate` passes from an installed dependency set, CI
+runs the equivalent backend, artifact, secret, performance, and browser checks,
+and deployment probes can restart Hermes independently from the BFF.
+
 ## 10. Data compatibility
 
 Existing locations and environment variables remain product contracts:

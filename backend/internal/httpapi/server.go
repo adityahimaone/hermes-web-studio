@@ -100,6 +100,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
+	mux.HandleFunc("GET /ready", s.handleReady)
 	mux.HandleFunc("GET /api/health/hermes", s.handleHermesHealth)
 	mux.HandleFunc("GET /api/sessions", s.handleSessions)
 	mux.HandleFunc("GET /api/sessions/{session_id}", s.handleSession)
@@ -320,6 +321,24 @@ func sessionError(w http.ResponseWriter, err error) {
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "service": "hermes-web-studio"})
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, _ *http.Request) {
+	checks := map[string]bool{
+		"session_store": s.sessions != nil,
+		"workspace":     s.workspaceErr == nil,
+		"auth":          s.authErr == nil,
+		"control":       s.controlErr == nil,
+	}
+	ready := true
+	for _, passed := range checks {
+		ready = ready && passed
+	}
+	status := http.StatusOK
+	if !ready {
+		status = http.StatusServiceUnavailable
+	}
+	writeJSON(w, status, map[string]any{"ok": ready, "ready": ready, "service": "hermes-web-studio", "checks": checks})
 }
 
 func (s *Server) handleHermesHealth(w http.ResponseWriter, r *http.Request) {

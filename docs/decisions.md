@@ -68,3 +68,10 @@ separate frontend server. `make build` refreshes the embedded package after a
 locked frontend build; a tiny checked-in fallback keeps direct Go compilation
 valid. Legacy Hermes state is never migrated in place: the separate migrator
 creates a timestamped private backup and can restore the newest backup.
+
+## ADR-015 - Separate liveness and readiness
+
+`/health` remains a cheap liveness probe. `/ready` reports only local BFF
+initialization and deliberately does not call Hermes Gateway. Gateway health
+is an operator diagnostic because the BFF can still serve sessions, auth, and
+safe offline UI while Hermes is restarting.

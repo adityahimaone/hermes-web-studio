@@ -174,3 +174,13 @@ state and run history is bounded to the latest 100 records. A wall-clock
 scheduler and external delivery remain deferred until the Gateway task runtime
 contract is available. `/api/settings` GET/POST aliases map to the safe
 preferences store, and `/api/plugins` returns sanitized visibility metadata.
+
+## M6 operations contract
+
+`GET /health` is a liveness check and returns `200` while the HTTP process is
+running. `GET /ready` checks locally initialized session, workspace, auth, and
+control services without contacting Hermes Gateway. It returns `200` with
+`ready: true` when the service can accept traffic, and `503` with per-check
+details when initialization failed. Gateway reachability remains a separate
+`/api/health/hermes` diagnostic so a temporarily offline Gateway does not make
+the BFF process appear dead.

@@ -86,6 +86,27 @@ func TestGatewayAuthErrorIsRedacted(t *testing.T) {
 	}
 }
 
+func TestReadyReportsLocalDependenciesWithoutContactingGateway(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := api.Client().Get(api.URL + "/ready")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("ready status=%d", response.StatusCode)
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"ready":true`) || !strings.Contains(string(body), `"workspace":true`) {
+		t.Fatalf("unexpected readiness payload: %s", body)
+	}
+}
+
 func TestCancelStopsUpstreamTurn(t *testing.T) {
 	requestStarted := make(chan struct{})
 	cancelled := make(chan struct{})
