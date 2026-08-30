@@ -32,7 +32,7 @@ export function App() {
             <Button variant="ghost" size="icon" onClick={() => workspace.setOpen(!workspace.open)} aria-label={workspace.open ? 'Close workspace' : 'Open workspace'}><PanelRight size={17} /></Button>
           </div>
         </header>
-        {view === 'chat' ? <><div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><MessageList messages={chat.messages} stream={chat.streamState} onEdit={chat.edit} onRetry={chat.retry} onApproval={chat.approve} /></div><Composer onSend={chat.send} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} /></> : <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><ControlCenter view={view} /></div>}
+        {view === 'chat' ? <><div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><MessageList messages={chat.messages} stream={chat.streamState} onEdit={chat.edit} onRetry={chat.retry} onApproval={chat.approve} /></div><Composer onSend={chat.send} onCommand={command => { if (command === '/clear') chat.reset(); else if (command === '/help') chat.setDraft('Try /clear to reset this conversation, or write a message for Hermes.') }} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} /></> : <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><ControlCenter view={view} /></div>}
       </main>
       <WorkspacePanel {...workspace} width={workspaceWidth} onWidthChange={value => setWorkspaceWidth(Math.max(280, Math.min(520, value)))} />
     </div>

@@ -97,3 +97,5 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added server-owned persistent collections for tasks, todos, goals, spaces, and filtered preferences with CRUD API routes and tests.
 - Added safe skills and memory discovery endpoints plus explicit capability reporting for runtime-dependent voice, background, extension, and terminal surfaces.
 - Replaced dead Soon navigation buttons with accessible control-center views for tasks, todos, goals, spaces, skills, and memory, including loading, empty, error, create, complete, and delete states.
+- M4 remains partial by design: cron execution/history, external memory adapters, voice, scheduler wakeups, plugin loading, and terminal execution are not represented as working until their runtime and sandbox contracts are implemented.
+- Added local `/help` and `/clear` command affordances, browser Speech Recognition input with unsupported-browser fallback, and server-persisted theme/locale preference controls.

@@ -50,7 +50,7 @@ export function Sidebar({ onNewChat, onNavigate, currentView, sessions, activeSe
         <div className="flex items-center gap-2 text-xs font-medium"><Bot size={14} className="text-primary" /> Gateway-first runtime</div>
         <p className="mt-1.5 text-[11px] leading-4 text-muted-foreground">Credentials stay in the Go service. Browser traffic uses normalized events.</p>
       </div>
-      <Button variant="ghost" className="mt-2 w-full justify-start"><Settings2 size={16} /> Settings</Button>
+      <Button variant="ghost" className="mt-2 w-full justify-start" onClick={() => { onNavigate('settings'); onClose?.() }}><Settings2 size={16} /> Settings</Button>
     </aside>
   )
 }

@@ -63,10 +63,10 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [~] Memory and external notes (safe local discovery surface; external source adapters remain)
 - [x] Todos and goals
 - [x] Spaces/projects
-- [ ] Slash commands and voice input
-- [ ] Preferences, skins, locale, update status
-- [ ] Background tasks and wakeups
-- [ ] Extensions/plugins and terminal surfaces
+- [~] Slash commands and voice input (local /help and /clear commands plus browser speech input are implemented; provider transcription remains)
+- [~] Preferences, skins, locale, update status (theme/locale persistence is implemented; skin/update registry remains)
+- [~] Background tasks and wakeups (capability reported unavailable until a durable scheduler contract exists)
+- [~] Extensions/plugins and terminal surfaces (capability reported unavailable until sandboxed runtime contracts exist)
 
 ## M5 — Distribution and cutover
 

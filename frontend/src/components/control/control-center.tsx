@@ -7,6 +7,7 @@ const collections = ['tasks', 'todos', 'goals', 'spaces'] as const
 type Props = { view: string }
 export function ControlCenter({ view }: Props) {
   if (view === 'skills' || view === 'memory') return <DiscoveryView view={view} />
+  if (view === 'settings') return <PreferencesView />
   const collection = collections.includes(view as typeof collections[number]) ? view : 'tasks'; const [items, setItems] = useState<ControlItem[]>([]); const [title, setTitle] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState('')
   const refresh = async () => { setLoading(true); try { setItems(await getControl(collection)); setError('') } catch (err) { setError(err instanceof Error ? err.message : 'Control center unavailable') } finally { setLoading(false) } }
   useEffect(() => { void refresh() }, [collection])
@@ -18,4 +19,11 @@ function DiscoveryView({ view }: { view: 'skills' | 'memory' }) {
   const [items, setItems] = useState<{ name: string; path: string }[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('')
   useEffect(() => { void fetch(`/api/${view}`).then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Discovery unavailable'); setItems(data[view === 'skills' ? 'skills' : 'notes'] || []) }).catch(err => setError(err instanceof Error ? err.message : 'Discovery unavailable')).finally(() => setLoading(false)) }, [view])
   return <section className="mx-auto w-full max-w-3xl p-5 sm:p-8"><p className="text-[11px] uppercase tracking-[0.18em] text-primary">Control center</p><h1 className="mt-2 text-2xl font-semibold capitalize">{view}</h1><p className="mt-1 text-sm text-muted-foreground">Server-owned discovery surface. Empty means no local entries were found.</p>{error && <p role="alert" className="mt-5 rounded border border-destructive/40 p-3 text-sm text-red-300">{error}</p>}{loading ? <p role="status" className="mt-5 text-sm text-muted-foreground">Loading {view}...</p> : items.length === 0 ? <div className="mt-5 rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No {view} entries found.</div> : <div className="mt-5 space-y-2">{items.map(item => <div key={item.path} className="rounded-lg border bg-card px-4 py-3 text-sm">{item.name}</div>)}</div>}</section>
+}
+
+function PreferencesView() {
+  const [theme, setTheme] = useState('dark'); const [locale, setLocale] = useState('en'); const [saved, setSaved] = useState(false)
+  useEffect(() => { void fetch('/api/preferences').then(r => r.json()).then(data => { setTheme(data.preferences?.theme || 'dark'); setLocale(data.preferences?.locale || 'en') }) }, [])
+  const save = async () => { await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme, locale }) }); setSaved(true); window.setTimeout(() => setSaved(false), 1400) }
+  return <section className="mx-auto w-full max-w-3xl p-5 sm:p-8"><p className="text-[11px] uppercase tracking-[0.18em] text-primary">Control center</p><h1 className="mt-2 text-2xl font-semibold">Preferences</h1><p className="mt-1 text-sm text-muted-foreground">Display choices are persisted by the server. Credentials are never accepted here.</p><div className="mt-6 grid max-w-md gap-4"><label className="grid gap-2 text-sm">Theme<select value={theme} onChange={e => setTheme(e.target.value)} className="h-10 rounded border bg-card px-3"><option value="dark">Dark</option><option value="light">Light</option></select></label><label className="grid gap-2 text-sm">Locale<select value={locale} onChange={e => setLocale(e.target.value)} className="h-10 rounded border bg-card px-3"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label><Button onClick={() => void save()}>{saved ? 'Saved' : 'Save preferences'}</Button></div></section>
 }

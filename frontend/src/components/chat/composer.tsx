@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { ArrowUp, FileText, Paperclip, Square, TerminalSquare, X } from 'lucide-react'
+import { ArrowUp, FileText, Mic, Paperclip, Square, TerminalSquare, X } from 'lucide-react'
 import { Button } from '../ui/button'
 
-export function Composer({ onSend, onCancel, isStreaming, draft, onDraftChange, queuedMessages }: { onSend: (value: string, attachments?: File[]) => void; onCancel: () => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: string[] }) {
+export function Composer({ onSend, onCancel, onCommand, isStreaming, draft, onDraftChange, queuedMessages }: { onSend: (value: string, attachments?: File[]) => void; onCancel: () => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: string[] }) {
   const [localValue, setLocalValue] = useState('')
   const value = draft ?? localValue
   const setValue = onDraftChange ?? setLocalValue
   const [attachments, setAttachments] = useState<File[]>([])
   const ref = useRef<HTMLTextAreaElement>(null)
+  const [commandsOpen, setCommandsOpen] = useState(false)
 
   useEffect(() => {
     const input = ref.current
@@ -18,6 +19,7 @@ export function Composer({ onSend, onCancel, isStreaming, draft, onDraftChange, 
 
   function submit() {
     if (!value.trim()) return
+    if (value.trim().startsWith('/') && onCommand) { onCommand(value.trim()); setValue(''); setCommandsOpen(false); return }
     onSend(value, attachments)
     setValue('')
     setAttachments([])
@@ -39,10 +41,12 @@ export function Composer({ onSend, onCancel, isStreaming, draft, onDraftChange, 
     <div className="mx-auto w-full max-w-3xl px-3 pb-4 sm:px-6">
       <div className="rounded-2xl border bg-card/90 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl focus-within:border-primary/35 focus-within:ring-1 focus-within:ring-primary/20">
         {attachments.length > 0 && <div className="flex flex-wrap gap-2 px-2 pt-2" aria-label="Selected attachments">{attachments.map((file, index) => <span key={`${file.name}-${index}`} className="attachment-chip"><FileText size={13} />{file.name}<button type="button" onClick={() => setAttachments((current) => current.filter((_, item) => item !== index))} aria-label={`Remove ${file.name}`}><X size={13} /></button></span>)}</div>}
-        <textarea ref={ref} value={value} onChange={(event) => setValue(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder={isStreaming ? 'Queue a message for Hermes…' : 'Message Hermes…'} aria-label="Message Hermes" className="max-h-44 min-h-12 w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground" />
+        <textarea ref={ref} value={value} onChange={(event) => { setValue(event.target.value); setCommandsOpen(event.target.value.startsWith('/')) }} onKeyDown={onKeyDown} rows={1} placeholder={isStreaming ? 'Queue a message for Hermes…' : 'Message Hermes…'} aria-label="Message Hermes" className="max-h-44 min-h-12 w-full resize-none bg-transparent px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground" />
+        {commandsOpen && <div className="flex flex-wrap gap-1 px-2 pb-2" aria-label="Slash commands"><button type="button" className="rounded border px-2 py-1 text-xs hover:bg-accent" onClick={() => { setValue('/help'); setCommandsOpen(false) }}>/help</button><button type="button" className="rounded border px-2 py-1 text-xs hover:bg-accent" onClick={() => { setValue('/clear'); setCommandsOpen(false) }}>/clear</button></div>}
         <div className="flex items-center gap-1 px-1 pb-1">
           <label className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-within:ring-2 focus-within:ring-ring" aria-label="Attach files"><Paperclip size={16} /><input type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain" className="sr-only" onChange={chooseFiles} /></label>
           <Button type="button" variant="ghost" size="sm" disabled className="gap-1.5"><TerminalSquare size={14} /> Tools</Button>
+          <Button type="button" variant="ghost" size="icon" aria-label="Use voice input" onClick={() => { const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return; const recognition = new Speech(); recognition.onresult = (event: Event & { results: SpeechRecognitionResultList }) => setValue(`${value} ${event.results[0][0].transcript}`.trim()); recognition.start() }}><Mic size={15} /></Button>
           <span className="ml-auto mr-2 hidden text-[11px] text-muted-foreground sm:inline">Enter to send · Shift Enter for newline</span>
           {isStreaming && <Button type="button" size="icon" variant="outline" onClick={onCancel} aria-label="Stop Hermes"><Square size={13} fill="currentColor" /></Button>}
           <Button type="button" size="icon" onClick={submit} disabled={!value.trim()} aria-label={isStreaming ? 'Queue message' : 'Send message'}><ArrowUp size={17} /></Button>
