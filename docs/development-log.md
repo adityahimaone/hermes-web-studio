@@ -191,3 +191,17 @@ The acceptance script verifies it is visible only on Chat.
 - Extended the browser acceptance check for tooltip labels and Chat
   expand/collapse behavior. Production build passed; live Hermes behavior was
   not changed by this UI-only slice.
+
+## 2026-08-30 - Personal WebUI parity convergence planning
+
+- Audited the read-only personal source at commit
+  `3caeca14064cec36c9c7b4f83ffade9a92cf2aee` and the authenticated production
+  shell without storing credentials or private runtime data in the repository.
+- Confirmed the production composition includes the compact rail, WebUI/CLI
+  session sources, project filters, conversation canvas, composer-owned
+  profile/workspace/model controls, and demand-driven Files/Artifacts panel.
+- Reclassified existing Studio control surfaces as partial where they do not yet
+  implement the personal route/state workflow. Added `MVP.md` and M7-M11 tasks
+  for shell, conversation runtime, operator workbench, identity/extensibility,
+  and reversible certification.
+- No frontend or backend implementation changed in this planning slice.

@@ -1,8 +1,8 @@
 # Hermes Web Studio migration plan
 
-> Status: M0 implementation started  
+> Status: M0-M6 implementation history complete locally; exact personal-WebUI parity convergence planned
 > Target repository: `adityahimaone/hermes-web-studio`  
-> Compatibility baseline: `nesquena/hermes-webui@e168b67e4278df618d1cab61fdb3a8dc55b29a81`  
+> Compatibility baseline: `hermes-webui-personal@3caeca14064cec36c9c7b4f83ffade9a92cf2aee` plus audited production behavior
 > Strategy: working Hermes chat first, then compatibility slices  
 > Updated: 2026-08-30
 
@@ -18,7 +18,7 @@ The attached draft remains useful, with these deliberate changes:
 
 | Earlier draft | Current decision |
 |---|---|
-| Pixel parity and no redesign | Modern shadcn dashboard is allowed; preserve composition and flow rather than pixels |
+| Modern redesign with composition parity | Superseded for MVP: match personal WebUI visual hierarchy, flow, responsive behavior, and feature contracts; deviations require explicit approval |
 | Design shell before integration | Hermes chat connection is milestone M0 and blocks broad migration |
 | Choose CLI subprocess or Gateway later | Gateway/API Server is the primary boundary; CLI is only a documented fallback experiment |
 | Broad Go backend rewrite starts immediately | Implement thin Go compatibility BFF first; port persistence and domains slice by slice |
@@ -34,6 +34,8 @@ The attached draft remains useful, with these deliberate changes:
 6. **Small runtime.** Prefer Go standard library, platform APIs, copy-owned shadcn primitives, and narrowly scoped packages.
 7. **Reversible cutover.** Keep the original WebUI available until full parity and migration proof.
 8. **Evidence-based completion.** Mock tests prove contracts; only a live test proves Hermes connectivity.
+9. **Personal WebUI is the MVP baseline.** A menu, placeholder, or shallow CRUD surface does not satisfy a richer personal-WebUI workflow.
+10. **Lightweight without subtraction.** Reduce runtime and dependency cost through architecture, code splitting, and Go services rather than feature removal.
 
 ## 4. Target stack
 
@@ -173,22 +175,27 @@ Each row becomes a slice with a contract, implementation, tests, migration note,
 | Sessions | CRUD, title, search, grouping, pin, archive, tags, project | M1 |
 | Session continuity | Existing JSON/SQLite, CLI bridge, lineage, replay | M1 |
 | Export/share | Markdown/JSON/HTML export and share links | M1 |
+| Conversation lifecycle | Queue/interrupt/steer, clarify, compression, recovery, branch/fork | M8 |
+| Gateway channels | External sessions, handoff, summaries, routing metadata | M8-M9 |
 | Workspace | Tree, breadcrumb, preview, write/rename/delete/upload | M2 |
 | Workspace safety | Root containment, symlinks, inaccessible paths, limits | M2 |
-| Git | Repository detection and status badges | M2 |
+| Git/terminal/artifacts | Full repository operations, terminal lifecycle, artifacts | M9 |
 | Profiles | Active profile, model/provider, clone/config, health | M3 |
 | Authentication | Password, cookie, passkeys, OIDC, trusted headers | M3 |
 | Onboarding | First run and provider/Gateway diagnostics | M3 |
 | Tasks | Cron/task CRUD, run, pause, history, alerts | M4 |
+| Kanban | Boards, tasks, links, assignees, dispatch, events, stats | M9 |
 | Skills | List, inspect, activate/configure | M4 |
 | Memory/notes | MEMORY.md, USER.md, external sources | M4 |
 | Todos/goals | Todo and goal lifecycle | M4 |
 | Spaces/projects | Project grouping and workspace association | M4 |
+| Insights/logs/health | Usage/cost insights, logs, crash and runtime diagnostics | M9 |
 | Commands/voice | Slash completion and speech input/transcription | M4 |
 | Background work | Background tasks, wakeups, notifications | M4 |
 | Extensions | Plugin/extension status and integrations | M4 |
-| Terminal | Terminal stream and lifecycle | M4 |
-| Preferences | Themes, skins, locale, runtime settings | M4 |
+| MCP | Server/tool CRUD and safe configuration | M10 |
+| Preferences | Full Control Center, themes, 21 skins, 15 locales, runtime settings | M10 |
+| PWA | Offline shell, install, update invalidation, subpath | M10 |
 | Distribution | Single binary, Docker, Nix, Windows/macOS/Linux | M5 |
 
 The upstream repository is large and evolving. Before each domain starts, compare the frozen baseline with current upstream and classify additions as required parity, intentional deferment, or out of scope.
@@ -242,6 +249,61 @@ parity, or external security review into automated claims.
 Exit proof: `make release-gate` passes from an installed dependency set, CI
 runs the equivalent backend, artifact, secret, performance, and browser checks,
 and deployment probes can restart Hermes independently from the BFF.
+
+### M7 — Baseline freeze and shell parity
+
+Freeze the personal source and production evidence, establish the route/state/UI
+matrix, then reproduce the exact shell information architecture: primary rail,
+Chat session panel, titlebar, composer control ownership, demand-driven workspace
+panel, Control Center structure, mobile drawer/bottom navigation, appearance
+axes, and stable visual hooks.
+
+Exit proof: shell behavior and computed-style/screenshot matrices pass on the
+required desktop, laptop, tablet, and mobile viewports without using production
+private data as fixtures.
+
+### M8 — Conversation runtime and session parity
+
+Close the full chat lifecycle: Runs-first event fidelity, clarification,
+approvals, worklog/transparent stream/final-only modes, queue/interrupt/steer,
+compaction/recovery, branching, session lineage, WebUI/CLI/gateway session
+sources, projects/tags/search/batch actions, import/export/share, model/provider
+routing, and composer runtime controls.
+
+Exit proof: deterministic lifecycle rows and live Gateway rows pass side by side
+against the personal WebUI, including reload, reconnect, cancel, session switch,
+terminal error, compression, and recovery.
+
+### M9 — Workbench and operator parity
+
+Replace placeholder control surfaces with full contracts for workspace/files,
+artifacts, terminal and git, cron/tasks, Kanban, Skills, Memory/notes, Todos,
+Goals, Insights, Logs, health, background work, and external-channel handoff.
+
+Exit proof: every primary rail destination supports its reference CRUD,
+streaming/watch, error, and recovery states against isolated copied state.
+
+### M10 — Identity, settings, extensibility, and platform parity
+
+Complete profile-local state and provider/model management, OAuth/passkeys/OIDC,
+onboarding, full Control Center preferences, themes/skins, 15 locales, PWA,
+notifications/voice/TTS, MCP, plugins/extensions, update/rollback diagnostics,
+subpath deployment, and reference Docker topologies.
+
+Exit proof: identity and provider threat cases, preference persistence, locale
+key parity, theme/skin visual matrices, extension trust boundaries, PWA/subpath,
+and distribution acceptance pass.
+
+### M11 — MVP certification and reversible cutover
+
+Run migration on copied personal state, resource benchmarks, full release gates,
+visual/behavior matrices, and a parallel beta. Resolve every critical/major gap
+before requesting explicit cutover approval. Do not archive or modify the
+personal implementation during this milestone.
+
+Exit proof: all gates in `MVP.md` pass, the beta report has no unresolved
+critical/major gap, rollback is rehearsed, and the user explicitly approves the
+cutover.
 
 ## 10. Data compatibility
 

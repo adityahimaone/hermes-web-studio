@@ -64,6 +64,28 @@ Supported upstream frames:
 
 Unimplemented routes must not be improvised. Inventory the original route, request shape, response shape, persistence effects, auth policy, and tests before implementation. Track that work in `TASKS.md`.
 
+## Personal WebUI MVP baseline
+
+Replacement parity is frozen against the read-only personal source at
+`3caeca14064cec36c9c7b4f83ffade9a92cf2aee` plus the production behavior
+audited on 2026-08-30. `MVP.md` defines the required browser surfaces,
+feature matrix, evidence, appearance, responsive states, resource budgets, and
+cutover gate.
+
+The contract applies to observable behavior and state effects, not Python
+implementation details. Go routes may use internal names that fit the new
+architecture, but the reference browser workflow, validation, error state,
+persistence effect, and compatibility aliases must remain available until the
+replacement is proven. Shallow list/CRUD placeholders do not satisfy richer
+personal-WebUI contracts such as cron delivery/history, Skills editing, Memory
+sources, profile isolation, or session recovery.
+
+Production credentials, session names, model inventories, workspace paths, and
+other private runtime data are never fixtures. Deterministic tests use sanitized
+state derived from the frozen source contracts. If frozen source and production
+behavior disagree, the task remains open until the difference has an explicit
+disposition.
+
 ## M1 session persistence inventory
 
 The frozen upstream session store is file-based and remains the compatibility source for the first M1 slice:

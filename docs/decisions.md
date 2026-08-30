@@ -118,3 +118,18 @@ control collections, auth, and preferences. Hermes-owned Skills and memory
 must be read from `HERMES_HOME`, otherwise a valid Hermes installation appears
 empty whenever the UI state directory is separate. Discovery is read-only,
 bounded, and path-checked; the browser never receives credentials.
+
+## ADR-021 - Personal WebUI defines replacement MVP parity
+
+The earlier allowance for a visually distinct dashboard is superseded for the
+replacement MVP. The read-only personal WebUI source at
+`3caeca14064cec36c9c7b4f83ffade9a92cf2aee` and audited production behavior
+define the required information architecture, workflows, responsive behavior,
+appearance system, and backend state effects. React and Go remain the target
+stack, but lightweight implementation work must use lazy loading, bounded state,
+and small dependencies rather than removing features. Existing M0-M6 records
+remain implementation history and do not certify personal-WebUI parity.
+
+The personal implementation remains side by side through migration, beta, and
+rollback proof. Any intentional visual or behavioral deviation requires a
+recorded decision and explicit approval before MVP certification.
