@@ -167,6 +167,12 @@ customization dialog persists those preferences locally, keeps Chat visible,
 and only exposes destinations that have a working Studio view. Full reference
 section registry parity remains a later task.
 
+Theme boot reads local layout preferences before the React module loads and
+sets `data-theme` and `data-skin` on the document root. Preferences also
+persist the selected theme, skin, and locale through the server-backed
+preferences route. The built-in registry contains all 21 frozen skin names;
+visual tuning and screenshot evidence remain separate acceptance work.
+
 ## M3 identity and profile contract
 
 `GET /api/onboarding` reports whether local password setup is complete and

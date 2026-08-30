@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark" data-skin="default" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +9,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>try{const t=localStorage.getItem('hermes-theme')||'dark';const s=localStorage.getItem('hermes-skin')||'default';const l=t==='system'&&matchMedia('(prefers-color-scheme: light)').matches?'light':t;document.documentElement.dataset.theme=l;document.documentElement.dataset.skin=s;document.documentElement.classList.toggle('dark',l==='dark');document.documentElement.style.colorScheme=l}catch(_){}</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

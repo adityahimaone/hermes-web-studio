@@ -11,6 +11,9 @@ try {
   }))
   await page.route('**/api/health/hermes', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"connected":true}' }))
   await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.setItem('hermes-theme', 'light'))
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 
   const rail = page.getByTestId('primary-rail')
   await expect(rail).toBeVisible()

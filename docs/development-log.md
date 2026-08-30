@@ -272,3 +272,14 @@ The acceptance script verifies it is visible only on Chat.
 - Added browser coverage for the visibility toggle and Dialog completion.
 - Frontend tests and production build pass. P009 remains `[~]` pending the
   complete reference Control Center section registry and broader panel matrix.
+
+## 2026-08-30 — P010 theme boot and skin registry
+
+- Added pre-React System/Dark/Light theme boot and validated `data-theme` and
+  `data-skin` root attributes through browser acceptance.
+- Added a validated registry for all 21 frozen skin names and shared token
+  variants for the tuned palette groups.
+- Preferences now preview and persist theme, skin, and locale through the
+  server route plus local layout storage.
+- Frontend tests and production build pass. P010 remains `[~]` pending
+  per-skin visual tuning and the P012 screenshot matrix.

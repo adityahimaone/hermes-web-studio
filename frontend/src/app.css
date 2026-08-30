@@ -49,6 +49,33 @@
   --radius: 0.75rem;
 }
 
+[data-theme='light'] {
+  color-scheme: light;
+  --background: #f7f7f8;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #6d4aff;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e4e7;
+  --secondary-foreground: #18181b;
+  --muted: #eeeeF0;
+  --muted-foreground: #52525b;
+  --accent: #e9e5ff;
+  --accent-foreground: #30206e;
+  --border: rgb(24 24 27 / 0.12);
+  --input: rgb(24 24 27 / 0.16);
+  --ring: #6d4aff;
+}
+
+[data-skin='mono'] { --primary: #d4d4d8; --primary-foreground: #18181b; --ring: #a1a1aa; }
+[data-skin='github'] { --primary: #2f81f7; --ring: #2f81f7; }
+[data-skin='neon'], [data-skin='neon-paint'], [data-skin='neon-soft'] { --primary: #22d3ee; --ring: #22d3ee; }
+[data-skin='sienna'], [data-skin='terracotta'] { --primary: #f08c67; --ring: #f08c67; }
+[data-skin='verdigris'], [data-skin='poseidon'] { --primary: #4fd1b5; --ring: #4fd1b5; }
+
 * { border-color: var(--border); }
 
 html, body, #root { min-height: 100%; }

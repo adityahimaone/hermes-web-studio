@@ -4,6 +4,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Select } from '../ui/select'
 import { createControl, deleteControl, getControl, updateControl, type ControlItem } from '../../lib/control-client'
+import { applyTheme, skins, type ThemePreference } from '../../lib/theme'
 
 const collections = ['tasks', 'todos', 'goals', 'spaces'] as const
 type Props = { view: string }
@@ -49,8 +50,10 @@ function DiscoveryView({ view }: { view: 'skills' | 'memory' }) {
 }
 
 function PreferencesView() {
-  const [theme, setTheme] = useState('dark'); const [locale, setLocale] = useState('en'); const [saved, setSaved] = useState(false)
-  useEffect(() => { void fetch('/api/preferences').then(r => r.json()).then(data => { setTheme(data.preferences?.theme || 'dark'); setLocale(data.preferences?.locale || 'en') }) }, [])
-  const save = async () => { await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme, locale }) }); setSaved(true); window.setTimeout(() => setSaved(false), 1400) }
-  return <section className="mx-auto w-full max-w-3xl p-5 sm:p-8"><p className="text-[11px] uppercase tracking-[0.18em] text-primary">Control center</p><h1 className="mt-2 text-2xl font-semibold">Preferences</h1><p className="mt-1 text-sm text-muted-foreground">Display choices are persisted by the server. Credentials are never accepted here.</p><div className="mt-6 grid max-w-md gap-4"><label className="grid gap-2 text-sm">Theme<Select value={theme} onChange={e => setTheme(e.target.value)}><option value="dark">Dark</option><option value="light">Light</option></Select></label><label className="grid gap-2 text-sm">Locale<Select value={locale} onChange={e => setLocale(e.target.value)}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select></label><Button onClick={() => void save()}>{saved ? 'Saved' : 'Save preferences'}</Button></div></section>
+  const [theme, setTheme] = useState<ThemePreference>('dark'); const [skin, setSkin] = useState('default'); const [locale, setLocale] = useState('en'); const [saved, setSaved] = useState(false)
+  useEffect(() => { void fetch('/api/preferences').then(r => r.json()).then(data => { const nextTheme = (data.preferences?.theme || localStorage.getItem('hermes-theme') || 'dark') as ThemePreference; const nextSkin = data.preferences?.skin || localStorage.getItem('hermes-skin') || 'default'; setTheme(nextTheme); setSkin(nextSkin); setLocale(data.preferences?.locale || 'en'); applyTheme(nextTheme, nextSkin) }) }, [])
+  const previewTheme = (next: ThemePreference) => { setTheme(next); localStorage.setItem('hermes-theme', next); applyTheme(next, skin) }
+  const previewSkin = (next: string) => { setSkin(next); localStorage.setItem('hermes-skin', next); applyTheme(theme, next) }
+  const save = async () => { await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme, skin, locale }) }); setSaved(true); window.setTimeout(() => setSaved(false), 1400) }
+  return <section className="mx-auto w-full max-w-3xl p-5 sm:p-8"><p className="text-[11px] uppercase tracking-[0.18em] text-primary">Control center</p><h1 className="mt-2 text-2xl font-semibold">Preferences</h1><p className="mt-1 text-sm text-muted-foreground">Display choices are persisted by the server. Credentials are never accepted here.</p><div className="mt-6 grid max-w-md gap-4"><label className="grid gap-2 text-sm">Theme<Select value={theme} onChange={e => previewTheme(e.target.value as ThemePreference)}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></Select></label><label className="grid gap-2 text-sm">Skin<Select value={skin} onChange={e => previewSkin(e.target.value)}>{skins.map(value => <option key={value} value={value}>{value}</option>)}</Select></label><label className="grid gap-2 text-sm">Locale<Select value={locale} onChange={e => setLocale(e.target.value)}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select></label><Button onClick={() => void save()}>{saved ? 'Saved' : 'Save preferences'}</Button></div></section>
 }

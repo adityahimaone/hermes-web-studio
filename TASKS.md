@@ -140,7 +140,7 @@ personal source as the new acceptance baseline.
 - [~] P007 Match the titlebar and composer control ownership, ordering, responsive overflow, model/profile/workspace pickers, context ring, and Stop/Send states (runtime pickers and usage indicator implemented; visual titlebar evidence and grouped live model discovery remain)
 - [~] P008 Match the demand-driven workspace panel shell, resize/open persistence, Files/Artifacts/Todos tabs, and mobile slide-over (Files/Todos tabs and persisted open/width implemented; Artifacts backend and full browser resize/mobile evidence remain)
 - [~] P009 Rebuild the Control Center section structure and primary-rail order/visibility customization without shipping non-functional controls (rail visibility/order dialog implemented; full reference section registry and broader panel evidence remain)
-- [ ] P010 Implement System/Dark/Light boot without flash and the complete frozen built-in skin registry through lazy theme assets
+- [~] P010 Implement System/Dark/Light boot without flash and the complete frozen built-in skin registry through lazy theme assets (pre-React theme boot and 21-name registry implemented; per-skin visual tuning and screenshot matrix remain)
 - [ ] P011 Match mobile drawer, five-tab bottom navigation, 44px targets, safe-area/keyboard composer behavior, and panel transitions
 - [ ] P012 Add Playwright screenshot, DOM, computed-style, keyboard, and responsive shell matrices at the `MVP.md` viewports
 

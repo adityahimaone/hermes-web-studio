@@ -200,3 +200,15 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** Kanban, Insights, Logs, and other missing sections remain
   mapped in the parity manifest and will enter the rail only with their own
   backend/UI slice.
+
+## ADR-027: Apply theme before React paint
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Read theme and skin layout preferences in a minimal inline boot
+  script, then let the shared theme utility validate and apply the same values
+  after React starts.
+- **Reason:** The personal WebUI supports System/Dark/Light and skins; waiting
+  for an asynchronous preferences request would flash the wrong surface.
+- **Consequence:** Only non-secret layout preferences are read before the app
+  loads. Skin-specific visual certification remains P012 work.
