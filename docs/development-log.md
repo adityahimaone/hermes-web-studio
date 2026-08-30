@@ -309,3 +309,13 @@ The acceptance script verifies it is visible only on Chat.
 - Added browser acceptance for mobile-open followed by desktop resize.
 - P011 remains `[~]` pending device-level IME, safe-area, and full transition
   evidence.
+
+## 2026-08-30 — Parallel parity wave: controls, recovery, and discovery states
+
+- Replaced visible native selects with a shadcn-style trigger/listbox while
+  preserving controlled form and change-event behavior.
+- Added a validated inflight turn journal, transcript restore, cursor-aware
+  reconnect, and stale-stream protection for session switch and hard reload.
+- Separated Skills/Memory preview loading, empty, success, and error states.
+- P013-P015 and P034 remain `[~]`; full source fixtures, expired-stream polling,
+  live reload proof, and complete Skills parity are still open.

@@ -105,6 +105,22 @@ export interface SessionDetail extends SessionSummary {
   messages: ChatMessage[]
 }
 
+export interface InflightTurn {
+  stream_id: string
+  session_id: string
+}
+
+export function parseInflightTurn(value: string | null): InflightTurn | null {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value) as Partial<InflightTurn>
+    if (typeof parsed.stream_id !== 'string' || !parsed.stream_id || typeof parsed.session_id !== 'string' || !parsed.session_id) return null
+    return { stream_id: parsed.stream_id, session_id: parsed.session_id }
+  } catch {
+    return null
+  }
+}
+
 export function normalizeSessionMessage(message: unknown, index: number): ChatMessage | null {
   if (!message || typeof message !== 'object') return null
   const value = message as Record<string, unknown>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterSessions, groupSessionsByDate, initialChatState, normalizeSessionMessages, reduceChatEvent } from './chat-contract'
+import { filterSessions, groupSessionsByDate, initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent } from './chat-contract'
 
 describe('chat event reducer', () => {
   it('builds an answer from token frames and settles on done', () => {
@@ -41,6 +41,12 @@ describe('chat event reducer', () => {
       { id: 'history-0', role: 'user', content: 'hello', status: 'complete', created_at: undefined },
       { id: 'history-1', role: 'assistant', content: 'world', status: 'complete', created_at: '2026-08-30T00:00:00Z' },
     ])
+  })
+
+  it('accepts only complete inflight turn journal entries', () => {
+    expect(parseInflightTurn('{"stream_id":"stream-1","session_id":"session-1"}')).toEqual({ stream_id: 'stream-1', session_id: 'session-1' })
+    expect(parseInflightTurn('{"stream_id":"stream-1"}')).toBeNull()
+    expect(parseInflightTurn('not-json')).toBeNull()
   })
 
   it('groups and searches sessions using metadata without changing order within a day', () => {

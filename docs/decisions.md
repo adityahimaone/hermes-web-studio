@@ -236,3 +236,28 @@ recorded decision and explicit approval before MVP certification.
   a resize or device rotation into desktop layout.
 - **Consequence:** Returning to mobile requires the normal explicit menu action;
   no navigation destination or workflow is removed.
+
+## ADR-030: Keep select behavior shadcn-owned while preserving form contracts
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Render visible selects as an accessible shadcn-style trigger and
+  listbox, while retaining a visually hidden native select for form serialization
+  and the existing controlled `onChange` contract.
+- **Reason:** The interface must avoid browser-native visible controls without
+  breaking existing form fields or keyboard expectations at current call sites.
+- **Consequence:** Option children remain the source of truth; future grouped
+  options and portal positioning need their own acceptance coverage.
+
+## ADR-031: Persist one recoverable inflight turn journal
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Persist only the active stream and session identifiers in local
+  storage, restore the server transcript on reload, and reconnect with the SSE
+  cursor when available.
+- **Reason:** Hard reload and session switching must not silently discard an
+  active turn, while transcript contents remain server-owned and credentials
+  never enter browser storage.
+- **Consequence:** Concurrent inflight turns and expired-stream full-session
+  polling remain explicit follow-up work.

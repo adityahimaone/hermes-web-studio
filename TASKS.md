@@ -146,9 +146,9 @@ personal source as the new acceptance baseline.
 
 ## M8 — Conversation runtime and session parity
 
-- [ ] P013 Freeze personal chat/SSE/turn-journal/session contracts and deterministic fixtures before changing the Gateway adapter
-- [ ] P014 Make Runs-first normalization cover message, reasoning, tool, progress, subagent, approval, clarification, usage, compression, recovery, and terminal events
-- [ ] P015 Preserve inflight turns across session switches, hard reload, reconnect backoff, cursor replay, and full-session poll fallback
+- [~] P013 Freeze personal chat/SSE/turn-journal/session contracts and deterministic fixtures before changing the Gateway adapter (validated inflight journal parser and deterministic fixtures; full personal-source fixture freeze remains)
+- [~] P014 Make Runs-first normalization cover message, reasoning, tool, progress, subagent, approval, clarification, usage, compression, recovery, and terminal events (existing normalized event path retained; clarification/compression/recovery coverage remains)
+- [~] P015 Preserve inflight turns across session switches, hard reload, reconnect backoff, cursor replay, and full-session poll fallback (journal restore, transcript restore, cursor reconnect, and stale-stream protection implemented; expired-stream polling fallback and live proof remain)
 - [ ] P016 Implement Queue/Interrupt/Steer modes, including attachments, visible pending intent, cancellation, replacement, and cleanup on every exit
 - [ ] P017 Implement compact worklog, transparent stream, and final-answer-only modes with per-turn disclosure persistence and settled-history behavior
 - [ ] P018 Add compaction barriers, `/compact`, exhausted-context recovery, partial-message crash recovery, retry, and safe transcript repair/audit
@@ -170,7 +170,7 @@ personal source as the new acceptance baseline.
 - [ ] P031 Add git branch/status/diff/stage/unstage/discard/commit/fetch/pull/push/stash-checkout flows with confirmation and hostile-path tests
 - [ ] P032 Replace task placeholders with cron create/edit/delete, schedule builder, delivery options, skill picker, run/pause/resume, output/history, alerts, and watch status
 - [ ] P033 Implement Kanban boards/tasks/assignees/links/bulk actions/dispatch/events/stats and map its persisted state without local fallback
-- [ ] P034 Complete Skills grouping/search/content/linked files/create/edit/delete/toggle/usage and profile-aware refresh
+- [~] P034 Complete Skills grouping/search/content/linked files/create/edit/delete/toggle/usage and profile-aware refresh (preview loading/empty/error state separation implemented; CRUD, linked files, usage, and profile refresh remain)
 - [ ] P035 Complete Memory/USER/external-note sources, search, timestamps, inline create/edit, and path/source safety
 - [ ] P036 Complete Todos and Goals lifecycle plus current-goal/workspace projections using Hermes-owned state
 - [ ] P037 Implement Insights for usage, cost/provider history, state synchronization, and operational summaries
