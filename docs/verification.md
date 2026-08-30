@@ -50,7 +50,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Frontend production build | Pass: Vite output generated successfully |
 | Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
 | M1 UI contract check | Pass: `bash scripts/check-m1-ui-contract.sh` verifies labels, keyboard copy, focus rings, mobile navigation, tap sizing, and stream URL usage |
-| M1 browser acceptance | Pass: `node frontend/e2e/m1-browser-check.mjs` with temporary Chromium verifies mobile navigation, focus/labels, desktop sidebar, Shift+Enter, and Enter-to-send over mocked SSE |
+| M1 browser acceptance | Pass: `node frontend/e2e/m1-browser-check.mjs` with temporary Chromium verifies mobile navigation, focus/labels, desktop sidebar, Shift+Enter, Enter-to-send, queued attachment delivery, and one final answer over mocked SSE |
 | Browser SSE interruption/reconnect | Pass: the same Playwright script closes the first mocked SSE delivery after a token, observes EventSource reconnect, then verifies the continued reply and terminal event without duplicate prefix |
 | Live approval probe | Inconclusive safely: a non-destructive `printf approval-check` request returned a textual confirmation prompt and no normalized `approval` event; no command was executed |
 | Live Hermes chat | Pass: M0 smoke proof above |
@@ -60,3 +60,10 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Opt-in live Runs API stream | Pass: `HERMES_WEBUI_USE_RUNS_API=true` returned token/reasoning events and exactly one non-duplicated `done` answer; payload-level `run.completed` output was deduplicated |
 | Opt-in live Runs approval-shaped prompt | Pass: reasoning snapshot/full token duplication is suppressed; Gateway returned a textual confirmation rather than a structured approval event, so no command was run |
 | Live approval interaction | Pending operator verification; safe prompt did not create a Runs approval event; tracked as `[~]` in `TASKS.md` |
+
+## 2026-08-30 — M1 duplicate-response and queued-attachment regression
+
+| Check | Result |
+|---|---|
+| Browser reconnect/finalization | Pass: terminal handling now reduces each event once; the acceptance script confirms the streamed prefix and final answer are not rendered as duplicate assistant replies |
+| Queued attachment | Pass: an attachment selected while the first turn is streaming is retained in the queued turn and forwarded after the reconnecting turn completes |

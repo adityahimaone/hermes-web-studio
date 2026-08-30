@@ -5,8 +5,10 @@ try {
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } })
   let starts = 0
   let streamRequests = 0
+  const startPayloads = []
   await mobile.route('**/api/sessions', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sessions: [] }) }))
-  await mobile.route('**/api/chat/start', (route) => { starts += 1; return route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ stream_id: 'browser-stream', session_id: 'browser-session' }) }) })
+  await mobile.route('**/api/attachments', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'browser-attachment', name: 'note.txt', mime: 'text/plain', size: 12 }) }))
+  await mobile.route('**/api/chat/start', (route) => { starts += 1; startPayloads.push(route.request().postDataJSON()); return route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ stream_id: `browser-stream-${starts}`, session_id: 'browser-session' }) }) })
   await mobile.route('**/api/chat/stream*', (route) => {
     streamRequests += 1
     const body = streamRequests === 1
@@ -23,9 +25,15 @@ try {
   await mobile.getByRole('textbox', { name: 'Message Hermes' }).fill('keyboard check')
   await mobile.getByRole('textbox', { name: 'Message Hermes' }).press('Enter')
   await mobile.getByText('keyboard check').waitFor()
-  if (starts !== 1) throw new Error(`expected one chat start, got ${starts}`)
+  await mobile.getByText('browser', { exact: true }).waitFor()
+  await mobile.getByRole('textbox', { name: 'Message Hermes' }).fill('queued with file')
+  await mobile.locator('input[type="file"]').setInputFiles({ name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('queued file') })
+  await mobile.getByRole('button', { name: 'Queue message' }).click()
+  await mobile.getByText('queued with file').waitFor()
   await expect.poll(() => streamRequests, { timeout: 10000 }).toBeGreaterThan(1)
   await mobile.getByText('browser reply').waitFor()
+  await expect.poll(() => starts, { timeout: 10000 }).toBe(2)
+  if (startPayloads[1]?.attachment_ids?.[0] !== 'browser-attachment') throw new Error(`queued attachment was not forwarded: ${JSON.stringify(startPayloads)}`)
   await mobile.close()
 
   const desktop = await browser.newPage({ viewport: { width: 1280, height: 900 } })

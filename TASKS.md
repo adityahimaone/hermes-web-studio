@@ -29,7 +29,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [x] Add read-only sessions API contract and integration tests
 - [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, session actions, and inline tag/project metadata implemented; live parity proof remains)
 - [x] Load and resume existing session history
-- [~] Edit/regenerate/retry and queue while processing (server-side edit truncation, queue, and retry implemented; live parity proof remains)
+- [~] Edit/regenerate/retry and queue while processing (server-side edit truncation, retry, and queued text/attachment delivery implemented and browser-verified; live edit/retry parity proof remains)
 - [x] Markdown, code highlight/copy, Mermaid, safe links
 - [~] Tool cards, subagent cards, reasoning blocks (normalized rendering and redaction implemented; live upstream variants remain)
 - [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)

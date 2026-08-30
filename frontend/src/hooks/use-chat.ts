@@ -4,6 +4,7 @@ import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatE
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
 const newId = () => crypto.randomUUID()
+type QueuedTurn = { content: string; files: File[] }
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -16,12 +17,13 @@ export function useChat() {
   const [draft, setDraft] = useState('')
   const sourceRef = useRef<EventSource | null>(null)
   const streamIdRef = useRef<string | null>(null)
-  const queueRef = useRef<string[]>([])
+  const queueRef = useRef<QueuedTurn[]>([])
   const activeSessionRef = useRef(activeSessionId)
   const answerRef = useRef('')
   const terminalRef = useRef<string | null>(null)
   const lastEventIdRef = useRef(0)
-  const pumpRef = useRef<(content: string) => void>(() => undefined)
+  const chatStateRef = useRef<ChatState>(initialChatState)
+  const pumpRef = useRef<(content: string, files?: File[]) => void>(() => undefined)
 
   const closeSource = useCallback(() => { sourceRef.current?.close(); sourceRef.current = null }, [])
   const refreshSessions = useCallback(async (signal?: AbortSignal) => {
@@ -44,16 +46,17 @@ export function useChat() {
     if (terminalRef.current === streamId) return
     terminalRef.current = streamId; closeSource(); streamIdRef.current = null
     if (state.answer || status !== 'complete') setMessages((current) => [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
+    chatStateRef.current = initialChatState
     setStreamState(initialChatState)
     void refreshSessions().catch(() => undefined)
     const next = queueRef.current.shift()
-    setQueuedMessages([...queueRef.current])
-    if (next) pumpRef.current(next)
+    setQueuedMessages(queueRef.current.map((item) => item.content))
+    if (next) pumpRef.current(next.content, next.files)
   }, [closeSource])
 
   const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[]) => {
     const clean = content.trim(); if (!clean) return
-    closeSource(); answerRef.current = ''; terminalRef.current = null; lastEventIdRef.current = 0
+    closeSource(); answerRef.current = ''; terminalRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
@@ -72,15 +75,14 @@ export function useChat() {
         }
         let data: Record<string, unknown>
         try { data = JSON.parse(event.data) as Record<string, unknown> } catch { data = { message: event.data } }
-        setStreamState((current) => {
-          if (terminalRef.current === started.stream_id) return current
-          const next = reduceChatEvent(current, { type, data } as ChatEvent)
-          if (type === 'token' && typeof data.text === 'string') answerRef.current += data.text
-          if (type === 'done') finish(started.stream_id, { ...next, answer: answerRef.current || next.answer })
-          if (type === 'cancel') finish(started.stream_id, next, 'cancelled')
-          if (type === 'apperror') finish(started.stream_id, next, 'error')
-          return type === 'done' || type === 'cancel' || type === 'apperror' ? current : next
-        })
+        if (terminalRef.current === started.stream_id) return
+        const next = reduceChatEvent(chatStateRef.current, { type, data } as ChatEvent)
+        chatStateRef.current = next
+        if (type === 'token' && typeof data.text === 'string') answerRef.current += data.text
+        if (type === 'done') { finish(started.stream_id, { ...next, answer: answerRef.current || next.answer }); return }
+        if (type === 'cancel') { finish(started.stream_id, next, 'cancelled'); return }
+        if (type === 'apperror') { finish(started.stream_id, next, 'error'); return }
+        setStreamState(next)
       }))
       source.onerror = () => {
         if (source.readyState === EventSource.CLOSED && terminalRef.current !== started.stream_id) setStreamState((state) => ({ ...state, status: 'error', error: 'The Hermes stream closed unexpectedly. Reconnecting…' }))
@@ -92,7 +94,10 @@ export function useChat() {
   const send = useCallback((content: string, files: File[] = []) => {
     const clean = content.trim(); if (!clean) return
     setDraft('')
-    if (streamState.status === 'streaming' || streamIdRef.current) { queueRef.current.push(clean); setQueuedMessages([...queueRef.current]) } else pump(clean, files)
+    if (streamState.status === 'streaming' || streamIdRef.current) {
+      queueRef.current.push({ content: clean, files })
+      setQueuedMessages(queueRef.current.map((item) => item.content))
+    } else pump(clean, files)
   }, [pump, streamState.status])
   const retry = useCallback((message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
@@ -118,7 +123,7 @@ export function useChat() {
     await cancelChat(streamId).catch(() => undefined); finish(streamId, { ...initialChatState, status: 'cancelled' }, 'cancelled')
   }, [finish])
   const selectSession = useCallback(async (sessionId: string) => {
-    closeSource(); setActiveSessionId(sessionId); setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
+    closeSource(); setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try { const detail = await getSession(sessionId); setMessages(normalizeSessionMessages(detail.messages)) } catch (error) { setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.') } finally { setSessionLoading(false) }
   }, [closeSource])
   const rename = useCallback(async (sessionId: string) => {
@@ -142,7 +147,7 @@ export function useChat() {
     setSessions((items) => items.filter((item) => item.session_id !== sessionId))
     if (activeSessionRef.current === sessionId) reset()
   }, [])
-  const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
+  const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
   return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, rename, pin, archive, remove, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }
