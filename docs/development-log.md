@@ -81,3 +81,10 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Live M1 probes passed for isolated session CRUD metadata, real chat/history, and transcript truncation; Runs mode also emitted normalized tool start/complete activity. Safe subagent and approval prompts produced no structured events, so those capability limits remain explicitly unclaimed.
 - Live branch probe passed for edit/retry persistence: truncation removed the old assistant branch before the replacement response was appended; the remaining parity gap is original-UI side-by-side interaction proof, not server transcript semantics.
 - Gateway capability discovery advertised approval and tool-progress support, but explicit harmless terminal/approval/delegation probes still produced no structured approval or subagent event; those results are recorded as observed runtime behavior rather than implementation claims.
+
+## 2026-08-30 - M2 workspace composition
+
+- Added a server-owned workspace root with path containment after symlink resolution, restrictive file permissions, bounded previews/uploads, and traversal/symlink tests.
+- Added normalized workspace tree, preview, download, mutation, upload, and Git status API routes. Errors use safe codes without exposing filesystem contents.
+- Added a resizable desktop workspace panel and mobile sheet with breadcrumbs, text/code/Markdown/image/binary preview states, editing, file operations, upload, download, and Git branch/status context.
+- Workspace state is kept outside chat state so the selected preview remains visible while a response streams. Build and acceptance verification are tracked with the M2 checklist.

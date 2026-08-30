@@ -18,14 +18,17 @@ import (
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/session"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/workspace"
 )
 
 type Server struct {
-	config   config.Config
-	gateway  *gateway.Client
-	sessions *session.Store
-	turns    map[string]*turn
-	mu       sync.Mutex
+	config       config.Config
+	gateway      *gateway.Client
+	sessions     *session.Store
+	turns        map[string]*turn
+	workspace    *workspace.Service
+	workspaceErr error
+	mu           sync.Mutex
 }
 
 type turn struct {
@@ -64,7 +67,8 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	if stateDir == "" {
 		stateDir, _ = session.ResolveStateDir(os.Getenv, os.UserHomeDir)
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn)}
+	ws, wsErr := workspace.New(cfg.WorkspaceRoot)
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -86,6 +90,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/runs/{run_id}/approval", s.handleApproval)
 	mux.HandleFunc("POST /api/attachments", s.handleAttachmentUpload)
 	mux.HandleFunc("GET /api/attachments/{attachment_id}", s.handleAttachmentDownload)
+	mux.HandleFunc("GET /api/workspace/tree", s.handleWorkspaceTree)
+	mux.HandleFunc("GET /api/workspace/preview", s.handleWorkspacePreview)
+	mux.HandleFunc("GET /api/workspace/download", s.handleWorkspaceDownload)
+	mux.HandleFunc("GET /api/workspace/git", s.handleWorkspaceGit)
+	mux.HandleFunc("POST /api/workspace/item", s.handleWorkspaceCreate)
+	mux.HandleFunc("PUT /api/workspace/file", s.handleWorkspaceWrite)
+	mux.HandleFunc("POST /api/workspace/rename", s.handleWorkspaceRename)
+	mux.HandleFunc("DELETE /api/workspace/item", s.handleWorkspaceDelete)
+	mux.HandleFunc("POST /api/workspace/upload", s.handleWorkspaceUpload)
 	return securityHeaders(requestLog(mux))
 }
 

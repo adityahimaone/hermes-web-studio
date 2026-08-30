@@ -6,10 +6,14 @@ import { ConnectionStatus } from './components/chat/connection-status'
 import { MessageList } from './components/chat/message-list'
 import { Composer } from './components/chat/composer'
 import { useChat } from './hooks/use-chat'
+import { useWorkspace } from './hooks/use-workspace'
+import { WorkspacePanel } from './components/workspace/workspace-panel'
 
 export function App() {
   const chat = useChat()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const workspace = useWorkspace()
+  const [workspaceWidth, setWorkspaceWidth] = useState(360)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -21,7 +25,7 @@ export function App() {
           <div className="ml-auto flex items-center gap-2">
             <ConnectionStatus />
             <Button variant="ghost" size="icon" onClick={chat.reset} aria-label="Reset chat"><RotateCcw size={16} /></Button>
-            <Button variant="ghost" size="icon" disabled aria-label="Open workspace (planned)"><PanelRight size={17} /></Button>
+            <Button variant="ghost" size="icon" onClick={() => workspace.setOpen(!workspace.open)} aria-label={workspace.open ? 'Close workspace' : 'Open workspace'}><PanelRight size={17} /></Button>
           </div>
         </header>
         <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
@@ -29,6 +33,7 @@ export function App() {
         </div>
         <Composer onSend={chat.send} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} />
       </main>
+      <WorkspacePanel {...workspace} width={workspaceWidth} onWidthChange={value => setWorkspaceWidth(Math.max(280, Math.min(520, value)))} />
     </div>
   )
 }

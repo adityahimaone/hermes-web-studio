@@ -97,4 +97,8 @@ button, textarea { font: inherit; }
 .approval-card { align-items: flex-start; border-color: color-mix(in srgb, #f59e0b 35%, var(--border)); background: color-mix(in srgb, #f59e0b 8%, var(--card)); }
 .attachment-chip { display: inline-flex; max-width: 100%; align-items: center; gap: 0.35rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--muted); padding: 0.35rem 0.5rem; font-size: 0.7rem; }
 .attachment-chip button { display: grid; min-height: 24px; min-width: 24px; place-items: center; color: var(--muted-foreground); }
+.workspace-panel { width: var(--workspace-width); }
+.workspace-resizer { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 2; }
+.workspace-resizer:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
 @media (max-width: 640px) { .approval-card { flex-wrap: wrap; } .approval-card > div:last-child { width: 100%; margin-left: 1.6rem; } }
+@media (max-width: 767px) { .workspace-panel { position: fixed; inset: 0 0 0 auto; z-index: 40; width: min(92vw, 420px); box-shadow: -16px 0 40px rgb(0 0 0 / 0.35); } }

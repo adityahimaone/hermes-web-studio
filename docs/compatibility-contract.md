@@ -95,3 +95,25 @@ Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PD
 Editing a persisted user message uses `POST /api/sessions/{session_id}/truncate` with `{"count":<message-count>}`. The BFF keeps the transcript prefix, preserves session metadata, and the next composer send creates the replacement branch.
 
 Retry/regenerate uses the same prefix operation and immediately starts a replacement turn, preventing the previous assistant branch from being appended as a second answer.
+
+## M2 workspace contract
+
+The workspace surface is backed by one server-owned root. Set
+`HERMES_WEBUI_DEFAULT_WORKSPACE` to choose it; when unset, the backend creates
+`~/.hermes/webui/workspace` with private permissions. Browser paths are always
+relative to that root. Absolute paths, traversal, backslash-separated paths,
+and symlinks resolving outside the root are rejected.
+
+The BFF exposes `GET /api/workspace/tree?path=.`,
+`GET /api/workspace/preview?path=...`, `GET /api/workspace/download?path=...`,
+and `GET /api/workspace/git?path=...`. Mutations use `POST /api/workspace/item`,
+`PUT /api/workspace/file`, `POST /api/workspace/rename`,
+`DELETE /api/workspace/item`, and multipart `POST /api/workspace/upload`.
+Text previews and writes are limited to 1 MiB; uploads are limited to 10 MiB.
+Files are written with `0600` and created directories with `0700`.
+
+Text/code/Markdown previews return `content` and `editable`; images and other
+binary files return `binary: true` and are only served through the download
+endpoint. Git output is informational and never blocks file access. Workspace
+state is independent from the chat stream, so an active stream does not clear
+the selected preview.

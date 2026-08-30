@@ -12,6 +12,7 @@ type Config struct {
 	GatewayBaseURL  string
 	GatewayAPIKey   string
 	StateDir        string
+	WorkspaceRoot   string
 	DefaultModel    string
 	DefaultProvider string
 	UseRunsAPI      bool
@@ -26,6 +27,7 @@ func Load() Config {
 		GatewayBaseURL:  strings.TrimRight(env("HERMES_WEBUI_GATEWAY_BASE_URL", "http://127.0.0.1:8642"), "/"),
 		GatewayAPIKey:   firstEnv("HERMES_WEBUI_GATEWAY_API_KEY", "API_SERVER_KEY"),
 		StateDir:        stateDir,
+		WorkspaceRoot:   env("HERMES_WEBUI_DEFAULT_WORKSPACE", ""),
 		DefaultModel:    env("HERMES_WEBUI_DEFAULT_MODEL", "default"),
 		DefaultProvider: os.Getenv("HERMES_WEBUI_DEFAULT_PROVIDER"),
 		UseRunsAPI:      strings.EqualFold(env("HERMES_WEBUI_USE_RUNS_API", "false"), "true"),

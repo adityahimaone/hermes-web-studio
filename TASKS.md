@@ -40,12 +40,12 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 ## M2 — Workspace composition
 
-- [ ] Secure workspace root discovery and containment
-- [ ] Tree, breadcrumb, text/code/Markdown/image preview
-- [ ] Create, edit, rename, delete, upload, download
-- [ ] Git status badges
-- [ ] Resizable desktop panel and mobile sheet
-- [ ] Preserve preview during active chat streams
+- [x] Secure workspace root discovery and containment
+- [x] Tree, breadcrumb, text/code/Markdown/image preview
+- [x] Create, edit, rename, delete, upload, download
+- [x] Git status badges
+- [x] Resizable desktop panel and mobile sheet
+- [x] Preserve preview during active chat streams
 
 ## M3 — Profiles, auth, and onboarding
 
