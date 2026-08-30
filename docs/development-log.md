@@ -63,3 +63,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Resolved-state inventory confirms chat persistence is JSON under `~/.hermes/webui`; the separate `kanban.db` is unrelated to WebUI chat sessions, so no SQLite/CLI bridge is required for this M1 source contract.
 - Added a repeatable static UI contract check for required labels, keyboard guidance, focus styles, mobile navigation, tap sizing, and EventSource wiring; it complements but does not replace browser-level verification.
 - Added official `@playwright/test` dev tooling and a browser acceptance script; Chromium verification passes for mobile navigation, focus/labels, desktop layout, Shift+Enter, and Enter-to-send against mocked SSE.
+- Extended browser coverage to simulate an interrupted SSE connection and verify automatic EventSource reconnect, cursor progression, continued output, and no duplicated prefix.

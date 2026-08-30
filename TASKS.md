@@ -34,7 +34,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [~] Tool cards, subagent cards, reasoning blocks (normalized rendering and redaction implemented; live upstream variants remain)
 - [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)
 - [x] Attachments and multimodal messages (validated upload/download, MIME-specific Gateway transport, and live model completion verified)
-- [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and terminal dedup implemented; browser interruption proof remains)
+- [x] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, live replay proof, and Playwright interruption/reconnect coverage)
 - [x] Context/token usage indicator
 - [x] Chat keyboard, focus, screen-reader, and mobile acceptance tests (Playwright coverage passes for mobile navigation, focus/labels, desktop rail, Shift+Enter, and Enter-to-send)
 

@@ -51,8 +51,9 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
 | M1 UI contract check | Pass: `bash scripts/check-m1-ui-contract.sh` verifies labels, keyboard copy, focus rings, mobile navigation, tap sizing, and stream URL usage |
 | M1 browser acceptance | Pass: `node frontend/e2e/m1-browser-check.mjs` with temporary Chromium verifies mobile navigation, focus/labels, desktop sidebar, Shift+Enter, and Enter-to-send over mocked SSE |
+| Browser SSE interruption/reconnect | Pass: the same Playwright script closes the first mocked SSE delivery after a token, observes EventSource reconnect, then verifies the continued reply and terminal event without duplicate prefix |
 | Live Hermes chat | Pass: M0 smoke proof above |
 | Current-source live attachment upload | Pass: multipart README upload returned opaque ID, canonical `text/plain`, original filename, and size |
 | Current-source live multimodal completion | Pass: source BFF started through Makefile with configured credential, real Gateway returned a streamed README summary and exactly one `done` |
 | Current-source live replay | Pass: reconnect with `Last-Event-ID: 29` replayed only event `id: 30` (`done`) |
-| Live approval, browser network interruption | Pending operator/browser verification; tracked as `[~]` in `TASKS.md` |
+| Live approval interaction | Pending operator verification; tracked as `[~]` in `TASKS.md` |
