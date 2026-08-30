@@ -74,6 +74,8 @@ The frozen upstream session store is file-based and remains the compatibility so
 
 The Go implementation uses the same JSON files as its durable session store. Writes are atomic, use `0600` files, preserve unknown top-level fields, and rebuild `_index.json` without transcript messages. SQLite or CLI session data is not treated as compatible until those formats receive their own inventory and tests.
 
+The current resolved state directory was inventoried on 2026-08-30: chat data is present as `sessions/*.json` plus `_index.json`; the separate `kanban.db` is not a chat session source and is not read by this service.
+
 ### Session API
 
 `GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata at the top level. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. `POST /api/sessions` creates a session, `PATCH /api/sessions/{session_id}` updates metadata, and `DELETE /api/sessions/{session_id}` removes it. Action-compatible routes are available at `/rename`, `/pin`, and `/archive`. Missing sessions return `404`; unsafe IDs return `400`. Create and update preserve the legacy top-level JSON shape and unknown fields. Chat turns append user and assistant messages to the same transcript, allowing later loads to resume the stored history.

@@ -59,3 +59,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Retry/regenerate now truncates the persisted branch before automatically re-running the selected user prompt, matching edit branch semantics.
 - Session browsing now exposes project/tag metadata inline, in addition to search matching and persisted top-level fields.
 - Added explicit browser-side SSE cursor filtering in addition to server replay, so reconnects cannot duplicate token/tool events when delivery is retried.
+- Resolved-state inventory confirms chat persistence is JSON under `~/.hermes/webui`; the separate `kanban.db` is unrelated to WebUI chat sessions, so no SQLite/CLI bridge is required for this M1 source contract.
