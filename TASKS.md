@@ -109,3 +109,8 @@ session actions.
 UI polish follow-up: Chat now owns a dedicated Recent sessions rail inside its
 content area, and session/workspace modal actions use the shared Dialog
 primitive instead of browser-native prompt/confirm UI.
+
+Navigation polish follow-up: the primary rail is icon-only on desktop with
+keyboard/focus tooltips. Chat toggles its in-content Recent sessions rail when
+activated while already on Chat; the panel can also be collapsed from its
+header, and the session title/action layout reserves space for the toolbar.

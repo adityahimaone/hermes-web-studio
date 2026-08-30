@@ -155,3 +155,17 @@ The acceptance script verifies it is visible only on Chat.
   previews for `SKILL.md` and memory files.
 - Runtime verification against the local Hermes home found the installed
   Skills and memory files. Backend tests and frontend tests/build passed.
+
+## 2026-08-30 - Icon navigation rail and collapsible Chat sessions
+
+- Rebuilt the desktop primary navigation as a 72px icon-only rail with
+  accessible labels and focus/hover tooltips; mobile navigation retains labels
+  inside its drawer.
+- Chat now toggles the in-content Recent sessions panel when the active Chat
+  icon is clicked again. The session panel can also collapse from its header.
+- Widened the session panel and reserved an action-toolbar column so titles and
+  metadata remain readable while rename, pin, archive, and delete actions stay
+  available.
+- Extended the browser acceptance check for tooltip labels and Chat
+  expand/collapse behavior. Production build passed; live Hermes behavior was
+  not changed by this UI-only slice.

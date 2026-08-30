@@ -95,6 +95,15 @@ copy, cancellation, and destructive intent visible and consistent. The API
 actions remain unchanged, so the compatibility boundary and rollback behavior
 are preserved.
 
+## ADR-019 - Icon rail with Chat-owned session toggle
+
+The primary navigation is a compact icon-only rail on desktop. Each icon keeps
+an accessible label and a focusable tooltip, while the mobile navigation drawer
+retains readable labels. Chat remains a navigation destination, but activating
+Chat again while already there toggles the secondary Recent sessions rail.
+This preserves the session-first workflow while giving the conversation canvas
+the full available width when the session list is not needed.
+
 ## ADR-016 - Separate Hermes runtime state from Web Studio metadata
 
 The Web Studio state directory remains the owner of sessions, attachments,

@@ -18,10 +18,19 @@ export function App() {
   const workspace = useWorkspace()
   const [workspaceWidth, setWorkspaceWidth] = useState(360)
   const [view, setView] = useState('chat')
+  const [chatSessionsOpen, setChatSessionsOpen] = useState(true)
+  const handleNavigate = (nextView: string) => {
+    if (nextView === 'chat' && view === 'chat') {
+      setChatSessionsOpen(open => !open)
+      return
+    }
+    setView(nextView)
+    if (nextView === 'chat') setChatSessionsOpen(true)
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar onNewChat={() => { chat.reset(); setView('chat') }} onNavigate={setView} currentView={view} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <Sidebar onNewChat={() => { chat.reset(); setView('chat'); setChatSessionsOpen(true) }} onNavigate={handleNavigate} currentView={view} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/70 px-3 backdrop-blur-xl sm:px-5">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu size={18} /></Button>
@@ -33,7 +42,7 @@ export function App() {
             <Button variant="ghost" size="icon" onClick={() => workspace.setOpen(!workspace.open)} aria-label={workspace.open ? 'Close workspace' : 'Open workspace'}><PanelRight size={17} /></Button>
           </div>
         </header>
-        {view === 'chat' ? <div className="flex min-h-0 flex-1"><SessionRail sessions={chat.sessions} activeSessionId={chat.activeSessionId} onSelectSession={chat.selectSession} onRename={chat.rename} onPin={chat.pin} onArchive={chat.archive} onDelete={chat.remove} loading={chat.sessionLoading} error={chat.sessionError} /><div className="flex min-w-0 flex-1 flex-col"><div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><MessageList messages={chat.messages} stream={chat.streamState} onEdit={chat.edit} onRetry={chat.retry} onApproval={chat.approve} /></div><Composer onSend={chat.send} onCommand={command => { if (command === '/clear') chat.reset(); else if (command === '/help') chat.setDraft('Try /clear to reset this conversation, or write a message for Hermes.') }} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} /></div></div> : <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><ControlCenter view={view} /></div>}
+        {view === 'chat' ? <div className="flex min-h-0 flex-1">{chatSessionsOpen && <SessionRail sessions={chat.sessions} activeSessionId={chat.activeSessionId} onSelectSession={chat.selectSession} onRename={chat.rename} onPin={chat.pin} onArchive={chat.archive} onDelete={chat.remove} loading={chat.sessionLoading} error={chat.sessionError} onToggle={() => setChatSessionsOpen(false)} />}<div className="flex min-w-0 flex-1 flex-col"><div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><MessageList messages={chat.messages} stream={chat.streamState} onEdit={chat.edit} onRetry={chat.retry} onApproval={chat.approve} /></div><Composer onSend={chat.send} onCommand={command => { if (command === '/clear') chat.reset(); else if (command === '/help') chat.setDraft('Try /clear to reset this conversation, or write a message for Hermes.') }} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} /></div></div> : <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto"><ControlCenter view={view} /></div>}
       </main>
       <WorkspacePanel {...workspace} width={workspaceWidth} onWidthChange={value => setWorkspaceWidth(Math.max(280, Math.min(520, value)))} />
     </div>

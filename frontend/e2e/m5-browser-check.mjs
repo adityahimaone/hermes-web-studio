@@ -8,7 +8,12 @@ try {
   }
   await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' })
   await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeVisible()
-  await page.getByRole('button', { name: 'Tasks' }).click()
+  await expect(page.getByRole('button', { name: 'Tasks', exact: true })).toHaveAttribute('aria-label', 'Tasks')
+  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeHidden()
+  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeVisible()
+  await page.getByRole('button', { name: 'Tasks', exact: true }).click()
   await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeHidden()
   await expect(page.locator('h1').filter({ hasText: 'tasks' })).toBeVisible()
   await page.getByRole('button', { name: 'Skills' }).click()
