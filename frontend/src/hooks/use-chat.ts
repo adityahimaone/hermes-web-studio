@@ -99,18 +99,24 @@ export function useChat() {
       setQueuedMessages(queueRef.current.map((item) => item.content))
     } else pump(clean, files)
   }, [pump, streamState.status])
-  const retry = useCallback((message: ChatMessage) => {
+  const retry = useCallback(async (message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
-    void truncateSession(activeSessionRef.current, index).catch(() => undefined)
+    try { await truncateSession(activeSessionRef.current, index) } catch (error) {
+      setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to retry this message.' })
+      return
+    }
     setMessages((current) => current.slice(0, index))
     setDraft('')
-    pump(message.content, [], messages.slice(0, index))
+    await pump(message.content, [], messages.slice(0, index))
   }, [messages, pump])
-  const edit = useCallback((message: ChatMessage) => {
+  const edit = useCallback(async (message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
-    void truncateSession(activeSessionRef.current, index).catch(() => undefined)
+    try { await truncateSession(activeSessionRef.current, index) } catch (error) {
+      setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to edit this message.' })
+      return
+    }
     setMessages((current) => current.slice(0, index))
     setDraft(message.content)
   }, [messages])
