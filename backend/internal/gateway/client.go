@@ -238,6 +238,7 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 	eventName := "message"
 	var dataLines []string
 	answer := ""
+	reasoningSnapshot := ""
 
 	flush := func() error {
 		if len(dataLines) == 0 {
@@ -267,13 +268,31 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 			effectiveName = payloadName
 		}
 		if effectiveName == "run.completed" && delta != "" {
-			delta = missingSuffix(answer, delta)
+			if sameSnapshot(answer, delta) {
+				delta = ""
+			} else {
+				delta = missingSuffix(answer, delta)
+			}
 			if len(translated) > 0 && translated[0].Name == "token" {
 				if delta == "" {
 					translated = nil
 				} else {
 					translated[0].Data["text"] = delta
 				}
+			}
+		}
+		if len(translated) > 0 && translated[0].Name == "reasoning" {
+			reasoningSnapshot = stringValue(translated[0].Data["text"])
+		}
+		if len(translated) > 0 && translated[0].Name == "token" && reasoningSnapshot != "" && sameSnapshot(delta, reasoningSnapshot) {
+			delta = missingSuffix(answer, delta)
+			if sameSnapshot(answer, delta) {
+				delta = ""
+			}
+			if delta == "" {
+				translated = nil
+			} else {
+				translated[0].Data["text"] = delta
 			}
 		}
 		if delta != "" {
@@ -416,6 +435,10 @@ func choiceText(payload map[string]any) string {
 		return stringValue(message["content"])
 	}
 	return ""
+}
+
+func sameSnapshot(left, right string) bool {
+	return strings.TrimSpace(left) != "" && strings.TrimSpace(left) == strings.TrimSpace(right)
 }
 
 func toolData(payload map[string]any, complete bool) map[string]any {

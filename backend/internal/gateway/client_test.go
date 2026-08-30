@@ -86,6 +86,20 @@ func TestParseSSERunCompletedPayloadEventDoesNotRepeatStreamedAnswer(t *testing.
 	}
 }
 
+func TestParseSSEReasoningSnapshotDoesNotRepeatTokenAnswer(t *testing.T) {
+	input := strings.Join([]string{
+		"data: {\"event\":\"message.delta\",\"delta\":\"\\n\\nanswer\"}", "",
+		"data: {\"event\":\"reasoning.available\",\"text\":\"answer\"}", "",
+		"data: {\"event\":\"message.delta\",\"delta\":\"answer\"}", "",
+		"data: {\"event\":\"run.completed\",\"output\":\"answer\"}", "",
+	}, "\n")
+	var events []Event
+	answer, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil || answer != "\n\nanswer" || len(events) != 2 {
+		t.Fatalf("answer=%q events=%#v err=%v", answer, events, err)
+	}
+}
+
 func TestParseSSETranslatesActivityAndRedactsSecrets(t *testing.T) {
 	input := strings.Join([]string{
 		"event: subagent.started", "data: {\"id\":\"s1\",\"name\":\"research\"}", "",

@@ -70,3 +70,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added upstream approval event aliases `approval.request` and `hermes.approval.request` to the normalizer.
 - Added an opt-in Runs API adapter (`HERMES_WEBUI_USE_RUNS_API`) for structured run events and approval-capable sessions while preserving the existing chat-completions default.
 - Live Runs API regression exposed and fixed payload-level `run.completed` duplicate output; the corrected source returned one `RUNS_FIXED` answer and one terminal `done` event.
+- A second live Runs prompt exposed reasoning-snapshot duplication with whitespace-prefixed answers; the parser now suppresses normalized snapshot repeats and returned one confirmation answer.
