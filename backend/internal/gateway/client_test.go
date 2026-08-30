@@ -60,6 +60,32 @@ func TestParseSSERunCompletedDoesNotRepeatStreamedAnswer(t *testing.T) {
 	}
 }
 
+func TestParseSSERunCompletedChoicesDoesNotRepeatStreamedAnswer(t *testing.T) {
+	input := strings.Join([]string{
+		"data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}", "",
+		"event: run.completed", "data: {\"choices\":[{\"delta\":{\"content\":\"Hello world\"}}]}", "",
+		"data: [DONE]", "",
+	}, "\n")
+	var events []Event
+	answer, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil || answer != "Hello world" || len(events) != 2 || events[1].Data["text"] != " world" {
+		t.Fatalf("answer=%q events=%#v err=%v", answer, events, err)
+	}
+}
+
+func TestParseSSERunCompletedPayloadEventDoesNotRepeatStreamedAnswer(t *testing.T) {
+	input := strings.Join([]string{
+		"data: {\"event\":\"message.delta\",\"delta\":\"RAW_RUNS\"}", "",
+		"data: {\"event\":\"run.completed\",\"output\":\"RAW_RUNS\"}", "",
+		": stream closed", "",
+	}, "\n")
+	var events []Event
+	answer, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil || answer != "RAW_RUNS" || len(events) != 1 || events[0].Data["text"] != "RAW_RUNS" {
+		t.Fatalf("answer=%q events=%#v err=%v", answer, events, err)
+	}
+}
+
 func TestParseSSETranslatesActivityAndRedactsSecrets(t *testing.T) {
 	input := strings.Join([]string{
 		"event: subagent.started", "data: {\"id\":\"s1\",\"name\":\"research\"}", "",

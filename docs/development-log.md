@@ -69,3 +69,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Aligned approval choices with the Gateway Runs contract (`once`, `session`, `always`, `deny`) and retained backwards-compatible approved/denied aliases; the UI now exposes all four choices.
 - Added upstream approval event aliases `approval.request` and `hermes.approval.request` to the normalizer.
 - Added an opt-in Runs API adapter (`HERMES_WEBUI_USE_RUNS_API`) for structured run events and approval-capable sessions while preserving the existing chat-completions default.
+- Live Runs API regression exposed and fixed payload-level `run.completed` duplicate output; the corrected source returned one `RUNS_FIXED` answer and one terminal `done` event.

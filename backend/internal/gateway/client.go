@@ -259,7 +259,14 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		if terminalErr != nil {
 			return terminalErr
 		}
-		if name == "run.completed" && delta != "" {
+		effectiveName := name
+		if payloadName := stringValue(payload["event"]); payloadName != "" {
+			effectiveName = payloadName
+		}
+		if payloadName := stringValue(payload["type"]); payloadName != "" {
+			effectiveName = payloadName
+		}
+		if effectiveName == "run.completed" && delta != "" {
 			delta = missingSuffix(answer, delta)
 			if len(translated) > 0 && translated[0].Name == "token" {
 				if delta == "" {
@@ -328,6 +335,15 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 	if name == "" || name == "message" {
 		name = sseName
 	}
+	if name == "run.completed" {
+		completed := stringValue(payload["output"])
+		if completed == "" {
+			completed = choiceText(payload)
+		}
+		if completed != "" {
+			return []Event{{Name: "token", Data: map[string]any{"text": completed}}}, completed, nil
+		}
+	}
 
 	if choices, ok := payload["choices"].([]any); ok && len(choices) > 0 {
 		if choice, ok := choices[0].(map[string]any); ok {
@@ -382,6 +398,24 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 		return nil, "", errors.New(message)
 	}
 	return nil, "", nil
+}
+
+func choiceText(payload map[string]any) string {
+	choices, ok := payload["choices"].([]any)
+	if !ok || len(choices) == 0 {
+		return ""
+	}
+	choice, ok := choices[0].(map[string]any)
+	if !ok {
+		return ""
+	}
+	if delta, ok := choice["delta"].(map[string]any); ok {
+		return stringValue(delta["content"])
+	}
+	if message, ok := choice["message"].(map[string]any); ok {
+		return stringValue(message["content"])
+	}
+	return ""
 }
 
 func toolData(payload map[string]any, complete bool) map[string]any {

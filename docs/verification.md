@@ -57,4 +57,5 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Current-source live attachment upload | Pass: multipart README upload returned opaque ID, canonical `text/plain`, original filename, and size |
 | Current-source live multimodal completion | Pass: source BFF started through Makefile with configured credential, real Gateway returned a streamed README summary and exactly one `done` |
 | Current-source live replay | Pass: reconnect with `Last-Event-ID: 29` replayed only event `id: 30` (`done`) |
+| Opt-in live Runs API stream | Pass: `HERMES_WEBUI_USE_RUNS_API=true` returned token/reasoning events and exactly one non-duplicated `done` answer; payload-level `run.completed` output was deduplicated |
 | Live approval interaction | Pending operator verification; safe prompt did not create a Runs approval event; tracked as `[~]` in `TASKS.md` |
