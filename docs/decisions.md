@@ -187,3 +187,16 @@ recorded decision and explicit approval before MVP certification.
   real.
 - **Consequence:** Artifact persistence and stream projection remain P029
   work; file and todo state are not duplicated in local storage.
+
+## ADR-026: Navigation customization cannot create dead destinations
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Persist only the order and visibility of existing Studio
+  destinations. Chat remains locked visible; unavailable reference panels are
+  not added as fake navigation targets.
+- **Reason:** The personal WebUI supports navigation customization, but a
+  visible item without a working destination is a broken promise.
+- **Consequence:** Kanban, Insights, Logs, and other missing sections remain
+  mapped in the parity manifest and will enter the rail only with their own
+  backend/UI slice.

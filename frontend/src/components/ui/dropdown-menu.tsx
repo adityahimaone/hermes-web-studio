@@ -1,5 +1,5 @@
 import { MoreVertical } from 'lucide-react'
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import { Button } from './button'
 
 type MenuItem = { label: string; icon: ComponentType<{ size?: number }>; onSelect: () => void; destructive?: boolean }
@@ -8,6 +8,7 @@ export function DropdownMenu({ label, items }: { label: string; items: MenuItem[
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   useEffect(() => {
     if (!open) return
@@ -17,11 +18,12 @@ export function DropdownMenu({ label, items }: { label: string; items: MenuItem[
     document.addEventListener('keydown', escape)
     return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', escape) }
   }, [open])
+  useLayoutEffect(() => { if (open) itemRefs.current[0]?.focus() }, [open])
 
   return <div ref={rootRef} className="relative shrink-0">
     <Button type="button" variant="ghost" size="icon" className="size-8" aria-label={label} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreVertical size={16} /></Button>
-    {open && <div ref={menuRef} role="menu" aria-label={label} className="absolute right-0 top-9 z-50 min-w-52 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-xl" onKeyDown={event => { const entries = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []); const index = entries.indexOf(event.target as HTMLButtonElement); if (event.key === 'ArrowDown') { event.preventDefault(); entries[(index + 1) % entries.length]?.focus() } else if (event.key === 'ArrowUp') { event.preventDefault(); entries[(index - 1 + entries.length) % entries.length]?.focus() } else if (event.key === 'Home') { event.preventDefault(); entries[0]?.focus() } else if (event.key === 'End') { event.preventDefault(); entries.at(-1)?.focus() } }}>
-      {items.map(({ label: itemLabel, icon: Icon, onSelect, destructive }) => <button key={itemLabel} type="button" role="menuitem" className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none ${destructive ? 'text-destructive hover:bg-destructive/10' : ''}`} onClick={() => { onSelect(); setOpen(false) }}><Icon size={15} />{itemLabel}</button>)}
+    {open && <div ref={menuRef} role="menu" aria-label={label} className="absolute right-0 top-9 z-50 min-w-52 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-xl">
+      {items.map(({ label: itemLabel, icon: Icon, onSelect, destructive }, index) => <button ref={element => { itemRefs.current[index] = element }} key={itemLabel} type="button" role="menuitem" className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none ${destructive ? 'text-destructive hover:bg-destructive/10' : ''}`} onKeyDown={event => { const next = event.key === 'ArrowDown' ? index + 1 : event.key === 'ArrowUp' ? index - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : -1; if (next >= 0) { event.preventDefault(); itemRefs.current[(next + items.length) % items.length]?.focus() } }} onClick={() => { onSelect(); setOpen(false) }}><Icon size={15} />{itemLabel}</button>)}
     </div>}
   </div>
 }

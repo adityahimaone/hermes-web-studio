@@ -14,6 +14,7 @@ freezes behavior and semantics before the richer parity panels are migrated.
 | `role="tooltip"` | Keyboard/focus and pointer description for icon-only rail actions |
 | `role="menu"` / `role="menuitem"` | Session overflow actions, dismissible with Escape and navigable with arrows/Home/End |
 | `role="dialog"` / `aria-modal="true"` | Session/workspace confirmations, dismissible by close, backdrop, or Escape |
+| `role="checkbox"` in Customize navigation | Real visibility toggles, with Chat locked as the primary anchor |
 
 ## Keyboard and focus
 
@@ -24,6 +25,8 @@ freezes behavior and semantics before the richer parity panels are migrated.
   handling.
 - Dialogs focus their close control on open and close on Escape or backdrop
   click. Destructive actions remain explicit buttons inside the Dialog.
+- Customize navigation exposes real visibility toggles plus move-up/move-down
+  controls and persists the result without hiding Chat.
 - Enter sends a composer message and Shift+Enter inserts a newline; this
   contract remains owned by the composer and is covered by the M1 browser row.
 

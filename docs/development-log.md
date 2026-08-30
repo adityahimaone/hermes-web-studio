@@ -263,3 +263,12 @@ The acceptance script verifies it is visible only on Chat.
   workspace contents server-owned and stream-independent.
 - Frontend production build passes. P008 remains `[~]` pending artifact API
   parity and complete browser resize/mobile evidence.
+
+## 2026-08-30 — P009 navigation customization
+
+- Added a functional Customize navigation Dialog with persisted visibility and
+  order controls. Chat remains locked visible, and missing reference surfaces
+  are not presented as dead links.
+- Added browser coverage for the visibility toggle and Dialog completion.
+- Frontend tests and production build pass. P009 remains `[~]` pending the
+  complete reference Control Center section registry and broader panel matrix.

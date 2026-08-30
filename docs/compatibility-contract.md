@@ -162,6 +162,11 @@ Artifacts remains an honest empty state until an artifact route is available.
 Panel open state and width are browser layout preferences persisted locally;
 workspace contents and mutations remain server-owned.
 
+Primary navigation visibility and order are layout preferences. The
+customization dialog persists those preferences locally, keeps Chat visible,
+and only exposes destinations that have a working Studio view. Full reference
+section registry parity remains a later task.
+
 ## M3 identity and profile contract
 
 `GET /api/onboarding` reports whether local password setup is complete and
