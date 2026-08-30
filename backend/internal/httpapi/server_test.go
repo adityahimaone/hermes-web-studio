@@ -273,6 +273,32 @@ func TestSessionsAPIListsAndLoadsLegacySession(t *testing.T) {
 	}
 }
 
+func TestSessionsAPIFlattensLegacyMetadataForBrowserContract(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"session-1","title":"Hello","updated_at":"2026-08-30T12:00:00Z","pinned":true,"tags":["work"],"messages":[]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "session-1.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listing struct {
+		Sessions []map[string]any `json:"sessions"`
+	}
+	decode(t, response.Body, &listing)
+	_ = response.Body.Close()
+	if len(listing.Sessions) != 1 || listing.Sessions[0]["pinned"] != true || listing.Sessions[0]["tags"].([]any)[0] != "work" {
+		t.Fatalf("listing=%#v", listing)
+	}
+}
+
 func TestSessionsAPIRejectsUnsafeAndMissingIDs(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())

@@ -76,7 +76,7 @@ The Go implementation uses the same JSON files as its durable session store. Wri
 
 ### Session API
 
-`GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. `POST /api/sessions` creates a session, `PATCH /api/sessions/{session_id}` updates metadata, and `DELETE /api/sessions/{session_id}` removes it. Action-compatible routes are available at `/rename`, `/pin`, and `/archive`. Missing sessions return `404`; unsafe IDs return `400`. Create and update preserve the legacy top-level JSON shape and unknown fields. Chat turns append user and assistant messages to the same transcript, allowing later loads to resume the stored history.
+`GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata at the top level. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. `POST /api/sessions` creates a session, `PATCH /api/sessions/{session_id}` updates metadata, and `DELETE /api/sessions/{session_id}` removes it. Action-compatible routes are available at `/rename`, `/pin`, and `/archive`. Missing sessions return `404`; unsafe IDs return `400`. Create and update preserve the legacy top-level JSON shape and unknown fields. Chat turns append user and assistant messages to the same transcript, allowing later loads to resume the stored history.
 
 ## M1 streaming, approvals, and attachments
 

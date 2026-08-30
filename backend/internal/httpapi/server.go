@@ -95,7 +95,11 @@ func (s *Server) handleSessions(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusInternalServerError, "sessions_unavailable", "Session history is unavailable.")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"sessions": sessions})
+	rows := make([]map[string]any, 0, len(sessions))
+	for _, item := range sessions {
+		rows = append(rows, summaryPayload(item))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"sessions": rows})
 }
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +117,7 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "session_unavailable", "The requested session could not be loaded.")
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +136,7 @@ func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, item)
+	writeJSON(w, http.StatusCreated, sessionPayload(item))
 }
 
 func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +149,7 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func (s *Server) handleSessionRename(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +164,7 @@ func (s *Server) handleSessionRename(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func (s *Server) handleSessionPin(w http.ResponseWriter, r *http.Request) {
@@ -178,7 +182,7 @@ func (s *Server) handleSessionPin(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func (s *Server) handleSessionArchive(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +200,7 @@ func (s *Server) handleSessionArchive(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
@@ -226,7 +230,7 @@ func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, item)
+	writeJSON(w, http.StatusOK, sessionPayload(item))
 }
 
 func sessionError(w http.ResponseWriter, err error) {
@@ -553,6 +557,26 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func summaryPayload(item session.Summary) map[string]any {
+	payload := map[string]any{"session_id": item.ID, "title": item.Title}
+	for key, raw := range item.Metadata {
+		if key == "session_id" || key == "title" || key == "messages" {
+			continue
+		}
+		var value any
+		if json.Unmarshal(raw, &value) == nil {
+			payload[key] = value
+		}
+	}
+	return payload
+}
+
+func sessionPayload(item session.Session) map[string]any {
+	payload := summaryPayload(item.Summary)
+	payload["messages"] = item.Messages
+	return payload
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
