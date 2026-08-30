@@ -27,3 +27,14 @@ func TestControlCenterCRUDDoesNotExposeGatewaySecrets(t *testing.T) {
 		t.Fatalf("list=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestControlListsSerializeEmptyCollectionsAsArrays(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	h := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	req := httptest.NewRequest(http.MethodGet, "/api/control/tasks", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"items":[]`) {
+		t.Fatalf("list=%d body=%s", rec.Code, rec.Body.String())
+	}
+}

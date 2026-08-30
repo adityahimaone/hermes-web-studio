@@ -1,4 +1,4 @@
-import { Archive, ArchiveX, Bot, BrainCircuit, CheckSquare2, Clock3, FolderKanban, MessageSquareText, Pencil, Pin, Plus, Search, Settings2, Sparkles, Trash2, UsersRound, Wrench, X } from 'lucide-react'
+import { Archive, ArchiveX, Bot, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, MessageSquareText, Pencil, Pin, Plus, Search, Settings2, Sparkles, Trash2, UsersRound, Wrench, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/cn'
@@ -12,6 +12,7 @@ const navigation = [
   { label: 'Memory', icon: BrainCircuit },
   { label: 'Profiles', icon: UsersRound },
   { label: 'Todos', icon: CheckSquare2 },
+  { label: 'Goals', icon: CircleStar },
   { label: 'Spaces', icon: FolderKanban },
 ]
 

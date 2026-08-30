@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -12,6 +13,7 @@ type Config struct {
 	GatewayBaseURL    string
 	GatewayAPIKey     string
 	StateDir          string
+	HermesHome        string
 	WorkspaceRoot     string
 	AuthTrustedHeader string
 	OIDCIssuer        string
@@ -24,12 +26,20 @@ type Config struct {
 
 func Load() Config {
 	stateDir, _ := resolveStateDir()
+	hermesHome := strings.TrimSpace(os.Getenv("HERMES_HOME"))
+	if hermesHome == "" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			hermesHome = filepath.Join(home, ".hermes")
+		}
+	}
 	return Config{
 		Host:              env("HERMES_WEBUI_HOST", "127.0.0.1"),
 		Port:              env("HERMES_WEBUI_PORT", "8787"),
 		GatewayBaseURL:    strings.TrimRight(env("HERMES_WEBUI_GATEWAY_BASE_URL", "http://127.0.0.1:8642"), "/"),
 		GatewayAPIKey:     firstEnv("HERMES_WEBUI_GATEWAY_API_KEY", "API_SERVER_KEY"),
 		StateDir:          stateDir,
+		HermesHome:        hermesHome,
 		WorkspaceRoot:     env("HERMES_WEBUI_DEFAULT_WORKSPACE", ""),
 		AuthTrustedHeader: env("HERMES_WEBUI_TRUSTED_USER_HEADER", ""),
 		OIDCIssuer:        env("HERMES_WEBUI_OIDC_ISSUER", ""),

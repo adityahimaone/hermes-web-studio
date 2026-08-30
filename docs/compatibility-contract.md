@@ -155,6 +155,13 @@ return empty arrays when no source is configured. `GET /api/capabilities`
 declares runtime-dependent surfaces such as terminal, voice, background work,
 and extensions instead of exposing non-functional controls.
 
+Skills and memory now use the Hermes home selected by `HERMES_HOME` (default
+`~/.hermes`), independent of the Web Studio metadata state directory. Skills
+are discovered recursively from `skills/**/SKILL.md` with safe frontmatter
+metadata; `GET /api/skills?name=<relative-SKILL.md>` returns bounded content for
+preview. Memory lists `memories/MEMORY.md`, `memories/USER.md`, and root
+`SOUL.md`; `GET /api/memory?name=<allowed-file>` returns bounded content.
+
 ## M5 distribution contract
 
 `make build` produces a Go binary that serves the compiled frontend from an

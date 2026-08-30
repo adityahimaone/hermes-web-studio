@@ -49,7 +49,7 @@ func New(stateDir string) (*Store, error) {
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		return nil, err
 	}
-	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Preferences: map[string]string{}}}
+	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Tasks: []Item{}, Todos: []Item{}, Goals: []Item{}, Spaces: []Item{}, Preferences: map[string]string{}, TaskHistory: []RunRecord{}}}
 	data, err := os.ReadFile(s.path)
 	if err == nil {
 		if json.Unmarshal(data, &s.state) != nil {
@@ -58,6 +58,21 @@ func New(stateDir string) (*Store, error) {
 	}
 	if s.state.Preferences == nil {
 		s.state.Preferences = map[string]string{}
+	}
+	if s.state.Tasks == nil {
+		s.state.Tasks = []Item{}
+	}
+	if s.state.Todos == nil {
+		s.state.Todos = []Item{}
+	}
+	if s.state.Goals == nil {
+		s.state.Goals = []Item{}
+	}
+	if s.state.Spaces == nil {
+		s.state.Spaces = []Item{}
+	}
+	if s.state.TaskHistory == nil {
+		s.state.TaskHistory = []RunRecord{}
 	}
 	return s, nil
 }
@@ -68,7 +83,7 @@ func (s *Store) List(collection string) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := append([]Item(nil), items...)
+	result := append([]Item{}, items...)
 	return result, nil
 }
 func (s *Store) Create(collection string, item Item) (Item, error) {

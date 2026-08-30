@@ -75,3 +75,11 @@ creates a timestamped private backup and can restore the newest backup.
 initialization and deliberately does not call Hermes Gateway. Gateway health
 is an operator diagnostic because the BFF can still serve sessions, auth, and
 safe offline UI while Hermes is restarting.
+
+## ADR-016 - Separate Hermes runtime state from Web Studio metadata
+
+The Web Studio state directory remains the owner of sessions, attachments,
+control collections, auth, and preferences. Hermes-owned Skills and memory
+must be read from `HERMES_HOME`, otherwise a valid Hermes installation appears
+empty whenever the UI state directory is separate. Discovery is read-only,
+bounded, and path-checked; the browser never receives credentials.

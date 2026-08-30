@@ -96,3 +96,8 @@ M5 verification follow-up: performance budget script, browser control-center acc
 M6 status: implementation and local automated checks are complete. Hosted CI
 execution and live Hermes deployment verification remain evidence gates, not
 claims inferred from local tests.
+
+Control-center audit follow-up: empty collections, missing Goals navigation,
+Profiles fallback, and incorrect Skills/Memory roots were fixed. Hermes Skills
+and memory runtime verification passed locally; live scheduler execution and
+external provider-backed integrations remain `[~]` under M4.

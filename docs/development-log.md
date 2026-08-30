@@ -118,3 +118,15 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
   job. Hosted execution remains the source of CI evidence.
 - M6 implementation is complete locally; live Hermes deployment, hosted CI, and
   external beta/security sign-off remain explicitly outside automated claims.
+
+## 2026-08-30 - Control-center menu audit and Hermes discovery fix
+
+- Audited every sidebar menu and found empty control collections serialized as
+  `null`, which crashed the React control view when it called `.length`.
+- Fixed empty collection responses to use arrays, added the missing Goals menu,
+  and gave Profiles its own data view instead of falling back to Tasks.
+- Tasks now consumes the compatibility cron route and exposes run/pause/resume
+  actions. Skills and Memory now read Hermes runtime state, with safe bounded
+  previews for `SKILL.md` and memory files.
+- Runtime verification against the local Hermes home found the installed
+  Skills and memory files. Backend tests and frontend tests/build passed.
