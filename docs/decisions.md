@@ -212,3 +212,16 @@ recorded decision and explicit approval before MVP certification.
   for an asynchronous preferences request would flash the wrong surface.
 - **Consequence:** Only non-secret layout preferences are read before the app
   loads. Skin-specific visual certification remains P012 work.
+
+## ADR-028: Keep mobile navigation to working destinations
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Use five mobile tabs backed by existing Studio views and keep
+  the remaining destinations in the drawer until their panels are implemented.
+  Reserve safe-area space for the composer and honor reduced motion.
+- **Reason:** The reference has a compact mobile navigation model, but adding
+  unsupported destinations would create dead controls and obscure the active
+  chat workflow.
+- **Consequence:** Device-specific IME, PWA, and complete transition evidence
+  remain P011/P048 work.

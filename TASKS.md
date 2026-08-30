@@ -141,7 +141,7 @@ personal source as the new acceptance baseline.
 - [~] P008 Match the demand-driven workspace panel shell, resize/open persistence, Files/Artifacts/Todos tabs, and mobile slide-over (Files/Todos tabs and persisted open/width implemented; Artifacts backend and full browser resize/mobile evidence remain)
 - [~] P009 Rebuild the Control Center section structure and primary-rail order/visibility customization without shipping non-functional controls (rail visibility/order dialog implemented; full reference section registry and broader panel evidence remain)
 - [~] P010 Implement System/Dark/Light boot without flash and the complete frozen built-in skin registry through lazy theme assets (pre-React theme boot and 21-name registry implemented; per-skin visual tuning and screenshot matrix remain)
-- [ ] P011 Match mobile drawer, five-tab bottom navigation, 44px targets, safe-area/keyboard composer behavior, and panel transitions
+- [~] P011 Match mobile drawer, five-tab bottom navigation, 44px targets, safe-area/keyboard composer behavior, and panel transitions (five-tab navigation, 44px targets, safe-area composer spacing, reduced-motion panel transition, and browser navigation coverage implemented; full device/IME evidence remains)
 - [ ] P012 Add Playwright screenshot, DOM, computed-style, keyboard, and responsive shell matrices at the `MVP.md` viewports
 
 ## M8 — Conversation runtime and session parity

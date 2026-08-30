@@ -283,3 +283,13 @@ The acceptance script verifies it is visible only on Chat.
   server route plus local layout storage.
 - Frontend tests and production build pass. P010 remains `[~]` pending
   per-skin visual tuning and the P012 screenshot matrix.
+
+## 2026-08-30 — P011 mobile navigation and safe-area shell
+
+- Added five working mobile bottom tabs for Chat, Tasks, Skills, Memory, and
+  Settings, with 44px minimum targets.
+- Added safe-area-aware composer spacing, mobile panel transition, and reduced
+  motion fallback while preserving the drawer and workspace slide-over.
+- Browser acceptance covers mobile tab navigation and target sizing.
+- P011 remains `[~]` pending device-level IME, safe-area, and full transition
+  evidence.

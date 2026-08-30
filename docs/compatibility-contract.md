@@ -173,6 +173,12 @@ persist the selected theme, skin, and locale through the server-backed
 preferences route. The built-in registry contains all 21 frozen skin names;
 visual tuning and screenshot evidence remain separate acceptance work.
 
+Mobile exposes five working bottom-navigation destinations: Chat, Tasks,
+Skills, Memory, and Settings. Each target is at least 44 CSS pixels. The
+composer reserves the bottom safe-area/navigation space, while the primary
+rail remains a labeled drawer and the workspace remains a mobile slide-over.
+Reduced-motion users do not receive the panel transition.
+
 ## M3 identity and profile contract
 
 `GET /api/onboarding` reports whether local password setup is complete and
