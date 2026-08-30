@@ -51,3 +51,6 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Follow-up acceptance coverage added for attachment validation and multimodal payloads, replay after `Last-Event-ID`, and Runs approval forwarding. A MIME parameter bug found by the attachment test was fixed by canonicalizing detected media types.
 - Frontend contract coverage expanded to six tests for session search/date grouping, usage normalization, and approval identity mapping.
 - Closed the edit/regenerate persistence gap with a tested truncate route and server-side transcript prefix semantics; pushed after the full backend/frontend verification pass.
+- Corrected multimodal mapping so image, PDF, and plain-text attachments use distinct Gateway content parts instead of treating every file as an image.
+- Live check against the current source BFF proved attachment upload; completion was safely rejected because the isolated verification process did not have the operator Gateway credential. The existing operator process was left untouched.
+- Attachment original name/MIME metadata is now persisted in a restrictive sidecar so resumed turns keep the file contract.

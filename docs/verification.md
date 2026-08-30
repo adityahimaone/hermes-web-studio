@@ -50,4 +50,6 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Frontend production build | Pass: Vite output generated successfully |
 | Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
 | Live Hermes chat | Pass: M0 smoke proof above |
+| Current-source live attachment upload | Pass: multipart README upload returned opaque ID, canonical `text/plain`, original filename, and size |
+| Current-source live multimodal completion | Blocked by operator credential boundary: the source instance on port 8788 had no Gateway API key and Gateway returned safe `gateway_auth_error`; existing operator process on port 8787 was not replaced |
 | Live approval, live multimodal model acceptance, browser network interruption, keyboard/mobile matrix | Pending operator/browser verification; tracked as `[~]` in `TASKS.md` |

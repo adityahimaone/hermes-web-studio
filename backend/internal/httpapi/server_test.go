@@ -166,7 +166,7 @@ func TestAttachmentUploadAndMultimodalGatewayPayload(t *testing.T) {
 	_ = stream.Body.Close()
 	select {
 	case payload := <-seenPayload:
-		if !strings.Contains(payload, "data:text/plain;base64,") || strings.Contains(payload, "Authorization") {
+		if !strings.Contains(payload, `"text":"hello attachment"`) || strings.Contains(payload, "Authorization") {
 			t.Fatalf("payload=%s", payload)
 		}
 	case <-time.After(2 * time.Second):

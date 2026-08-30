@@ -3,6 +3,7 @@ package session
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -56,7 +57,13 @@ func (s *Store) SaveAttachment(header *multipart.FileHeader) (Attachment, error)
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		return Attachment{}, err
 	}
-	return Attachment{ID: id, Name: filepath.Base(header.Filename), MIME: contentType, Size: int64(len(data)), Path: path}, nil
+	attachment := Attachment{ID: id, Name: filepath.Base(header.Filename), MIME: contentType, Size: int64(len(data)), Path: path}
+	metadata, _ := json.Marshal(map[string]string{"name": attachment.Name, "mime": attachment.MIME})
+	if err := os.WriteFile(path+".json", metadata, 0600); err != nil {
+		_ = os.Remove(path)
+		return Attachment{}, err
+	}
+	return attachment, nil
 }
 
 func (s *Store) LoadAttachments(ids []string) ([]Attachment, error) {
@@ -73,7 +80,22 @@ func (s *Store) LoadAttachments(ids []string) ([]Attachment, error) {
 		if int64(len(data)) > MaxAttachmentSize {
 			return nil, errors.New("attachment size is not allowed")
 		}
-		result = append(result, Attachment{ID: id, Name: id, MIME: canonicalMIME(http.DetectContentType(data)), Size: int64(len(data)), Path: path, data: data})
+		name, contentType := id, canonicalMIME(http.DetectContentType(data))
+		if metadata, readErr := os.ReadFile(path + ".json"); readErr == nil {
+			var fields struct {
+				Name string `json:"name"`
+				MIME string `json:"mime"`
+			}
+			if json.Unmarshal(metadata, &fields) == nil {
+				if fields.Name != "" {
+					name = filepath.Base(fields.Name)
+				}
+				if allowedMIME(fields.MIME) {
+					contentType = canonicalMIME(fields.MIME)
+				}
+			}
+		}
+		result = append(result, Attachment{ID: id, Name: name, MIME: contentType, Size: int64(len(data)), Path: path, data: data})
 	}
 	return result, nil
 }

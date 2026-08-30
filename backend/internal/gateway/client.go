@@ -126,7 +126,14 @@ func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)
 		parts := []map[string]any{{"type": "text", "text": input.Message}}
 		for _, attachment := range input.Attachments {
 			encoded := base64.StdEncoding.EncodeToString(attachment.Data)
-			parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": "data:" + attachment.MIME + ";base64," + encoded}})
+			switch {
+			case strings.HasPrefix(attachment.MIME, "image/"):
+				parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": "data:" + attachment.MIME + ";base64," + encoded}})
+			case attachment.MIME == "application/pdf":
+				parts = append(parts, map[string]any{"type": "file", "file": map[string]string{"filename": attachment.Name, "file_data": "data:application/pdf;base64," + encoded}})
+			default:
+				parts = append(parts, map[string]any{"type": "text", "text": string(attachment.Data)})
+			}
 		}
 		content = parts
 	}
