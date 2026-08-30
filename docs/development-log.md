@@ -130,6 +130,10 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
   search and session actions while keeping other menus focused.
 - Frontend tests and production build pass; browser acceptance remains green.
 
+The layout was clarified after review: Recent sessions is now a second sidebar
+inside the Chat content area, not an item list in the primary navigation rail.
+The acceptance script verifies it is visible only on Chat.
+
 ## 2026-08-30 - Control-center menu audit and Hermes discovery fix
 
 - Audited every sidebar menu and found empty control collections serialized as

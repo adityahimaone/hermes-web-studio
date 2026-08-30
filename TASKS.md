@@ -103,4 +103,5 @@ and memory runtime verification passed locally; live scheduler execution and
 external provider-backed integrations remain `[~]` under M4.
 
 UI follow-up: visible controls now use shared shadcn-style primitives and
-Recent sessions is scoped to the Chat menu without removing session actions.
+Recent sessions is a secondary sidebar inside Chat content without removing
+session actions.

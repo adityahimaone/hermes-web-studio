@@ -84,7 +84,8 @@ states stay consistent across the workspace. The file chooser remains a
 hidden native input because it is the browser upload transport. Recent
 sessions belong to the Chat navigation context and are hidden while another
 control-center menu is active; session actions and search behavior remain
-unchanged.
+unchanged. The rail lives inside the Chat content area, leaving the primary
+navigation sidebar focused on product sections.
 
 ## ADR-016 - Separate Hermes runtime state from Web Studio metadata
 

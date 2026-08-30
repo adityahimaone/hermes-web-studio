@@ -7,7 +7,9 @@ try {
     await page.route(`**${endpoint}`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(endpoint === '/api/sessions' ? { sessions: [] } : endpoint === '/api/profiles' ? { profiles: [{ id: 'default', name: 'Default', model: 'default', health: 'gateway' }], active: 'default' } : endpoint === '/api/onboarding' ? { configured: false } : endpoint.startsWith('/api/control/') ? { items: [] } : endpoint === '/api/crons' ? { jobs: [] } : endpoint === '/api/preferences' ? { preferences: { theme: 'dark', locale: 'en' } } : endpoint === '/api/skills' ? { skills: [] } : endpoint === '/api/memory' ? { notes: [] } : { authenticated: false }) }))
   }
   await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' })
+  await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeVisible()
   await page.getByRole('button', { name: 'Tasks' }).click()
+  await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeHidden()
   await expect(page.locator('h1').filter({ hasText: 'tasks' })).toBeVisible()
   await page.getByRole('button', { name: 'Skills' }).click()
   await expect(page.locator('h1').filter({ hasText: 'skills' })).toBeVisible()
@@ -23,5 +25,7 @@ try {
   await expect(page.locator('h1').filter({ hasText: 'spaces' })).toBeVisible()
   await page.getByRole('button', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible()
+  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Recent sessions' })).toBeVisible()
   console.log('M5 control-center browser acceptance passed.')
 } finally { await browser.close() }
