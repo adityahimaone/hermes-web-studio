@@ -5,6 +5,7 @@ import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatE
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
 const newId = () => crypto.randomUUID()
 type QueuedTurn = { content: string; files: File[] }
+type TurnOptions = { model?: string; provider?: string }
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -17,13 +18,13 @@ export function useChat() {
   const [draft, setDraft] = useState('')
   const sourceRef = useRef<EventSource | null>(null)
   const streamIdRef = useRef<string | null>(null)
-  const queueRef = useRef<QueuedTurn[]>([])
+  const queueRef = useRef<(QueuedTurn & { options?: TurnOptions })[]>([])
   const activeSessionRef = useRef(activeSessionId)
   const answerRef = useRef('')
   const terminalRef = useRef<string | null>(null)
   const lastEventIdRef = useRef(0)
   const chatStateRef = useRef<ChatState>(initialChatState)
-  const pumpRef = useRef<(content: string, files?: File[]) => void>(() => undefined)
+  const pumpRef = useRef<(content: string, files?: File[], baseMessages?: ChatMessage[], options?: TurnOptions) => void>(() => undefined)
 
   const closeSource = useCallback(() => { sourceRef.current?.close(); sourceRef.current = null }, [])
   const refreshSessions = useCallback(async (signal?: AbortSignal) => {
@@ -56,17 +57,17 @@ export function useChat() {
     void refreshSessions().catch(() => undefined)
     const next = queueRef.current.shift()
     setQueuedMessages(queueRef.current.map((item) => item.content))
-    if (next) pumpRef.current(next.content, next.files)
+    if (next) pumpRef.current(next.content, next.files, undefined, next.options)
   }, [closeSource])
 
-  const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[]) => {
+  const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[], options?: TurnOptions) => {
     const clean = content.trim(); if (!clean) return
     closeSource(); answerRef.current = ''; terminalRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
       const uploaded = await Promise.all(files.map((file) => uploadAttachment(file, activeSessionRef.current)))
-      const started = await startChat({ session_id: activeSessionRef.current, message: clean, attachment_ids: uploaded.map((file) => file.id) })
+      const started = await startChat({ session_id: activeSessionRef.current, message: clean, model: options?.model, provider: options?.provider, attachment_ids: uploaded.map((file) => file.id) })
       streamIdRef.current = started.stream_id
       setActiveSessionId(started.session_id || activeSessionRef.current)
       const source = new EventSource(streamUrl(started.stream_id))
@@ -96,13 +97,13 @@ export function useChat() {
   }, [closeSource, finish, refreshSessions])
   pumpRef.current = pump
 
-  const send = useCallback((content: string, files: File[] = []) => {
+  const send = useCallback((content: string, files: File[] = [], options?: TurnOptions) => {
     const clean = content.trim(); if (!clean) return
     setDraft('')
     if (streamState.status === 'streaming' || streamIdRef.current) {
-      queueRef.current.push({ content: clean, files })
+      queueRef.current.push({ content: clean, files, options })
       setQueuedMessages(queueRef.current.map((item) => item.content))
-    } else pump(clean, files)
+    } else pump(clean, files, undefined, options)
   }, [pump, streamState.status])
   const retry = useCallback(async (message: ChatMessage) => {
     const index = messages.findIndex((item) => item.id === message.id)

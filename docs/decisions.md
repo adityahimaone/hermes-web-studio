@@ -159,3 +159,17 @@ recorded decision and explicit approval before MVP certification.
   to localize and can hide dead controls behind polished styling.
 - **Consequence:** P005 source checks verify the contract, while screenshot and
   computed-style measurements remain separate P012 evidence.
+
+## ADR-024: Keep composer selectors server-backed
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Profile and model controls in the composer read `/api/profiles`
+  and send the selected values through the existing chat start contract. The
+  workspace control opens the existing workspace service, and usage is shown
+  only when Gateway supplies bounded usage values.
+- **Reason:** The personal WebUI exposes runtime controls in the composer, but
+  hardcoded models, quotas, or paths would create a misleading UI and violate
+  the server credential boundary.
+- **Consequence:** Grouped provider discovery, auxiliary models, and richer
+  context-ring geometry remain P023/P012 work.

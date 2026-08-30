@@ -90,6 +90,12 @@ The primary rail and titlebar semantics are frozen in
 focus behavior, dialog/menu semantics, and responsive boundaries. Visual
 geometry remains an evidence task and is not inferred from source inspection.
 
+The composer may select an active profile and model from `/api/profiles`; the
+selected model/provider is sent only in the server-bound chat start request.
+Workspace selection opens the server-owned workspace panel. Context usage is
+rendered only when normalized Gateway usage fields include both a total and a
+context limit, so the UI never invents a quota or percentage.
+
 Production credentials, session names, model inventories, workspace paths, and
 other private runtime data are never fixtures. Deterministic tests use sanitized
 state derived from the frozen source contracts. If frozen source and production

@@ -241,3 +241,14 @@ The acceptance script verifies it is visible only on Chat.
   browser overflow actions now invoke real state/download behavior.
 - P006 remains `[~]`: duplicate/import/share/export actions still need their
   import/share contracts and browser acceptance evidence.
+
+## 2026-08-30 — P007 titlebar and composer runtime controls
+
+- Added server-backed profile and model selectors to the composer, forwarding
+  the selected model/provider into the chat start request.
+- Added a workspace control that opens the existing workspace panel, a usage
+  indicator gated on normalized Gateway totals/limits, and preserved Send,
+  Queue, Stop, attachment, voice, and slash-command behavior.
+- Automated evidence: frontend tests and production build pass.
+- P007 remains `[~]` for titlebar visual measurements and grouped live model
+  discovery, which are tracked by P012 and P023.
