@@ -1,6 +1,7 @@
-import { Bot, CheckCircle2, CircleAlert, LoaderCircle, Wrench } from 'lucide-react'
-import Markdown from 'react-markdown'
+import { Bot, LoaderCircle } from 'lucide-react'
 import type { ChatMessage, ChatState } from '../../lib/chat-contract'
+import { SafeMarkdown } from '../../lib/markdown'
+import { ActivityCards } from './activity-cards'
 
 function EmptyState() {
   return (
@@ -13,7 +14,7 @@ function EmptyState() {
       <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">Talk to Hermes through the new Gateway-first stack. Streaming, tool activity, cancellation, and failures stay visible in one focused workspace.</p>
       <div className="mt-6 grid w-full gap-2 sm:grid-cols-2">
         {['Inspect my current project', 'Plan a focused implementation', 'Help debug an error', 'Explain this codebase'].map((prompt) => (
-          <div key={prompt} className="rounded-xl border bg-card/45 px-4 py-3 text-left text-xs text-muted-foreground">{prompt}</div>
+          <p key={prompt} className="rounded-xl border bg-card/45 px-4 py-3 text-left text-xs text-muted-foreground">{prompt}</p>
         ))}
       </div>
     </div>
@@ -33,7 +34,7 @@ export function MessageList({ messages, stream }: { messages: ChatMessage[]; str
         ) : (
           <article key={message.id} className="flex gap-3">
             <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
-            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><Markdown>{message.content}</Markdown></div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><SafeMarkdown>{message.content}</SafeMarkdown></div>
           </article>
         )
       ))}
@@ -48,25 +49,17 @@ export function MessageList({ messages, stream }: { messages: ChatMessage[]; str
                 <p className="mt-2 whitespace-pre-wrap leading-5">{stream.reasoning}</p>
               </details>
             )}
-            {!!stream.tools.length && (
-              <div className="mb-3 space-y-2">
-                {stream.tools.map((tool) => (
-                  <div key={tool.id} className="flex items-center gap-2 rounded-xl border bg-card/45 px-3 py-2 text-xs">
-                    {tool.status === 'running' ? <LoaderCircle size={14} className="animate-spin text-primary" /> : tool.status === 'error' ? <CircleAlert size={14} className="text-destructive" /> : <CheckCircle2 size={14} className="text-emerald-400" />}
-                    <Wrench size={13} className="text-muted-foreground" /><span>{tool.name}</span><span className="ml-auto capitalize text-muted-foreground">{tool.status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ActivityCards tools={stream.tools} subagents={stream.subagents} approvals={stream.approvals} />
             {stream.error ? (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-red-200">{stream.error}</div>
             ) : stream.answer ? (
-              <div className="message-markdown text-sm leading-7 text-foreground/95"><Markdown>{stream.answer}</Markdown></div>
+              <div className="message-markdown text-sm leading-7 text-foreground/95"><SafeMarkdown>{stream.answer}</SafeMarkdown></div>
             ) : stream.status === 'cancelled' ? (
               <p className="text-sm text-muted-foreground">Generation stopped.</p>
             ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={15} className="animate-spin text-primary" /> Hermes is thinking…</div>
+              <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={15} className="animate-spin text-primary" /> Hermes is thinking…</div>
             )}
+            {stream.usage && <div className="mt-3 text-xs text-muted-foreground">{stream.usage.total !== undefined ? `${stream.usage.total.toLocaleString()} tokens` : 'Token usage reported'}{stream.usage.contextLimit ? ` · ${Math.round((stream.usage.total || 0) / stream.usage.contextLimit * 100)}% context` : ''}</div>}
           </div>
         </article>
       )}

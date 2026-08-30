@@ -2,6 +2,7 @@ import { Archive, Bot, BrainCircuit, CheckSquare2, Clock3, FolderKanban, Message
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/cn'
+import type { SessionSummary } from '../../lib/chat-contract'
 
 const navigation = [
   { label: 'Chat', icon: MessageSquareText, active: true },
@@ -13,7 +14,7 @@ const navigation = [
   { label: 'Spaces', icon: FolderKanban },
 ]
 
-export function Sidebar({ onNewChat }: { onNewChat: () => void }) {
+export function Sidebar({ onNewChat, sessions, activeSessionId, onSelectSession, loading, error }: { onNewChat: () => void; sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; loading: boolean; error?: string }) {
   return (
     <aside className="hidden h-screen w-[264px] shrink-0 flex-col border-r bg-card/55 p-3 backdrop-blur-xl lg:flex">
       <div className="flex h-12 items-center gap-3 px-2">
@@ -32,10 +33,12 @@ export function Sidebar({ onNewChat }: { onNewChat: () => void }) {
         ))}
       </nav>
 
-      <div className="mt-6 flex items-center px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"><span>Recent</span><Search size={13} className="ml-auto" /></div>
+      <div className="mt-6 flex items-center px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"><span>Recent sessions</span><Search size={13} className="ml-auto" /></div>
       <div className="mt-2 space-y-1">
-        <button className="w-full rounded-lg bg-accent/60 px-3 py-2.5 text-left"><div className="truncate text-sm">New Hermes conversation</div><div className="mt-1 text-[11px] text-muted-foreground">Just now</div></button>
-        <button disabled className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground opacity-50"><Archive size={14} /> Session history after M1</button>
+        {loading && <p className="px-3 py-2 text-xs text-muted-foreground" role="status">Loading session history…</p>}
+        {error && <p className="px-3 py-2 text-xs text-destructive" role="alert">{error}</p>}
+        {!loading && !error && !sessions.length && <p className="px-3 py-2 text-xs text-muted-foreground">No saved sessions yet.</p>}
+        {sessions.map((item) => <button key={item.session_id} type="button" onClick={() => onSelectSession(item.session_id)} aria-current={item.session_id === activeSessionId ? 'page' : undefined} className={cn('flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring', item.session_id === activeSessionId && 'bg-accent/60')}><Archive size={14} className="shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{item.title || 'Untitled session'}</span></button>)}
       </div>
 
       <div className="mt-auto rounded-xl border bg-background/50 p-3">
@@ -46,4 +49,3 @@ export function Sidebar({ onNewChat }: { onNewChat: () => void }) {
     </aside>
   )
 }
-

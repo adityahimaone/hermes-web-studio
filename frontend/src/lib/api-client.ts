@@ -1,3 +1,5 @@
+import type { SessionDetail, SessionSummary } from './chat-contract'
+
 export interface HermesHealth {
   ok: boolean
   configured: boolean
@@ -44,3 +46,26 @@ export async function cancelChat(streamId: string) {
   )
 }
 
+export async function getSessions(signal?: AbortSignal) {
+  return readJson<{ sessions: SessionSummary[] }>(await fetch('/api/sessions', { signal }))
+}
+
+export async function getSession(sessionId: string, signal?: AbortSignal) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { signal }))
+}
+
+export async function renameSession(sessionId: string, title: string) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/rename`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) }))
+}
+
+export async function setSessionPinned(sessionId: string, pinned: boolean) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/pin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pinned }) }))
+}
+
+export async function setSessionArchived(sessionId: string, archived: boolean) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ archived }) }))
+}
+
+export async function deleteSession(sessionId: string) {
+  return readJson<{ ok: boolean; session_id: string }>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }))
+}

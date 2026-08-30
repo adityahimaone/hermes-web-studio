@@ -16,6 +16,10 @@ type LegacySessionReader struct {
 	stateDir string
 }
 
+type Store struct {
+	*LegacySessionReader
+}
+
 type Summary struct {
 	ID       string                     `json:"session_id"`
 	Title    string                     `json:"title"`
@@ -29,6 +33,10 @@ type Session struct {
 
 func NewLegacySessionReader(stateDir string) *LegacySessionReader {
 	return &LegacySessionReader{stateDir: filepath.Clean(stateDir)}
+}
+
+func NewStore(stateDir string) *Store {
+	return &Store{LegacySessionReader: NewLegacySessionReader(stateDir)}
 }
 
 func ResolveStateDir(environ func(string) string, homeDir func() (string, error)) (string, error) {
@@ -172,3 +180,5 @@ func validateID(id string) error {
 	}
 	return nil
 }
+
+func ValidateID(id string) error { return validateID(id) }

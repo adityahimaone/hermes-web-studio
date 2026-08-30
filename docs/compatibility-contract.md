@@ -64,7 +64,7 @@ Unimplemented routes must not be improvised. Inventory the original route, reque
 
 ## M1 session persistence inventory
 
-The frozen upstream session store is file-based and remains the compatibility source while the first M1 slice is read-only:
+The frozen upstream session store is file-based and remains the compatibility source for the first M1 slice:
 
 - State directory: `HERMES_WEBUI_STATE_DIR`, then `$HERMES_HOME/webui`, then POSIX `~/.hermes/webui`.
 - Session files: `sessions/<session_id>.json`.
@@ -72,8 +72,8 @@ The frozen upstream session store is file-based and remains the compatibility so
 - Session JSON: top-level metadata plus a `messages` array. Unknown top-level fields are retained by the reader.
 - Safety: session IDs are single path components. Traversal, slash, and backslash forms are rejected.
 
-The current Go implementation is intentionally a read-only `LegacySessionReader`. It does not rename, archive, delete, or rewrite legacy files, and it does not treat SQLite or CLI session data as compatible until those formats receive their own inventory and tests.
+The Go implementation uses the same JSON files as its durable session store. Writes are atomic, use `0600` files, preserve unknown top-level fields, and rebuild `_index.json` without transcript messages. SQLite or CLI session data is not treated as compatible until those formats receive their own inventory and tests.
 
-### Read-only session API
+### Session API
 
-`GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. Missing sessions return `404`; unsafe IDs return `400`. These endpoints never write to the legacy state directory.
+`GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. `POST /api/sessions` creates a session, `PATCH /api/sessions/{session_id}` updates metadata, and `DELETE /api/sessions/{session_id}` removes it. Action-compatible routes are available at `/rename`, `/pin`, and `/archive`. Missing sessions return `404`; unsafe IDs return `400`. Create and update preserve the legacy top-level JSON shape and unknown fields. Chat turns append user and assistant messages to the same transcript, allowing later loads to resume the stored history.

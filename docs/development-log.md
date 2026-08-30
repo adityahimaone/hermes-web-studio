@@ -26,6 +26,15 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Compatibility status: `[~]`. No session write route or SQLite source of truth has been introduced.
 - Next task: expose a read-only sessions API contract and add browser session loading only after route shape is agreed against the upstream inventory.
 
+### M1 - Session continuity and rich response surface
+
+- Added session API clients and active-session history loading in the chat hook.
+- Added a keyboard-usable session history list with loading, empty, error, active, and no-overflow states.
+- Added queued sends while a response is streaming, terminal event de-duplication, retry entry point, and draft editing entry point.
+- Added safe Markdown links, code copy controls, tool/subagent/approval activity rendering, reasoning disclosure, usage display, and local attachment selection.
+- Automated evidence: 4 frontend reducer/normalization tests and frontend production build pass.
+- Compatibility status: `[~]`. Mermaid rendering, real approval actions, attachment upload/multimodal payloads, true replay reconnect, and complete session search/grouping/project/tag UI remain open.
+
 ### M1 - Read-only sessions API
 
 - Added `GET /api/sessions` and `GET /api/sessions/{session_id}` over the legacy reader.

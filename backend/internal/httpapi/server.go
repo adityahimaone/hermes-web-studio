@@ -23,7 +23,7 @@ import (
 type Server struct {
 	config   config.Config
 	gateway  *gateway.Client
-	sessions *session.LegacySessionReader
+	sessions *session.Store
 	turns    map[string]*turn
 	mu       sync.Mutex
 }
@@ -54,7 +54,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	if stateDir == "" {
 		stateDir, _ = session.ResolveStateDir(os.Getenv, os.UserHomeDir)
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewLegacySessionReader(stateDir), turns: make(map[string]*turn)}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn)}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -63,6 +63,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/health/hermes", s.handleHermesHealth)
 	mux.HandleFunc("GET /api/sessions", s.handleSessions)
 	mux.HandleFunc("GET /api/sessions/{session_id}", s.handleSession)
+	mux.HandleFunc("POST /api/sessions", s.handleSessionCreate)
+	mux.HandleFunc("PATCH /api/sessions/{session_id}", s.handleSessionUpdate)
+	mux.HandleFunc("POST /api/sessions/{session_id}/rename", s.handleSessionRename)
+	mux.HandleFunc("POST /api/sessions/{session_id}/pin", s.handleSessionPin)
+	mux.HandleFunc("POST /api/sessions/{session_id}/archive", s.handleSessionArchive)
+	mux.HandleFunc("DELETE /api/sessions/{session_id}", s.handleSessionDelete)
 	mux.HandleFunc("POST /api/chat/start", s.handleChatStart)
 	mux.HandleFunc("GET /api/chat/stream", s.handleChatStream)
 	mux.HandleFunc("POST /api/chat/cancel", s.handleChatCancel)
@@ -94,6 +100,117 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		SessionID string `json:"session_id"`
+		Title     string `json:"title"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	if input.SessionID == "" {
+		input.SessionID = newID()
+	}
+	item, err := s.sessions.Create(input.SessionID, strings.TrimSpace(input.Title), nil)
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
+	patch, ok := decodeRawObject(w, r)
+	if !ok {
+		return
+	}
+	item, err := s.sessions.Update(r.PathValue("session_id"), patch)
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) handleSessionRename(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Title string `json:"title"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	item, err := s.sessions.Rename(r.PathValue("session_id"), strings.TrimSpace(input.Title))
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) handleSessionPin(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Pinned *bool `json:"pinned"`
+	}
+	if !decodeBody(w, r, &input) || input.Pinned == nil {
+		if input.Pinned == nil {
+			writeError(w, http.StatusBadRequest, "pinned_required", "Pinned is required.")
+		}
+		return
+	}
+	item, err := s.sessions.SetPinned(r.PathValue("session_id"), *input.Pinned)
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) handleSessionArchive(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Archived *bool `json:"archived"`
+	}
+	if !decodeBody(w, r, &input) || input.Archived == nil {
+		if input.Archived == nil {
+			writeError(w, http.StatusBadRequest, "archived_required", "Archived is required.")
+		}
+		return
+	}
+	item, err := s.sessions.SetArchived(r.PathValue("session_id"), *input.Archived)
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
+	if err := s.sessions.Delete(r.PathValue("session_id")); err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "session_id": r.PathValue("session_id")})
+}
+
+func sessionError(w http.ResponseWriter, err error) {
+	if errors.Is(err, session.ErrInvalidSessionID) {
+		writeError(w, http.StatusBadRequest, "invalid_session_id", "The session ID is invalid.")
+		return
+	}
+	if errors.Is(err, session.ErrSessionExists) {
+		writeError(w, http.StatusConflict, "session_exists", "The session already exists.")
+		return
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		writeError(w, http.StatusNotFound, "session_not_found", "The requested session was not found.")
+		return
+	}
+	if strings.Contains(err.Error(), "required") {
+		writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	writeError(w, http.StatusInternalServerError, "session_unavailable", "The session could not be changed.")
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -141,6 +258,10 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 	if input.SessionID == "" {
 		input.SessionID = newID()
 	}
+	if err := session.ValidateID(input.SessionID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_session_id", "The session ID is invalid.")
+		return
+	}
 	if input.Model == "" {
 		input.Model = s.config.DefaultModel
 	}
@@ -164,6 +285,11 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequest) {
 	defer close(item.events)
+	if _, err := s.sessions.Load(input.SessionID); errors.Is(err, os.ErrNotExist) {
+		_, _ = s.sessions.Create(input.SessionID, input.Message, nil)
+	}
+	userMessage := mustMessage("user", input.Message)
+	_ = s.sessions.AppendMessages(input.SessionID, userMessage)
 	answer, err := s.gateway.Stream(ctx, input, func(event gateway.Event) {
 		select {
 		case item.events <- event:
@@ -184,7 +310,33 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		item.events <- gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": message}}
 		return
 	}
+	_ = s.sessions.AppendMessages(input.SessionID, mustMessage("assistant", answer))
 	item.events <- gateway.Event{Name: "done", Data: map[string]any{"answer": answer, "session_id": item.sessionID}}
+}
+
+func mustMessage(role, content string) json.RawMessage {
+	data, _ := json.Marshal(map[string]string{"role": role, "content": content})
+	return data
+}
+
+func decodeBody(w http.ResponseWriter, r *http.Request, target any) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", "The request body is invalid.")
+		return false
+	}
+	return true
+}
+
+func decodeRawObject(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, bool) {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	var value map[string]json.RawMessage
+	if err := decoder.Decode(&value); err != nil || value == nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", "The request body is invalid.")
+		return nil, false
+	}
+	return value, true
 }
 
 func (s *Server) handleChatStream(w http.ResponseWriter, r *http.Request) {
