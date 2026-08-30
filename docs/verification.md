@@ -46,7 +46,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 |---|---|
 | Backend unit/integration tests | Pass: Gateway normalization, session store/API, cancellation, attachment upload and multimodal payload, approval forwarding, replay cursor |
 | Backend vet and formatting | Pass |
-| Frontend reducer/contract tests | Pass: 4 tests |
+| Frontend reducer/contract tests | Pass: 6 tests |
 | Frontend production build | Pass: Vite output generated successfully |
 | Secret boundary | Pass: Gateway credentials are only configured/read in Go; attachment responses expose metadata/opaque IDs only |
 | Live Hermes chat | Pass: M0 smoke proof above |
