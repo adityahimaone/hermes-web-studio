@@ -72,3 +72,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Live Runs API regression exposed and fixed payload-level `run.completed` duplicate output; the corrected source returned one `RUNS_FIXED` answer and one terminal `done` event.
 - A second live Runs prompt exposed reasoning-snapshot duplication with whitespace-prefixed answers; the parser now suppresses normalized snapshot repeats and returned one confirmation answer.
 - Closed a multimodal safety gap in opt-in Runs mode: attachment-bearing turns now stay on the legacy chat-completions transport until a verified upstream Runs multipart/input contract exists. Added a regression acceptance test and recorded the decision in ADR-011.
+- Reconciled `plan.md` with the current M1 evidence: removed stale claims that Runs approval and session persistence were unimplemented, while retaining explicit `[~]` live/manual parity gates and the M5 frontend-embedding boundary.

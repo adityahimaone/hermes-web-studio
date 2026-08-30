@@ -203,6 +203,8 @@ Build and prove the smallest end-to-end path. No persistence dependency. See §7
 
 Add session persistence, session navigation, rich content, approvals through the Runs API, attachments, reconnect/replay, edits/retry, and context usage. Introduce SQLite only when the session contract has been inventoried.
 
+Current implementation status: the chat parity slice, compatibility BFF, browser acceptance matrix, live chat/attachment/replay proof, and opt-in text-only Runs adapter are implemented. `TASKS.md` keeps session CRUD/edit, tool/subagent variants, and structured approval at `[~]` until their live/manual side-by-side scenarios are observed against Hermes.
+
 Exit proof: an agreed chat scenario matrix passes side-by-side against the original WebUI, including stop/reconnect, tool success/failure, approval, and restored history.
 
 ### M2 — Workspace parity
@@ -335,10 +337,10 @@ Preserved / intentionally changed / deferred:
 
 ## 15. Current blockers and explicit non-claims
 
-- This workspace does not contain a running user Hermes Gateway or its credentials. Mock integration can be automated here; live connectivity must be run in the target environment.
-- The MVP uses the chat-completions Gateway transport. Runs API approval parity is not yet implemented.
-- Session history is currently in-memory frontend state and is not persisted.
-- The production frontend is not yet embedded in the Go binary.
+- Live Hermes proof is available for chat, attachment/multimodal transport, replay, and the opt-in Runs stream. The configured safe approval probe returned a textual confirmation rather than a structured approval event; no command was executed.
+- Session CRUD/edit, tool/subagent variants, and structured approval remain `[~]` in `TASKS.md` until live/manual side-by-side parity scenarios are observed.
+- Runs mode is intentionally text-only in the adapter; attachment turns fall back to legacy chat completions until an upstream multimodal Runs input contract is verified.
+- The production container baseline exists, but the frontend is not yet embedded in the Go binary; embedding remains M5 work.
 - Navigation labels beyond Chat are roadmap placeholders, not functioning features.
 
 These limits are surfaced in the UI/docs and tracked in `TASKS.md`; none should be presented as completed parity.
