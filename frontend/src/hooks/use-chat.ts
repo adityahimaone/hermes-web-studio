@@ -132,11 +132,9 @@ export function useChat() {
     closeSource(); setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try { const detail = await getSession(sessionId); setMessages(normalizeSessionMessages(detail.messages)) } catch (error) { setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.') } finally { setSessionLoading(false) }
   }, [closeSource])
-  const rename = useCallback(async (sessionId: string) => {
-    const current = sessions.find((item) => item.session_id === sessionId)
-    const title = window.prompt('Rename session', current?.title || '')?.trim()
-    if (!title) return
-    const updated = await renameSession(sessionId, title)
+  const rename = useCallback(async (sessionId: string, title: string) => {
+    if (!title.trim()) return
+    const updated = await renameSession(sessionId, title.trim())
     setSessions((items) => items.map((item) => item.session_id === sessionId ? updated : item))
   }, [sessions])
   const pin = useCallback(async (sessionId: string, pinned: boolean) => {
@@ -148,7 +146,6 @@ export function useChat() {
     setSessions((items) => items.map((item) => item.session_id === sessionId ? updated : item))
   }, [])
   const remove = useCallback(async (sessionId: string) => {
-    if (!window.confirm('Delete this session?')) return
     await deleteSession(sessionId)
     setSessions((items) => items.filter((item) => item.session_id !== sessionId))
     if (activeSessionRef.current === sessionId) reset()

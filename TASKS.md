@@ -105,3 +105,7 @@ external provider-backed integrations remain `[~]` under M4.
 UI follow-up: visible controls now use shared shadcn-style primitives and
 Recent sessions is a secondary sidebar inside Chat content without removing
 session actions.
+
+UI polish follow-up: Chat now owns a dedicated Recent sessions rail inside its
+content area, and session/workspace modal actions use the shared Dialog
+primitive instead of browser-native prompt/confirm UI.

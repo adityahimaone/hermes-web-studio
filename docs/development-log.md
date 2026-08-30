@@ -134,6 +134,16 @@ The layout was clarified after review: Recent sessions is now a second sidebar
 inside the Chat content area, not an item list in the primary navigation rail.
 The acceptance script verifies it is visible only on Chat.
 
+## 2026-08-30 - Chat rail layout and dialog cleanup
+
+- Moved Recent sessions into a dedicated in-content Chat rail with a wider
+  title column and right-aligned compact actions, preventing session names from
+  being truncated by the action toolbar.
+- Added a copy-owned Dialog primitive and replaced native prompt/confirm flows
+  for session and workspace actions. Native file inputs remain hidden upload
+  transports only.
+- Frontend tests, production build, and browser acceptance pass.
+
 ## 2026-08-30 - Control-center menu audit and Hermes discovery fix
 
 - Audited every sidebar menu and found empty control collections serialized as
