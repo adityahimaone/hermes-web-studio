@@ -36,7 +36,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [x] Attachments and multimodal messages (validated upload/download, MIME-specific Gateway transport, and live model completion verified)
 - [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and terminal dedup implemented; browser interruption proof remains)
 - [x] Context/token usage indicator
-- [~] Chat keyboard, focus, screen-reader, and mobile acceptance tests (keyboard/focus states and functional mobile navigation implemented; browser matrix remains)
+- [x] Chat keyboard, focus, screen-reader, and mobile acceptance tests (Playwright coverage passes for mobile navigation, focus/labels, desktop rail, Shift+Enter, and Enter-to-send)
 
 ## M2 — Workspace composition
 
