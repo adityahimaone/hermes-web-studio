@@ -252,3 +252,14 @@ The acceptance script verifies it is visible only on Chat.
 - Automated evidence: frontend tests and production build pass.
 - P007 remains `[~]` for titlebar visual measurements and grouped live model
   discovery, which are tracked by P012 and P023.
+
+## 2026-08-30 — P008 workspace panel composition
+
+- Added Files/Artifacts/Todos tabs to the demand-driven workspace panel.
+- Files retains tree, breadcrumb, preview, edit, upload, download, rename,
+  delete, and Git flows. Todos reads the server-owned control route; Artifacts
+  remains an explicit empty state until its backend contract exists.
+- Persisted panel open state and width as layout preferences while keeping
+  workspace contents server-owned and stream-independent.
+- Frontend production build passes. P008 remains `[~]` pending artifact API
+  parity and complete browser resize/mobile evidence.

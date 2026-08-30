@@ -156,6 +156,12 @@ endpoint. Git output is informational and never blocks file access. Workspace
 state is independent from the chat stream, so an active stream does not clear
 the selected preview.
 
+The workspace panel owns Files, Artifacts, and Todos tabs. Files uses the
+workspace contract above, Todos reads the server-owned control collection, and
+Artifacts remains an honest empty state until an artifact route is available.
+Panel open state and width are browser layout preferences persisted locally;
+workspace contents and mutations remain server-owned.
+
 ## M3 identity and profile contract
 
 `GET /api/onboarding` reports whether local password setup is complete and

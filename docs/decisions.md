@@ -173,3 +173,17 @@ recorded decision and explicit approval before MVP certification.
   the server credential boundary.
 - **Consequence:** Grouped provider discovery, auxiliary models, and richer
   context-ring geometry remain P023/P012 work.
+
+## ADR-025: Keep workspace panel tabs capability-driven
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Ship Files against the existing workspace service and Todos
+  against the control API. Render Artifacts as an explicit empty state until
+  its server contract exists. Persist only panel layout state in browser
+  storage.
+- **Reason:** The personal WebUI has a multi-surface right panel, but a fake
+  artifact list would violate the requirement that every visible data row be
+  real.
+- **Consequence:** Artifact persistence and stream projection remain P029
+  work; file and todo state are not duplicated in local storage.
