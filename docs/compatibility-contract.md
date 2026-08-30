@@ -80,7 +80,7 @@ The Go implementation uses the same JSON files as its durable session store. Wri
 
 ## M1 streaming, approvals, and attachments
 
-Start requests may include `attachment_ids`, returned by `POST /api/attachments`. Stream events carry monotonically increasing numeric SSE IDs. Clients may reconnect with `Last-Event-ID` or `after=<id>`; completed turns remain replayable for five minutes.
+Start requests may include `attachment_ids`, returned by `POST /api/attachments`. Stream events carry monotonically increasing numeric SSE IDs. Clients may reconnect with `Last-Event-ID` or `after=<id>`; completed turns remain replayable for five minutes. The browser also ignores any event whose ID is not newer than its local cursor, protecting the transcript from duplicate delivery during reconnect.
 
 The normalized event set also includes `subagent`, `approval`, and `usage`. Approval decisions use `POST /api/runs/{run_id}/approval` with `{"decision":"approved"}` or `{"decision":"denied"}`. The BFF forwards this using its server-side Gateway credential.
 

@@ -58,3 +58,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Fixed session API response serialization so legacy metadata fields are flattened to the browser contract; added integration coverage for pinned/tags metadata.
 - Retry/regenerate now truncates the persisted branch before automatically re-running the selected user prompt, matching edit branch semantics.
 - Session browsing now exposes project/tag metadata inline, in addition to search matching and persisted top-level fields.
+- Added explicit browser-side SSE cursor filtering in addition to server replay, so reconnects cannot duplicate token/tool events when delivery is retried.

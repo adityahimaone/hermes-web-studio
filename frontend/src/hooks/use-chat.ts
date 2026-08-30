@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, setSessionArchived, setSessionPinned, startChat, truncateSession, uploadAttachment } from '../lib/api-client'
+import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -20,6 +20,7 @@ export function useChat() {
   const activeSessionRef = useRef(activeSessionId)
   const answerRef = useRef('')
   const terminalRef = useRef<string | null>(null)
+  const lastEventIdRef = useRef(0)
   const pumpRef = useRef<(content: string) => void>(() => undefined)
 
   const closeSource = useCallback(() => { sourceRef.current?.close(); sourceRef.current = null }, [])
@@ -52,7 +53,7 @@ export function useChat() {
 
   const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[]) => {
     const clean = content.trim(); if (!clean) return
-    closeSource(); answerRef.current = ''; terminalRef.current = null
+    closeSource(); answerRef.current = ''; terminalRef.current = null; lastEventIdRef.current = 0
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
@@ -60,10 +61,15 @@ export function useChat() {
       const started = await startChat({ session_id: activeSessionRef.current, message: clean, attachment_ids: uploaded.map((file) => file.id) })
       streamIdRef.current = started.stream_id
       setActiveSessionId(started.session_id || activeSessionRef.current)
-      const source = new EventSource(`/api/chat/stream?stream_id=${encodeURIComponent(started.stream_id)}`)
+      const source = new EventSource(streamUrl(started.stream_id))
       sourceRef.current = source
       supportedEvents.forEach((type) => source.addEventListener(type, (raw) => {
         const event = raw as MessageEvent<string>
+        const eventID = Number(event.lastEventId)
+        if (Number.isFinite(eventID) && eventID > 0) {
+          if (eventID <= lastEventIdRef.current) return
+          lastEventIdRef.current = eventID
+        }
         let data: Record<string, unknown>
         try { data = JSON.parse(event.data) as Record<string, unknown> } catch { data = { message: event.data } }
         setStreamState((current) => {
