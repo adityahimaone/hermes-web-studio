@@ -136,7 +136,7 @@ personal source as the new acceptance baseline.
 - [~] P003 Capture the production shell at desktop; settings, narrow, tablet, mobile, and all panel states remain to be captured with dynamic-data masks
 - [x] P004 Build a route/state/feature manifest from the frozen personal source and map every entry to a Studio owner, test, and disposition
 - [x] P005 Freeze DOM, computed-style, keyboard, focus, tooltip, menu, dialog, and responsive contracts for the primary rail and titlebar
-- [~] P006 Match the Chat session panel: WebUI/CLI sources, content search, project chips, date groups, archive/pin, channel badges, batch mode, and overflow actions (source/project/channel/batch UI implemented; server-backed transcript search and import/share/duplicate actions remain)
+- [~] P006 Match the Chat session panel: WebUI/CLI sources, content search, project chips, date groups, archive/pin, channel badges, batch mode, and overflow actions (source/project/channel/batch UI, server-backed transcript search, duplicate, and Markdown export implemented; import/share remain)
 - [ ] P007 Match the titlebar and composer control ownership, ordering, responsive overflow, model/profile/workspace pickers, context ring, and Stop/Send states
 - [ ] P008 Match the demand-driven workspace panel shell, resize/open persistence, Files/Artifacts/Todos tabs, and mobile slide-over
 - [ ] P009 Rebuild the Control Center section structure and primary-rail order/visibility customization without shipping non-functional controls

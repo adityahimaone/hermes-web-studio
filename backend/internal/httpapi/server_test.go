@@ -399,6 +399,45 @@ func TestSessionsAPISearchesTranscriptServerSide(t *testing.T) {
 	}
 }
 
+func TestSessionDuplicateAndMarkdownExport(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"session-source","title":"Source","messages":[{"role":"user","content":"hello"},{"role":"assistant","content":"world"}]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "session-source.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Post(api.URL+"/api/sessions/session-source/duplicate", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("duplicate status=%d", response.StatusCode)
+	}
+	var duplicate map[string]any
+	decode(t, response.Body, &duplicate)
+	_ = response.Body.Close()
+	if duplicate["title"] != "Copy of Source" || duplicate["session_id"] == "session-source" {
+		t.Fatalf("duplicate=%#v", duplicate)
+	}
+	response, err = http.Get(api.URL + "/api/sessions/session-source/export?format=markdown")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK || !strings.Contains(string(body), "# Source") || !strings.Contains(string(body), "## Hermes") {
+		t.Fatalf("export status=%d body=%s", response.StatusCode, body)
+	}
+}
+
 func TestSessionsAPIRejectsUnsafeAndMissingIDs(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())

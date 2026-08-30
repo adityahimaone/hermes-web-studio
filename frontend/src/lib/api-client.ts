@@ -85,6 +85,14 @@ export async function deleteSession(sessionId: string) {
   return readJson<{ ok: boolean; session_id: string }>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }))
 }
 
+export async function duplicateSession(sessionId: string) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/duplicate`, { method: 'POST' }))
+}
+
+export function sessionExportUrl(sessionId: string) {
+  return `/api/sessions/${encodeURIComponent(sessionId)}/export?format=markdown`
+}
+
 export async function truncateSession(sessionId: string, count: number) {
   return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/truncate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ count }) }))
 }

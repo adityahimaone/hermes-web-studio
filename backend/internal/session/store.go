@@ -37,6 +37,29 @@ func (s *Store) Create(id, title string, messages []json.RawMessage) (Session, e
 	return sessionFromFields(id, fields)
 }
 
+func (s *Store) Duplicate(id, newID string) (Session, error) {
+	if err := validateID(newID); err != nil {
+		return Session{}, err
+	}
+	item, err := s.Load(id)
+	if err != nil {
+		return Session{}, err
+	}
+	fields, err := readObject(s.sessionPath(id))
+	if err != nil {
+		return Session{}, err
+	}
+	fields["session_id"] = mustJSON(newID)
+	fields["title"] = mustJSON("Copy of " + item.Title)
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	fields["created_at"] = mustJSON(now)
+	fields["updated_at"] = mustJSON(now)
+	if err := s.writeFields(newID, fields); err != nil {
+		return Session{}, err
+	}
+	return sessionFromFields(newID, fields)
+}
+
 func (s *Store) Update(id string, patch map[string]json.RawMessage) (Session, error) {
 	if err := validateID(id); err != nil {
 		return Session{}, err

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -110,6 +111,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/sessions/{session_id}/pin", s.handleSessionPin)
 	mux.HandleFunc("POST /api/sessions/{session_id}/archive", s.handleSessionArchive)
 	mux.HandleFunc("POST /api/sessions/{session_id}/truncate", s.handleSessionTruncate)
+	mux.HandleFunc("POST /api/sessions/{session_id}/duplicate", s.handleSessionDuplicate)
+	mux.HandleFunc("GET /api/sessions/{session_id}/export", s.handleSessionExport)
 	mux.HandleFunc("DELETE /api/sessions/{session_id}", s.handleSessionDelete)
 	mux.HandleFunc("POST /api/chat/start", s.handleChatStart)
 	mux.HandleFunc("GET /api/chat/stream", s.handleChatStream)
@@ -280,6 +283,46 @@ func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "session_id": r.PathValue("session_id")})
+}
+
+func (s *Server) handleSessionDuplicate(w http.ResponseWriter, r *http.Request) {
+	item, err := s.sessions.Duplicate(r.PathValue("session_id"), newID())
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, sessionPayload(item))
+}
+
+func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("format") != "markdown" {
+		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown export is supported.")
+		return
+	}
+	item, err := s.sessions.Load(r.PathValue("session_id"))
+	if err != nil {
+		sessionError(w, err)
+		return
+	}
+	var body strings.Builder
+	body.WriteString("# " + item.Title + "\n\n")
+	for _, raw := range item.Messages {
+		var message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		}
+		if json.Unmarshal(raw, &message) != nil || message.Content == "" {
+			continue
+		}
+		label := "User"
+		if message.Role == "assistant" {
+			label = "Hermes"
+		}
+		body.WriteString("## " + label + "\n\n" + message.Content + "\n\n")
+	}
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.md"`)
+	_, _ = io.WriteString(w, body.String())
 }
 
 func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {

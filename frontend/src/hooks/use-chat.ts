@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, deleteSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
+import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -155,7 +155,11 @@ export function useChat() {
     setSessions((items) => items.filter((item) => item.session_id !== sessionId))
     if (activeSessionRef.current === sessionId) reset()
   }, [])
+  const duplicate = useCallback(async (sessionId: string) => {
+    const created = await duplicateSession(sessionId)
+    setSessions((items) => [created, ...items])
+  }, [])
   const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
-  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
+  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, duplicate, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

@@ -237,5 +237,7 @@ The acceptance script verifies it is visible only on Chat.
 - Automated evidence: frontend tests and production build pass.
 - Added bounded server-owned transcript search at `GET /api/sessions?q=...`;
   results remain summary-only and have reader/API regression coverage.
+- Added duplicate-session and Markdown export routes with server-side tests;
+  browser overflow actions now invoke real state/download behavior.
 - P006 remains `[~]`: duplicate/import/share/export actions still need their
-  server contracts and acceptance evidence.
+  import/share contracts and browser acceptance evidence.
