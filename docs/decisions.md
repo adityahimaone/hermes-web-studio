@@ -43,3 +43,11 @@ The browser uploads files to the BFF using opaque attachment IDs. The BFF valida
 ## ADR-010 - Edit as transcript prefix truncation
 
 Edit/regenerate is represented as a deterministic prefix operation against the durable JSON transcript. The browser sends a message count, the BFF truncates only the transcript array, and all other top-level legacy metadata remains intact. This avoids inventing message IDs in the persisted compatibility format.
+
+## ADR-011 - Preserve multimodal transport in opt-in Runs mode
+
+The current Runs adapter sends a text `input` to `POST /v1/runs`; it does not
+encode attachment parts. When `HERMES_WEBUI_USE_RUNS_API=true`, turns carrying
+attachments therefore continue through the established chat-completions
+adapter. This prevents an opt-in feature flag from silently dropping user
+files while leaving the text-only Runs path available for approval parity work.

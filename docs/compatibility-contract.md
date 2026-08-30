@@ -86,7 +86,7 @@ Start requests may include `attachment_ids`, returned by `POST /api/attachments`
 
 The normalized event set also includes `subagent`, `approval`, and `usage`. Approval decisions use `POST /api/runs/{run_id}/approval` with `{"choice":"once"}`, `{"choice":"session"}`, `{"choice":"always"}`, or `{"choice":"deny"}`. The BFF also accepts the older `decision: approved|denied` aliases and maps them to `once|deny`. It forwards the canonical choice using its server-side Gateway credential.
 
-Set `HERMES_WEBUI_USE_RUNS_API=true` to create turns through `POST /v1/runs` and subscribe to `/v1/runs/{run_id}/events`, the Gateway path that exposes structured approval events. The default remains legacy chat completions for session continuity and multimodal compatibility until Runs API live parity is approved.
+Set `HERMES_WEBUI_USE_RUNS_API=true` to create text-only turns through `POST /v1/runs` and subscribe to `/v1/runs/{run_id}/events`, the Gateway path that exposes structured approval events. Turns with attachments intentionally remain on legacy chat completions because the current adapter does not yet have an upstream Runs multimodal input contract. The default remains legacy chat completions for session continuity and multimodal compatibility until Runs API live parity is approved.
 
 Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PDF/plain-text MIME types. Files are stored with `0600` permissions under the resolved WebUI state directory and are addressed by opaque IDs. The Gateway adapter maps images to `image_url`, PDFs to `file`, and text files to text content. Browser code never receives Gateway or provider credentials.
 

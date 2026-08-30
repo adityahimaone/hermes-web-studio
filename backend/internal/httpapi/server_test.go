@@ -174,6 +174,56 @@ func TestAttachmentUploadAndMultimodalGatewayPayload(t *testing.T) {
 	}
 }
 
+func TestRunsModeKeepsAttachmentTurnsOnChatCompletions(t *testing.T) {
+	paths := make(chan string, 1)
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths <- r.URL.Path
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer gw.Close()
+	cfg := config.Config{GatewayBaseURL: gw.URL, DefaultModel: "default", ReadTimeout: 5 * time.Second, StateDir: t.TempDir(), UseRunsAPI: true}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: gw.URL, ReadTimeout: cfg.ReadTimeout})).Handler())
+	defer api.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "note.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("attachment"))
+	_ = writer.Close()
+	uploadRequest, _ := http.NewRequest(http.MethodPost, api.URL+"/api/attachments", &body)
+	uploadRequest.Header.Set("Content-Type", writer.FormDataContentType())
+	upload, err := http.DefaultClient.Do(uploadRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uploaded map[string]any
+	decode(t, upload.Body, &uploaded)
+	_ = upload.Body.Close()
+
+	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"message": "describe", "attachment_ids": []string{uploaded["id"].(string)}})
+	var started map[string]string
+	decode(t, start.Body, &started)
+	_ = start.Body.Close()
+	stream, err := http.Get(api.URL + "/api/chat/stream?stream_id=" + started["stream_id"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.ReadAll(stream.Body)
+	_ = stream.Body.Close()
+	select {
+	case path := <-paths:
+		if path != "/v1/chat/completions" {
+			t.Fatalf("attachment turn used %s", path)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("gateway request not observed")
+	}
+}
+
 func TestCompletedStreamReplaysAfterLastEventID(t *testing.T) {
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")

@@ -340,7 +340,10 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 	userMessage := mustMessage("user", input.Message)
 	_ = s.sessions.AppendMessages(input.SessionID, userMessage)
 	stream := s.gateway.Stream
-	if s.config.UseRunsAPI {
+	// The Runs API request shape currently accepts text input only in this
+	// adapter. Preserve multimodal compatibility instead of silently dropping
+	// uploaded files when the opt-in Runs path is enabled.
+	if s.config.UseRunsAPI && len(input.Attachments) == 0 {
 		stream = s.gateway.RunStream
 	}
 	answer, err := stream(ctx, input, func(event gateway.Event) {
