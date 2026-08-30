@@ -84,12 +84,14 @@ func TestGatewayAuthErrorIsRedacted(t *testing.T) {
 }
 
 func TestCancelStopsUpstreamTurn(t *testing.T) {
+	requestStarted := make(chan struct{})
 	cancelled := make(chan struct{})
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
 		}
+		close(requestStarted)
 		<-r.Context().Done()
 		close(cancelled)
 	}))
@@ -99,6 +101,11 @@ func TestCancelStopsUpstreamTurn(t *testing.T) {
 	var started map[string]string
 	decode(t, start.Body, &started)
 	_ = start.Body.Close()
+	select {
+	case <-requestStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("upstream request did not start")
+	}
 	cancelResponse, err := http.Post(api.URL+"/api/chat/cancel?stream_id="+started["stream_id"], "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
