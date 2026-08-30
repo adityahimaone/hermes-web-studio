@@ -18,6 +18,7 @@ import (
 const (
 	MaxTextPreview = 1 << 20
 	MaxUpload      = 10 << 20
+	MaxGitDiff     = 256 << 10
 )
 
 var ErrInvalidPath = errors.New("workspace path is invalid")
@@ -40,9 +41,9 @@ type Preview struct {
 
 type GitStatus struct {
 	Available bool       `json:"available"`
-	Root      string     `json:"root,omitempty"`
 	Branch    string     `json:"branch,omitempty"`
 	Entries   []GitEntry `json:"entries,omitempty"`
+	Diff      string     `json:"diff,omitempty"`
 	Error     string     `json:"error,omitempty"`
 }
 
@@ -291,19 +292,41 @@ func (s *Service) Git(ctx context.Context, rel string) GitStatus {
 		return GitStatus{}
 	}
 	gitRoot := strings.TrimSpace(string(rootOutput))
-	status := GitStatus{Available: true, Root: gitRoot}
+	if gitRoot == "" {
+		return GitStatus{}
+	}
+	status := GitStatus{Available: true}
 	branchCmd := exec.CommandContext(ctx, "git", "-C", gitRoot, "branch", "--show-current")
 	if branchOutput, branchErr := branchCmd.Output(); branchErr == nil {
 		status.Branch = strings.TrimSpace(string(branchOutput))
 	}
-	statusCmd := exec.CommandContext(ctx, "git", "-C", gitRoot, "status", "--porcelain")
+	gitRootReal, err := filepath.EvalSymlinks(gitRoot)
+	pathReal, pathErr := filepath.EvalSymlinks(path)
+	relToGit, relErr := filepath.Rel(gitRootReal, pathReal)
+	if pathErr != nil || relErr != nil || !isWithinOrEqual(gitRootReal, pathReal) {
+		return GitStatus{Available: true, Branch: status.Branch, Error: "git workspace path is unavailable"}
+	}
+	statusCmd := exec.CommandContext(ctx, "git", "-C", gitRoot, "status", "--porcelain=v1", "-z", "--", filepath.ToSlash(relToGit))
 	if output, statusErr := statusCmd.Output(); statusErr == nil {
-		for _, line := range strings.Split(strings.TrimRight(string(output), "\n"), "\n") {
-			if len(line) < 4 {
+		for _, record := range strings.Split(string(output), "\x00") {
+			if len(record) < 4 || record[2] != ' ' {
 				continue
 			}
-			status.Entries = append(status.Entries, GitEntry{Status: strings.TrimSpace(line[:2]), Path: strings.TrimSpace(line[3:])})
+			entryPath := filepath.ToSlash(record[3:])
+			absoluteEntry := filepath.Join(gitRootReal, filepath.FromSlash(entryPath))
+			if !isWithin(s.rootReal, absoluteEntry) {
+				continue
+			}
+			status.Entries = append(status.Entries, GitEntry{Status: record[:2], Path: entryPath})
 		}
+	}
+	diffCmd := exec.CommandContext(ctx, "git", "-C", gitRoot, "diff", "--no-ext-diff", "--unified=3", "--", filepath.ToSlash(relToGit))
+	if diffOutput, diffErr := diffCmd.Output(); diffErr == nil {
+		if len(diffOutput) > MaxGitDiff {
+			diffOutput = diffOutput[:MaxGitDiff]
+			status.Error = "git diff is truncated"
+		}
+		status.Diff = string(diffOutput)
 	}
 	return status
 }
@@ -358,6 +381,10 @@ func (s *Service) resolve(rel string, allowMissing bool) (string, error) {
 func isWithin(root, path string) bool {
 	rel, err := filepath.Rel(root, path)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != string(filepath.Separator)
+}
+
+func isWithinOrEqual(root, path string) bool {
+	return filepath.Clean(root) == filepath.Clean(path) || isWithin(root, path)
 }
 
 func relative(root, path string) string {

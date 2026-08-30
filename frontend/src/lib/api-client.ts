@@ -119,6 +119,7 @@ export async function getWorkspaceTree(path = '.', signal?: AbortSignal) { retur
 export async function getWorkspacePreview(path: string, signal?: AbortSignal) { return readJson<WorkspacePreview>(await fetch(`/api/workspace/preview?path=${encodeURIComponent(path)}`, { signal })) }
 export async function getWorkspaceGit(path = '.', signal?: AbortSignal) { return readJson<GitStatus>(await fetch(`/api/workspace/git?path=${encodeURIComponent(path)}`, { signal })) }
 export function workspaceDownloadUrl(path: string) { return `/api/workspace/download?path=${encodeURIComponent(path)}` }
+export function workspaceOpenUrl(path: string) { return `/api/workspace/download?path=${encodeURIComponent(path)}&inline=1` }
 export async function saveWorkspaceFile(path: string, content: string) { return readJson<WorkspacePreview>(await fetch('/api/workspace/file', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content }) })) }
 export async function createWorkspaceItem(path: string, type: 'file' | 'directory', content = '') { return readJson<{ ok: boolean }>(await fetch('/api/workspace/item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, type, content }) })) }
 export async function renameWorkspaceItem(path: string, name: string) { return readJson<{ ok: boolean }>(await fetch('/api/workspace/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, name }) })) }

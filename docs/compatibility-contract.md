@@ -299,3 +299,18 @@ output or a successful capability.
 Authentication rotates the signed session cookie with per-login entropy, marks
 cookies Secure behind TLS or an explicitly trusted HTTPS reverse proxy, and
 rejects cross-origin logout requests under the same-origin policy.
+
+Workspace browsing is relative-path-only and resolves symlinks against the
+configured root before listing, previewing, downloading, editing, renaming,
+deleting, or uploading. Browser actions expose copy/open/download and an
+explicit unavailable reveal state; they do not receive an operating-system
+path. Git integration is currently read-only branch/status/diff projection,
+with hostile-path containment tests; stage, discard, commit, sync, and
+checkout actions remain deferred until a confirmation and ownership contract
+exists.
+
+The local certification runners are evidence generators, not parity approval:
+the route matrix checks registered aliases, the visual matrix writes sanitized
+screenshots under `/tmp`, and the accessibility audit reports open
+touch-target gaps instead of treating them as passed. Hosted, live-Hermes,
+screen-reader, and independent-review gates remain required for M11.

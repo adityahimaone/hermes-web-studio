@@ -320,3 +320,18 @@ recorded decision and explicit approval before MVP certification.
   termination.
 - **Consequence:** Existing cookie verification remains compatible; passkey,
   OIDC, and independent threat review remain open.
+
+## ADR-037: Ship read-only workspace and evidence slices before mutating parity
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Expose contained workspace browsing, safe preview/download/edit
+  actions, and read-only Git status projections first. Keep reveal, mutating
+  Git commands, and hosted certification explicitly unavailable until their
+  ownership, confirmation, and rollback contracts are proven.
+- **Reason:** Browser-visible paths and unbounded Git/process actions create
+  security and recovery risk; deterministic local evidence must remain
+  distinguishable from live Hermes parity.
+- **Consequence:** P028/P031 and M11 certification tasks remain partial while
+  paste/extract, mutating Git, screen-reader/device, hosted, and live gates are
+  completed.

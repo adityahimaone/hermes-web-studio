@@ -1,5 +1,5 @@
 import { BarChart3, BrainCircuit, Clock3, Menu, MessageSquareText, PanelRight, RotateCcw, Settings2, Wrench } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Sidebar } from './components/layout/sidebar'
 import { Button } from './components/ui/button'
 import { ConnectionStatus } from './components/chat/connection-status'
@@ -15,6 +15,7 @@ import { SessionRail } from './components/chat/session-rail'
 export function App() {
   const chat = useChat()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const mobileNavTrigger = useRef<HTMLButtonElement>(null)
   const workspace = useWorkspace()
   const [workspaceWidth, setWorkspaceWidth] = useState(() => Number(window.localStorage.getItem('hermes-workspace-width')) || 360)
   const [view, setView] = useState('chat')
@@ -31,10 +32,10 @@ export function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar onNewChat={() => { chat.reset(); setView('chat'); setChatSessionsOpen(true) }} onNavigate={handleNavigate} currentView={view} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <Sidebar onNewChat={() => { chat.reset(); setView('chat'); setChatSessionsOpen(true) }} onNavigate={handleNavigate} currentView={view} mobileOpen={mobileNavOpen} onClose={() => { setMobileNavOpen(false); requestAnimationFrame(() => mobileNavTrigger.current?.focus()) }} />
       <main id="main-content" className="flex min-w-0 flex-1 flex-col" aria-label="Hermes Studio workspace">
         <header data-testid="titlebar" className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/70 px-3 backdrop-blur-xl sm:px-5">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu size={18} /></Button>
+          <Button ref={mobileNavTrigger} variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu size={18} /></Button>
           <div className="min-w-0"><h2 className="truncate text-sm font-medium">{view === 'chat' ? (chat.sessions.find((session) => session.session_id === chat.activeSessionId)?.title || 'New Hermes conversation') : view}</h2><p className="text-[11px] text-muted-foreground">{view === 'chat' ? 'Default profile · Gateway runtime' : 'Hermes Studio control center'}</p></div>
           <div className="ml-auto flex items-center gap-2">
             <ConnectionStatus />

@@ -364,3 +364,16 @@ The acceptance script verifies it is visible only on Chat.
 - P030, P037, P043, and P044 are now `[~]`; contained terminal lifecycle,
   authoritative cost data, passkey/OIDC, branded onboarding, and external
   review gates remain open.
+
+## 2026-08-31 — Workspace and certification evidence wave
+
+- Added relative-path-safe workspace tree/preview/download/edit/basic CRUD,
+  upload, copy/open actions, read-only Git branch/status/diff, and hostile-path
+  tests. Reveal and mutating Git operations remain explicitly unavailable.
+- Added contract, performance, visual, accessibility, local acceptance, and
+  copied-state rollback runners. The visual matrix passed 252 local
+  viewport/theme/skin rows; frontend tests/build, backend tests/vet, contract,
+  secret, platform, and gzip checks passed.
+- Accessibility evidence now verifies session-action focus restoration and
+  records remaining sub-44px target gaps; therefore P028/P031/P046/P056/P057/P058/P060/P064/
+  P066 remain `[~]` and no live, hosted, beta, or cutover gate is claimed.

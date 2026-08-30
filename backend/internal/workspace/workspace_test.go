@@ -1,7 +1,9 @@
 package workspace
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -82,6 +84,51 @@ func TestWorkspaceMutationsAndUpload(t *testing.T) {
 	}
 	if err := service.Delete("."); err == nil {
 		t.Fatal("root deletion unexpectedly succeeded")
+	}
+}
+
+func TestGitReadOnlySurfacesHandleHostilePathsAndRejectTraversal(t *testing.T) {
+	root := t.TempDir()
+	gitRun := func(args ...string) {
+		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v (%s)", args, err, output)
+		}
+	}
+	gitRun("init")
+	gitRun("config", "user.email", "test@example.invalid")
+	gitRun("config", "user.name", "Workspace Test")
+	if err := os.WriteFile(filepath.Join(root, "tracked.txt"), []byte("before\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun("add", "--", "tracked.txt")
+	gitRun("commit", "-m", "initial")
+	if err := os.WriteFile(filepath.Join(root, "tracked.txt"), []byte("after\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	hostile := "line\nname.txt"
+	if err := os.WriteFile(filepath.Join(root, hostile), []byte("untracked\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	service, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := service.Git(context.Background(), ".")
+	if !status.Available || !strings.Contains(status.Diff, "-before") || !strings.Contains(status.Diff, "+after") {
+		t.Fatalf("git status=%#v", status)
+	}
+	foundHostile := false
+	for _, entry := range status.Entries {
+		if entry.Path == hostile {
+			foundHostile = true
+		}
+	}
+	if !foundHostile {
+		t.Fatalf("hostile filename was not preserved: %#v", status.Entries)
+	}
+	if got := service.Git(context.Background(), "../"); got.Error != "workspace path is invalid" {
+		t.Fatalf("traversal git status=%#v", got)
 	}
 }
 

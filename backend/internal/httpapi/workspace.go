@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,11 @@ func (s *Server) handleWorkspaceDownload(w http.ResponseWriter, r *http.Request)
 	if entry.MIME == "" {
 		w.Header().Set("Content-Type", "application/octet-stream")
 	}
-	w.Header().Set("Content-Disposition", `attachment; filename="`+strings.ReplaceAll(entry.Name, `"`, "")+`"`)
+	disposition := "attachment"
+	if r.URL.Query().Get("inline") == "1" {
+		disposition = "inline"
+	}
+	w.Header().Set("Content-Disposition", disposition+`; filename*=UTF-8''`+url.PathEscape(entry.Name))
 	http.ServeContent(w, r, entry.Name, entry.ModifiedAt, strings.NewReader(string(data)))
 }
 

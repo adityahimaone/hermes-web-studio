@@ -164,10 +164,10 @@ personal source as the new acceptance baseline.
 ## M9 — Workbench and operator parity
 
 - [~] P027 Replace the single-root workspace abstraction with reference-compatible registered Spaces, active inheritance, ordering, health, suggestions, and profile-local state (server-owned registration, activation, and health added; inheritance/order/suggestions/profile-local state remain)
-- [ ] P028 Complete lazy tree/breadcrumb/filemap, hidden-file rules, broad preview matrix, copy paths, open/reveal, create/edit/move/rename/delete, upload/paste/extract, and size limits
+- [~] P028 Complete lazy tree/breadcrumb/filemap, hidden-file rules, broad preview matrix, copy paths, open/reveal, create/edit/move/rename/delete, upload/paste/extract, and size limits (tree/preview/edit/basic CRUD/upload/download/copy/open and safe containment added; paste/extract/lazy filemap/reveal and broader preview matrix remain)
 - [~] P029 Complete workspace Artifacts and optional Todos projections with independent panel state and stream-safe persistence (server-owned Todos projection and explicit Artifacts empty state retained; Artifacts contract remains)
 - [~] P030 Add contained terminal start/input/output/resize/close and prove process ownership/cleanup on success, error, cancel, replacement, and disconnect (explicit unavailable capability and safe UI state added; contained process lifecycle remains)
-- [ ] P031 Add git branch/status/diff/stage/unstage/discard/commit/fetch/pull/push/stash-checkout flows with confirmation and hostile-path tests
+- [~] P031 Add git branch/status/diff/stage/unstage/discard/commit/fetch/pull/push/stash-checkout flows with confirmation and hostile-path tests (read-only branch/status/diff and hostile-path containment added; mutating Git flows remain)
 - [~] P032 Replace task placeholders with cron create/edit/delete, schedule builder, delivery options, skill picker, run/pause/resume, output/history, alerts, and watch status (run/pause/resume/delete/history added; builder, delivery, alerts, and watch remain)
 - [~] P033 Implement Kanban boards/tasks/assignees/links/bulk actions/dispatch/events/stats and map its persisted state without local fallback (persisted boards/cards CRUD added; assignees, links, bulk, dispatch, events, and stats remain)
 - [~] P034 Complete Skills grouping/search/content/linked files/create/edit/delete/toggle/usage and profile-aware refresh (preview loading/empty/error state separation implemented; CRUD, linked files, usage, and profile refresh remain)
@@ -185,7 +185,7 @@ personal source as the new acceptance baseline.
 - [~] P043 Complete password lifecycle, passkey registration/login/delete, OIDC start/callback, trusted headers, cookie rotation, CSRF/CORS, and reverse-proxy threat cases (nonce cookie rotation, HTTPS proxy flags, logout origin protection, and auth tests added; passkeys/OIDC/full threat matrix remain)
 - [~] P044 Match branded onboarding for existing config, provider setup, OAuth polling/cancel, probes, completion, skip rules, and failure recovery (validation recovery tests and secure onboarding behavior added; branded/provider/OAuth flows remain)
 - [~] P045 Complete Control Center Conversation, Appearance, Preferences, Providers, Plugins, Extensions, System, and Help sections with searchable settings (capability section registry added; complete section behavior/search remains)
-- [ ] P046 Implement all reference preference behaviors, including send key, activity modes, scroll, rendering, outline, notifications, token controls, voice/TTS, and tab/composer customization
+- [~] P046 Implement all reference preference behaviors, including send key, activity modes, scroll, rendering, outline, notifications, token controls, voice/TTS, and tab/composer customization (searchable server-persisted preference surface, immediate theme/skin preview, and explicit media gaps added; full behavior wiring remains)
 - [~] P047 Add 15 locales with key parity, fallback accounting, RTL chat layout, CJK/IME behavior, and localized login/onboarding/error surfaces (15-locale resolver/fallback contract added; translated keys, RTL, CJK/IME, and localized surfaces remain)
 - [~] P048 Add PWA manifest/service worker/offline shell, install flow, icons, update invalidation, bfcache behavior, and subpath support (manifest, service worker, install icon, production registration, and Vite subpath support implemented; update invalidation, bfcache, and install-flow evidence remain)
 - [ ] P049 Implement MCP server/tool management and plugin settings/status using server-owned validation and secret filtering
@@ -198,14 +198,14 @@ personal source as the new acceptance baseline.
 ## M11 — MVP certification and reversible cutover
 
 - [~] P055 Build sanitized personal-state fixtures plus a copied-state migration rehearsal; never run migration against the production state directory (fixture generator refuses production Hermes paths; copied-state rehearsal remains)
-- [ ] P056 Run full contract comparison for required personal route/state effects and record every intentional alias or deviation
-- [ ] P057 Run visual matrices across required viewports, System/Dark/Light, all release skins, long lists/transcripts, active streaming, dialogs, and both side panels
-- [ ] P058 Run accessibility checks for keyboard-only flows, focus restoration, screen readers, contrast, reduced motion, touch targets, RTL, and IME
+- [~] P056 Run full contract comparison for required personal route/state effects and record every intentional alias or deviation (local route inventory and focused backend matrix pass; full personal state-effect comparison remains)
+- [~] P057 Run visual matrices across required viewports, System/Dark/Light, all release skins, long lists/transcripts, active streaming, dialogs, and both side panels (252 local viewport/theme/skin rows pass with screenshots outside repo; long/live/reference pixel rows remain)
+- [~] P058 Run accessibility checks for keyboard-only flows, focus restoration, screen readers, contrast, reduced motion, touch targets, RTL, and IME (local runner records keyboard/RTL/IME and remaining focus/touch-target gaps; screen-reader/contrast/device validation remains)
 - [ ] P059 Run live Hermes/Gateway side-by-side rows for chat, tools, subagents, approvals, clarification, compression, recovery, external channels, and scheduled work
-- [ ] P060 Prove 1,000-session and 5,000-message behavior, JS gzip, idle RSS, startup, first-token overhead, stream rendering, and no per-token full refetch
+- [~] P060 Prove 1,000-session and 5,000-message behavior, JS gzip, idle RSS, startup, first-token overhead, stream rendering, and no per-token full refetch (local JS gzip/no-refetch evidence passes; scale, RSS, startup, and live latency remain)
 - [~] P061 Run independent security review for auth/proxy, SSRF, XSS/Markdown, workspace/terminal/git, uploads/extraction, extensions/sidecars, migration, and secret boundaries (CSP, Permissions-Policy, headers, and automated platform checks added; independent review and full threat matrix remain)
 - [ ] P062 Run hosted Linux/macOS/Windows artifact, Docker, Nix, PWA/subpath, and browser matrices from release candidates
 - [ ] P063 Complete parallel beta with the personal WebUI available for rollback and resolve every critical/major parity gap
-- [~] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state (sanitized copied-state rehearsal script passes; migration/rollback/operator communication rehearsal remains)
+- [~] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state (sanitized copied-state rollback script passes; migration/release/operator communication rehearsal remains)
 - [ ] P065 Request explicit user cutover approval; do not archive or modify the personal WebUI before approval
-- [ ] P066 Keep rollback artifacts and the personal implementation available until the agreed rollback window closes
+- [~] P066 Keep rollback artifacts and the personal implementation available until the agreed rollback window closes (local copied-state rehearsal is available; user-approved rollback window and hosted artifacts remain)

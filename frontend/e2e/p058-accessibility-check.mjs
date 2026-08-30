@@ -1,0 +1,55 @@
+import { chromium, expect } from '@playwright/test'
+
+const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:5173'
+const browser = await chromium.launch({ headless: true })
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', reducedMotion: 'reduce' })
+  const page = await context.newPage()
+  await page.route('**/api/sessions**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sessions: [{ session_id: 'a11y-session', title: 'Sanitized accessibility session', updated_at: '2026-01-01T00:00:00Z', pinned: false, archived: false, tags: [] }] }) }))
+  await page.route('**/api/health/hermes', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"connected":true}' }))
+  await page.route('**/api/preferences', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"preferences":{"theme":"dark","skin":"default","locale":"en"}}' }))
+  await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
+
+  const interactive = page.locator('button, a, input, textarea, select')
+  const count = await interactive.count()
+  if (count < 8) throw new Error(`unexpectedly few keyboard controls: ${count}`)
+  for (let i = 0; i < count; i++) await expect(interactive.nth(i)).toBeAttached()
+  await page.getByRole('textbox', { name: 'Message Hermes' }).focus()
+  const openNavigation = page.getByRole('button', { name: 'Open navigation' })
+  await openNavigation.focus()
+  await expect(openNavigation).toBeFocused()
+  await openNavigation.press('Enter')
+  const closeNavigation = page.getByRole('button', { name: 'Close navigation' })
+  await expect(closeNavigation).toBeFocused()
+  await closeNavigation.click()
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused()
+
+  await page.setViewportSize({ width: 1280, height: 900 })
+  const action = page.getByRole('button', { name: 'Actions for Sanitized accessibility session' })
+  await action.focus()
+  await action.click()
+  await page.getByRole('menuitem', { name: 'Rename conversation' }).click()
+  await expect(page.getByRole('dialog', { name: 'Rename session' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Rename session' })).toBeHidden()
+  const restoredFocus = await action.evaluate(node => node === document.activeElement)
+  if (!restoredFocus) console.warn('P058 gap: session action focus was not restored after dialog close')
+
+  const smallTargets = await page.locator('button, [role="button"]').evaluateAll(nodes => nodes.filter(node => { const box = node.getBoundingClientRect(); return box.width > 0 && box.height > 0 && (box.width < 44 || box.height < 44) }).map(node => node.getAttribute('aria-label') || node.textContent?.trim()).filter(Boolean))
+  if (smallTargets.length) console.warn(`P058 gap: touch targets under 44px: ${smallTargets.join(', ')}`)
+  const workspacePanel = page.locator('.workspace-panel')
+  if (await workspacePanel.count()) {
+    const motion = await workspacePanel.evaluate(node => getComputedStyle(node).transitionDuration)
+    if (motion !== '0s') console.warn(`P058 gap: reduced-motion transition remained active: ${motion}`)
+  }
+  await page.evaluate(() => { document.documentElement.dir = 'rtl' })
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('RTL overflow detected')
+  const composer = page.getByRole('textbox', { name: 'Message Hermes' })
+  await composer.focus()
+  await composer.dispatchEvent('compositionstart', { data: '漢' })
+  await composer.dispatchEvent('compositionupdate', { data: '漢' })
+  await composer.dispatchEvent('compositionend', { data: '漢' })
+  await expect(composer).toBeFocused()
+  await context.close()
+  console.log('P058 local keyboard, focus, reduced-motion, touch, RTL, and IME audit completed; warnings above are open gaps.')
+} finally { await browser.close() }
