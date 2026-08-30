@@ -215,3 +215,16 @@ The acceptance script verifies it is visible only on Chat.
 - Marked P004 complete. P003 remains partial because non-desktop and dynamic
   panel baselines still need capture.
 - No production credentials or private runtime state entered the repository.
+
+## 2026-08-30 — P005 shell semantics contract
+
+- Added `docs/shell-contract.md` for stable rail/titlebar DOM ownership,
+  keyboard/focus semantics, menu/dialog behavior, and responsive boundaries.
+- Added `data-testid` ownership markers, programmatic tooltip descriptions,
+  dialog Escape/initial-focus behavior, and keyboard navigation for overflow
+  menus.
+- Added `scripts/check-m7-shell-contract.sh`; computed-style and screenshot
+  comparison remain separate P012 evidence.
+- Added `frontend/e2e/m7-shell-check.mjs` for rail toggle, tooltip semantics,
+  overflow-menu keyboard navigation, Dialog Escape behavior, and mobile drawer.
+- Marked P005 complete after source contract verification and frontend checks.

@@ -85,6 +85,11 @@ The complete route/state/feature ownership map is maintained in
 claim; it is a traceability record linking the reference capability to its
 Studio owner, parity task, and required evidence.
 
+The primary rail and titlebar semantics are frozen in
+`docs/shell-contract.md`. It defines stable ownership selectors, keyboard and
+focus behavior, dialog/menu semantics, and responsive boundaries. Visual
+geometry remains an evidence task and is not inferred from source inspection.
+
 Production credentials, session names, model inventories, workspace paths, and
 other private runtime data are never fixtures. Deterministic tests use sanitized
 state derived from the frozen source contracts. If frozen source and production

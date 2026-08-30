@@ -135,7 +135,7 @@ personal source as the new acceptance baseline.
 - [x] P002 Publish `MVP.md` with visual, interaction, frontend, backend, evidence, and lightweight-runtime definitions
 - [~] P003 Capture the production shell at desktop; settings, narrow, tablet, mobile, and all panel states remain to be captured with dynamic-data masks
 - [x] P004 Build a route/state/feature manifest from the frozen personal source and map every entry to a Studio owner, test, and disposition
-- [ ] P005 Freeze DOM, computed-style, keyboard, focus, tooltip, menu, dialog, and responsive contracts for the primary rail and titlebar
+- [x] P005 Freeze DOM, computed-style, keyboard, focus, tooltip, menu, dialog, and responsive contracts for the primary rail and titlebar
 - [ ] P006 Match the Chat session panel: WebUI/CLI sources, content search, project chips, date groups, archive/pin, channel badges, batch mode, and overflow actions
 - [ ] P007 Match the titlebar and composer control ownership, ordering, responsive overflow, model/profile/workspace pickers, context ring, and Stop/Send states
 - [ ] P008 Match the demand-driven workspace panel shell, resize/open persistence, Files/Artifacts/Todos tabs, and mobile slide-over

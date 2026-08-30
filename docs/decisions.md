@@ -147,3 +147,15 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** Manifest rows are planning evidence only. Completion still
   requires the acceptance tests and live/browser proof defined by `MVP.md`.
   Private production state remains excluded from fixtures.
+
+## ADR-023: Freeze shell semantics before visual convergence
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Give the primary rail, titlebar, menus, dialogs, and responsive
+  shell stable semantic selectors and keyboard contracts before changing their
+  visual geometry.
+- **Reason:** Pixel work against an unstable DOM makes parity regressions hard
+  to localize and can hide dead controls behind polished styling.
+- **Consequence:** P005 source checks verify the contract, while screenshot and
+  computed-style measurements remain separate P012 evidence.
