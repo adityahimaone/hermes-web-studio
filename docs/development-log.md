@@ -228,3 +228,13 @@ The acceptance script verifies it is visible only on Chat.
 - Added `frontend/e2e/m7-shell-check.mjs` for rail toggle, tooltip semantics,
   overflow-menu keyboard navigation, Dialog Escape behavior, and mobile drawer.
 - Marked P005 complete after source contract verification and frontend checks.
+
+## 2026-08-30 — P006 session panel parity pass
+
+- Added WebUI/CLI source filters, project chips, channel badges, content-aware
+  search labeling, date grouping, batch selection, batch archive/delete, and
+  preserved pin/archive/rename/delete overflow actions.
+- Automated evidence: frontend tests and production build pass.
+- P006 remains `[~]`: the current session listing does not expose transcript
+  search indexes, and duplicate/import/share/export actions still need their
+  server contracts and acceptance evidence.
