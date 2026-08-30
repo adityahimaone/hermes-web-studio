@@ -314,3 +314,8 @@ the route matrix checks registered aliases, the visual matrix writes sanitized
 screenshots under `/tmp`, and the accessibility audit reports open
 touch-target gaps instead of treating them as passed. Hosted, live-Hermes,
 screen-reader, and independent-review gates remain required for M11.
+
+External sessions are projected from server-owned session metadata. The rail
+may show source, channel, identity, and routing labels and an explicit
+unavailable handoff state, but it does not fabricate channel transport,
+round summaries, or model-switch behavior without a Gateway channel contract.

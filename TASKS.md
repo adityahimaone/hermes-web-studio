@@ -175,7 +175,7 @@ personal source as the new acceptance baseline.
 - [~] P036 Complete Todos and Goals lifecycle plus current-goal/workspace projections using Hermes-owned state (server-owned lifecycle retained and workspace Todos projection added; current-goal integration remains)
 - [~] P037 Implement Insights for usage, cost/provider history, state synchronization, and operational summaries (server-owned usage/provider/synchronization view added with explicit cost-unavailable state; live cost source remains)
 - [~] P038 Implement Logs, crash visibility, background status, agent/gateway/system health, safe restart, and rollback diagnostics (operator health/log routes added; crash/background/restart/rollback flows remain)
-- [ ] P039 Implement external-channel sessions, handoff dock, round summaries, per-conversation identity, routing metadata, and model-switch warnings
+- [~] P039 Implement external-channel sessions, handoff dock, round summaries, per-conversation identity, routing metadata, and model-switch warnings (external projection, channel/identity/routing metadata, and explicit unavailable handoff dock added; live channel rows, summaries, and model-switch semantics remain)
 - [~] P040 Add browser and backend matrices for every rail panel covering loading, empty, CRUD, watch/stream, permission failure, cancellation, and recovery (backend operator/control coverage and shell matrix added; complete rail matrix remains)
 
 ## M10 — Identity, settings, extensibility, and platform parity

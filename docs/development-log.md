@@ -377,3 +377,11 @@ The acceptance script verifies it is visible only on Chat.
 - Accessibility evidence now verifies session-action focus restoration and
   records remaining sub-44px target gaps; therefore P028/P031/P046/P056/P057/P058/P060/P064/
   P066 remain `[~]` and no live, hosted, beta, or cutover gate is claimed.
+
+## 2026-08-31 — External session projection slice
+
+- Added a server-metadata-driven external session handoff dock in the session
+  rail, including channel/source, identity, and routing labels with an honest
+  unavailable handoff action.
+- P039 is now `[~]`; live channel transport, round summaries, identity
+  semantics, and model-switch warnings still require Gateway/live evidence.
