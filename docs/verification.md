@@ -78,3 +78,5 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Runs subagent activity | Inconclusive capability check: the harmless delegation prompt produced tool events and a safe response but no structured `subagent` event |
 | Runs approval activity | Inconclusive safely: the prompt requesting approval for `printf approval_check` produced no structured `approval` event; no approval was submitted and no command was executed |
 | Live edit/retry branch semantics | Pass: an isolated session completed an old no-tools turn, was truncated to its user-message prefix, then completed a replacement turn; persisted history contained the replacement assistant response and no old assistant response |
+| Gateway capability discovery | Pass: the live Gateway advertised `run_approval`, `approval_events`, `tool_progress_events`, and delegation-capable toolsets; capability advertisement is recorded separately from observed event delivery |
+| Explicit live delegation probe | Inconclusive capability check: an explicit harmless delegation request produced normalized tool events and the safe result but no structured `subagent` event |

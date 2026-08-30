@@ -337,7 +337,7 @@ Preserved / intentionally changed / deferred:
 
 ## 15. Current blockers and explicit non-claims
 
-- Live Hermes proof is available for chat, attachment/multimodal transport, replay, and the opt-in Runs stream. The configured safe approval probe returned a textual confirmation rather than a structured approval event; no command was executed.
+- Live Hermes proof is available for chat, attachment/multimodal transport, replay, the opt-in Runs stream, session branch semantics, and tool activity. The Gateway advertises approval events, but explicit safe approval/delegation probes returned tool/text outcomes without structured approval or subagent events; no destructive command was executed.
 - Session CRUD/edit, tool/subagent variants, and structured approval remain `[~]` in `TASKS.md` until live/manual side-by-side parity scenarios are observed.
 - Runs mode is intentionally text-only in the adapter; attachment turns fall back to legacy chat completions until an upstream multimodal Runs input contract is verified.
 - The production container baseline exists, but the frontend is not yet embedded in the Go binary; embedding remains M5 work.
