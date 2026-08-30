@@ -14,6 +14,7 @@ type Config struct {
 	StateDir        string
 	DefaultModel    string
 	DefaultProvider string
+	UseRunsAPI      bool
 	ReadTimeout     time.Duration
 }
 
@@ -27,6 +28,7 @@ func Load() Config {
 		StateDir:        stateDir,
 		DefaultModel:    env("HERMES_WEBUI_DEFAULT_MODEL", "default"),
 		DefaultProvider: os.Getenv("HERMES_WEBUI_DEFAULT_PROVIDER"),
+		UseRunsAPI:      strings.EqualFold(env("HERMES_WEBUI_USE_RUNS_API", "false"), "true"),
 		ReadTimeout:     durationEnv("HERMES_WEBUI_GATEWAY_READ_TIMEOUT", 10*time.Minute),
 	}
 }

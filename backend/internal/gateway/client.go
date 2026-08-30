@@ -176,6 +176,52 @@ func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)
 	return parseSSE(resp.Body, emit)
 }
 
+func (c *Client) RunStream(ctx context.Context, input ChatRequest, emit func(Event)) (string, error) {
+	body, err := json.Marshal(map[string]any{"input": input.Message, "session_id": input.SessionID, "model": input.Model, "provider": input.Provider})
+	if err != nil {
+		return "", err
+	}
+	requestContext, cancel := context.WithTimeout(ctx, c.config.ReadTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestContext, http.MethodPost, c.config.BaseURL+"/v1/runs", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	c.addHeaders(req, input.SessionID)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", &HTTPError{StatusCode: resp.StatusCode, Code: "gateway_run_error", Message: fmt.Sprintf("Hermes Gateway returned HTTP %d while starting the run.", resp.StatusCode)}
+	}
+	var started struct {
+		RunID string `json:"run_id"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&started); err != nil || strings.TrimSpace(started.RunID) == "" {
+		return "", errors.New("Hermes Gateway returned no run ID")
+	}
+	eventsURL := c.config.BaseURL + "/v1/runs/" + url.PathEscape(started.RunID) + "/events"
+	eventRequest, err := http.NewRequestWithContext(requestContext, http.MethodGet, eventsURL, nil)
+	if err != nil {
+		return "", err
+	}
+	eventRequest.Header.Set("Accept", "text/event-stream")
+	c.addHeaders(eventRequest, input.SessionID)
+	eventResponse, err := c.http.Do(eventRequest)
+	if err != nil {
+		return "", err
+	}
+	defer eventResponse.Body.Close()
+	if eventResponse.StatusCode < 200 || eventResponse.StatusCode >= 300 {
+		return "", &HTTPError{StatusCode: eventResponse.StatusCode, Code: "gateway_run_stream_error", Message: "Hermes Gateway could not open the run event stream."}
+	}
+	answer, err := parseSSE(eventResponse.Body, emit)
+	return answer, err
+}
+
 func (c *Client) addHeaders(req *http.Request, sessionID string) {
 	if c.config.APIKey != "" {
 		req.Header.Set("Authorization", "Bearer "+c.config.APIKey)

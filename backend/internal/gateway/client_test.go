@@ -102,6 +102,32 @@ func TestHealthRejectsUnauthorizedModelProbe(t *testing.T) {
 	}
 }
 
+func TestRunStreamStartsRunAndReadsEvents(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/runs" {
+			if r.Method != http.MethodPost || r.Header.Get("X-Hermes-Session-Id") != "session-1" {
+				t.Fatalf("run request method=%s session=%q", r.Method, r.Header.Get("X-Hermes-Session-Id"))
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"run_id":"run-1"}`))
+			return
+		}
+		if r.URL.Path == "/v1/runs/run-1/events" {
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte("event: message.delta\ndata: {\"delta\":\"runs\"}\n\ndata: [DONE]\n\n"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+	client := New(Config{BaseURL: server.URL, ReadTimeout: time.Second})
+	var events []Event
+	answer, err := client.RunStream(context.Background(), ChatRequest{SessionID: "session-1", Message: "hello", Model: "default"}, func(event Event) { events = append(events, event) })
+	if err != nil || answer != "runs" || len(events) != 1 || events[0].Name != "token" {
+		t.Fatalf("answer=%q events=%#v err=%v", answer, events, err)
+	}
+}
+
 func authErrString(err error) string {
 	if typed, ok := err.(*HTTPError); ok {
 		return typed.Code

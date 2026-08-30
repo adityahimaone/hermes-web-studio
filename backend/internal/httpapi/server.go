@@ -339,7 +339,11 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 	}
 	userMessage := mustMessage("user", input.Message)
 	_ = s.sessions.AppendMessages(input.SessionID, userMessage)
-	answer, err := s.gateway.Stream(ctx, input, func(event gateway.Event) {
+	stream := s.gateway.Stream
+	if s.config.UseRunsAPI {
+		stream = s.gateway.RunStream
+	}
+	answer, err := stream(ctx, input, func(event gateway.Event) {
 		s.publish(item, event)
 	})
 	if err != nil {

@@ -68,3 +68,4 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Local Gateway contract inspection confirmed `POST /v1/runs` is exposed, while the safe live prompt did not create an approval run; the BFF forwarding route remains tested and live approval interaction remains intentionally unclaimed.
 - Aligned approval choices with the Gateway Runs contract (`once`, `session`, `always`, `deny`) and retained backwards-compatible approved/denied aliases; the UI now exposes all four choices.
 - Added upstream approval event aliases `approval.request` and `hermes.approval.request` to the normalizer.
+- Added an opt-in Runs API adapter (`HERMES_WEBUI_USE_RUNS_API`) for structured run events and approval-capable sessions while preserving the existing chat-completions default.
