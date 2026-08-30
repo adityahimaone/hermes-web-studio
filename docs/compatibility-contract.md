@@ -80,6 +80,11 @@ replacement is proven. Shallow list/CRUD placeholders do not satisfy richer
 personal-WebUI contracts such as cron delivery/history, Skills editing, Memory
 sources, profile isolation, or session recovery.
 
+The complete route/state/feature ownership map is maintained in
+`docs/personal-webui-feature-manifest.md`. A manifest row is not an acceptance
+claim; it is a traceability record linking the reference capability to its
+Studio owner, parity task, and required evidence.
+
 Production credentials, session names, model inventories, workspace paths, and
 other private runtime data are never fixtures. Deterministic tests use sanitized
 state derived from the frozen source contracts. If frozen source and production

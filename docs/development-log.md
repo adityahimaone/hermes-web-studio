@@ -205,3 +205,13 @@ The acceptance script verifies it is visible only on Chat.
   for shell, conversation runtime, operator workbench, identity/extensibility,
   and reversible certification.
 - No frontend or backend implementation changed in this planning slice.
+## 2026-08-30 — P004 personal WebUI parity manifest
+
+- Added `docs/personal-webui-feature-manifest.md` from the frozen personal
+  source contracts and sanitized production behavior audit.
+- Mapped shell, chat/session, workbench/operator, identity/settings, extension,
+  and distribution capabilities to Studio owners, tasks, dispositions, and
+  evidence requirements.
+- Marked P004 complete. P003 remains partial because non-desktop and dynamic
+  panel baselines still need capture.
+- No production credentials or private runtime state entered the repository.

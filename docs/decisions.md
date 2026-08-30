@@ -133,3 +133,17 @@ remain implementation history and do not certify personal-WebUI parity.
 The personal implementation remains side by side through migration, beta, and
 rollback proof. Any intentional visual or behavioral deviation requires a
 recorded decision and explicit approval before MVP certification.
+## ADR-022: Use a parity manifest before broad feature implementation
+
+- **Status:** Accepted
+- **Date:** 2026-08-30
+- **Decision:** Freeze a sanitized route/state/feature manifest for the
+  personal WebUI before implementing P005 onward. Each capability maps to a
+  Studio owner, task, disposition, and evidence type.
+- **Reason:** The current Studio already contains several shallow equivalents;
+  without traceability, broad migration could falsely mark a menu complete
+  while losing workflow behavior such as CLI sessions, delivery history,
+  external channels, or profile-local state.
+- **Consequence:** Manifest rows are planning evidence only. Completion still
+  requires the acceptance tests and live/browser proof defined by `MVP.md`.
+  Private production state remains excluded from fixtures.
