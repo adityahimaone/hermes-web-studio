@@ -4,6 +4,7 @@ import { SafeMarkdown } from '../../lib/markdown'
 import { ActivityCards } from './activity-cards'
 import type { ApprovalChoice } from '../../lib/api-client'
 import { MermaidDiagram, splitMermaidBlocks } from './mermaid'
+import { Button } from '../ui/button'
 
 function RichContent({ content }: { content: string }) {
   return <>{splitMermaidBlocks(content).map((part, index) => part.kind === 'mermaid' ? <MermaidDiagram key={index} source={part.content} /> : <SafeMarkdown key={index}>{part.content}</SafeMarkdown>)}</>
@@ -35,13 +36,13 @@ export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: {
       {messages.map((message) => (
         message.role === 'user' ? (
           <article key={message.id} className="group flex justify-end gap-2">
-            {onEdit && <button type="button" className="message-action" onClick={() => onEdit(message)} aria-label="Edit message"><Pencil size={14} /></button>}
+            {onEdit && <Button type="button" variant="ghost" size="icon" className="message-action" onClick={() => onEdit(message)} aria-label="Edit message"><Pencil size={14} /></Button>}
             <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
           </article>
         ) : (
           <article key={message.id} className="flex gap-3">
             <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
-            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && (() => { const previous = [...messages].reverse().find((item: ChatMessage) => item.role === 'user'); return previous ? <button type="button" className="message-action mt-3" onClick={() => onRetry(previous)}><RotateCcw size={14} /> Retry</button> : null })()}</div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && (() => { const previous = [...messages].reverse().find((item: ChatMessage) => item.role === 'user'); return previous ? <Button type="button" variant="ghost" size="sm" className="message-action mt-3" onClick={() => onRetry(previous)}><RotateCcw size={14} /> Retry</Button> : null })()}</div>
           </article>
         )
       ))}

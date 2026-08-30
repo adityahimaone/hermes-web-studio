@@ -76,6 +76,16 @@ initialization and deliberately does not call Hermes Gateway. Gateway health
 is an operator diagnostic because the BFF can still serve sessions, auth, and
 safe offline UI while Hermes is restarting.
 
+## ADR-017 - Shared UI primitives and Chat-owned session navigation
+
+Visible controls use the repository's copy-owned shadcn-style `Button`,
+`Input`, `Select`, and `Textarea` primitives so focus, sizing, and disabled
+states stay consistent across the workspace. The file chooser remains a
+hidden native input because it is the browser upload transport. Recent
+sessions belong to the Chat navigation context and are hidden while another
+control-center menu is active; session actions and search behavior remain
+unchanged.
+
 ## ADR-016 - Separate Hermes runtime state from Web Studio metadata
 
 The Web Studio state directory remains the owner of sessions, attachments,

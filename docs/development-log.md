@@ -119,6 +119,17 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - M6 implementation is complete locally; live Hermes deployment, hosted CI, and
   external beta/security sign-off remain explicitly outside automated claims.
 
+## 2026-08-30 - UI primitive and Chat navigation cleanup
+
+- Replaced visible native form controls and action buttons across chat,
+  workspace, auth, control center, discovery, messages, and sidebar with the
+  copy-owned shadcn-style primitives.
+- Kept hidden native file inputs only where the browser file picker is the
+  actual transport mechanism.
+- Recent sessions now render inside the Chat navigation context, preserving
+  search and session actions while keeping other menus focused.
+- Frontend tests and production build pass; browser acceptance remains green.
+
 ## 2026-08-30 - Control-center menu audit and Hermes discovery fix
 
 - Audited every sidebar menu and found empty control collections serialized as
