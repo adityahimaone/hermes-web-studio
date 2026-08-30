@@ -15,3 +15,27 @@ Environment: Linux amd64, Go 1.27.0, Node 24.19.0, pnpm 11.19.0.
 The backend integration suite uses an HTTP mock that implements the Hermes Gateway streaming boundary. It verifies the outgoing bearer/session headers and body, incoming SSE normalization, safe authentication failure, and upstream cancellation.
 
 Live verification must be added as a separate dated entry using `scripts/smoke-hermes.sh`. Do not convert the live task to complete based on this mock result.
+
+## 2026-08-30 - Live verification attempt
+
+| Check | Result |
+|---|---|
+| `./scripts/smoke-hermes.sh` | Blocked: could not connect to the local BFF at `127.0.0.1:8787` |
+| Hermes Gateway probe | Blocked: `127.0.0.1:8642` was not reachable |
+
+The live M0 gate remains open. Re-run after starting both the Hermes Gateway and Hermes Web Studio API, then record the Hermes version, model/provider, first-token latency, and final response here.
+
+## 2026-08-30 - M0 live proof
+
+| Check | Result |
+|---|---|
+| Hermes Web Studio health | Pass: `configured=true`, `reachable=true` |
+| Live smoke script | Pass: `./scripts/smoke-hermes.sh` |
+| Model | `default` |
+| Provider | Gateway default |
+| First-token latency | 4588 ms, measured from stream request to first `token` event |
+| Terminal event | Pass: exactly one `done` event |
+| Final response | Pass: `HERMES_CONNECTED` |
+| Hermes version | Not exposed by the available Gateway health metadata |
+
+This closes the M0 live gate. The version is intentionally recorded as unavailable rather than inferred.

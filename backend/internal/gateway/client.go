@@ -163,6 +163,16 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		if terminalErr != nil {
 			return terminalErr
 		}
+		if name == "run.completed" && delta != "" {
+			delta = missingSuffix(answer, delta)
+			if len(translated) > 0 && translated[0].Name == "token" {
+				if delta == "" {
+					translated = nil
+				} else {
+					translated[0].Data["text"] = delta
+				}
+			}
+		}
 		if delta != "" {
 			answer += delta
 		}
@@ -200,6 +210,18 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		return answer, err
 	}
 	return answer, nil
+}
+
+// Gateways may send token deltas and then repeat the complete answer in
+// run.completed. Only emit the suffix that was not already streamed.
+func missingSuffix(current, completed string) string {
+	if completed == current || strings.HasPrefix(current, completed) {
+		return ""
+	}
+	if strings.HasPrefix(completed, current) {
+		return strings.TrimPrefix(completed, current)
+	}
+	return completed
 }
 
 func translate(sseName string, payload map[string]any) ([]Event, string, error) {

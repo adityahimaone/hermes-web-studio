@@ -59,6 +59,20 @@ HERMES_WEBUI_GATEWAY_API_KEY=your-gateway-key \
 ./scripts/smoke-hermes.sh
 ```
 
+## Production baseline
+
+Build the multi-stage image and run it behind your TLS-terminating ingress:
+
+```bash
+make prod-image
+docker run --rm -p 8080:8080 \
+  -e HERMES_WEBUI_GATEWAY_BASE_URL=http://host.docker.internal:8642 \
+  -e HERMES_WEBUI_GATEWAY_API_KEY=your-gateway-key \
+  hermes-web-studio:local
+```
+
+Open `http://127.0.0.1:8080`. Nginx serves the production frontend and proxies the Go API, including unbuffered SSE. Put TLS, authentication, and external rate limiting at the deployment ingress before exposing this beyond a trusted machine. Do not put the Gateway key in a `VITE_*` variable.
+
 ## Architecture
 
 ```mermaid

@@ -11,21 +11,38 @@ type Config struct {
 	Port            string
 	GatewayBaseURL  string
 	GatewayAPIKey   string
+	StateDir        string
 	DefaultModel    string
 	DefaultProvider string
 	ReadTimeout     time.Duration
 }
 
 func Load() Config {
+	stateDir, _ := resolveStateDir()
 	return Config{
 		Host:            env("HERMES_WEBUI_HOST", "127.0.0.1"),
 		Port:            env("HERMES_WEBUI_PORT", "8787"),
 		GatewayBaseURL:  strings.TrimRight(env("HERMES_WEBUI_GATEWAY_BASE_URL", "http://127.0.0.1:8642"), "/"),
 		GatewayAPIKey:   firstEnv("HERMES_WEBUI_GATEWAY_API_KEY", "API_SERVER_KEY"),
+		StateDir:        stateDir,
 		DefaultModel:    env("HERMES_WEBUI_DEFAULT_MODEL", "default"),
 		DefaultProvider: os.Getenv("HERMES_WEBUI_DEFAULT_PROVIDER"),
 		ReadTimeout:     durationEnv("HERMES_WEBUI_GATEWAY_READ_TIMEOUT", 10*time.Minute),
 	}
+}
+
+func resolveStateDir() (string, error) {
+	if value := strings.TrimSpace(os.Getenv("HERMES_WEBUI_STATE_DIR")); value != "" {
+		return value, nil
+	}
+	if value := strings.TrimSpace(os.Getenv("HERMES_HOME")); value != "" {
+		return value + "/webui", nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return home + "/.hermes/webui", nil
 }
 
 func env(key, fallback string) string {

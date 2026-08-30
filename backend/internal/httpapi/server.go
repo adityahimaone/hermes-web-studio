@@ -10,19 +10,22 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/session"
 )
 
 type Server struct {
-	config  config.Config
-	gateway *gateway.Client
-	turns   map[string]*turn
-	mu      sync.Mutex
+	config   config.Config
+	gateway  *gateway.Client
+	sessions *session.LegacySessionReader
+	turns    map[string]*turn
+	mu       sync.Mutex
 }
 
 type turn struct {
@@ -47,17 +50,50 @@ func New(cfg config.Config) *Server {
 }
 
 func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
-	return &Server{config: cfg, gateway: client, turns: make(map[string]*turn)}
+	stateDir := cfg.StateDir
+	if stateDir == "" {
+		stateDir, _ = session.ResolveStateDir(os.Getenv, os.UserHomeDir)
+	}
+	return &Server{config: cfg, gateway: client, sessions: session.NewLegacySessionReader(stateDir), turns: make(map[string]*turn)}
 }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /api/health/hermes", s.handleHermesHealth)
+	mux.HandleFunc("GET /api/sessions", s.handleSessions)
+	mux.HandleFunc("GET /api/sessions/{session_id}", s.handleSession)
 	mux.HandleFunc("POST /api/chat/start", s.handleChatStart)
 	mux.HandleFunc("GET /api/chat/stream", s.handleChatStream)
 	mux.HandleFunc("POST /api/chat/cancel", s.handleChatCancel)
 	return securityHeaders(requestLog(mux))
+}
+
+func (s *Server) handleSessions(w http.ResponseWriter, _ *http.Request) {
+	sessions, err := s.sessions.List()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "sessions_unavailable", "Session history is unavailable.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"sessions": sessions})
+}
+
+func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("session_id")
+	item, err := s.sessions.Load(id)
+	if err != nil {
+		if errors.Is(err, session.ErrInvalidSessionID) {
+			writeError(w, http.StatusBadRequest, "invalid_session_id", "The session ID is invalid.")
+			return
+		}
+		if errors.Is(err, os.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "session_not_found", "The requested session was not found.")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "session_unavailable", "The requested session could not be loaded.")
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {

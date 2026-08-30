@@ -62,3 +62,18 @@ Supported upstream frames:
 
 Unimplemented routes must not be improvised. Inventory the original route, request shape, response shape, persistence effects, auth policy, and tests before implementation. Track that work in `TASKS.md`.
 
+## M1 session persistence inventory
+
+The frozen upstream session store is file-based and remains the compatibility source while the first M1 slice is read-only:
+
+- State directory: `HERMES_WEBUI_STATE_DIR`, then `$HERMES_HOME/webui`, then POSIX `~/.hermes/webui`.
+- Session files: `sessions/<session_id>.json`.
+- Listing index: `sessions/_index.json`, with a `*.json` scan fallback when the index is missing, invalid, or empty.
+- Session JSON: top-level metadata plus a `messages` array. Unknown top-level fields are retained by the reader.
+- Safety: session IDs are single path components. Traversal, slash, and backslash forms are rejected.
+
+The current Go implementation is intentionally a read-only `LegacySessionReader`. It does not rename, archive, delete, or rewrite legacy files, and it does not treat SQLite or CLI session data as compatible until those formats receive their own inventory and tests.
+
+### Read-only session API
+
+`GET /api/sessions` returns `{ "sessions": [...] }` with compact metadata. `GET /api/sessions/{session_id}` returns the metadata plus the original ordered `messages` array. Missing sessions return `404`; unsafe IDs return `400`. These endpoints never write to the legacy state directory.

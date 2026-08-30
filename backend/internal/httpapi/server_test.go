@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -41,7 +43,7 @@ func TestChatStreamsHermesGatewayResponse(t *testing.T) {
 	}))
 	defer gw.Close()
 
-	api := newTestServer(gw.URL, "secret")
+	api := newTestServer(t, gw.URL, "secret")
 	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"session_id": "session-1", "message": "hello"})
 	var started map[string]string
 	decode(t, start.Body, &started)
@@ -69,7 +71,7 @@ func TestGatewayAuthErrorIsRedacted(t *testing.T) {
 		http.Error(w, "upstream leaked secret detail", http.StatusUnauthorized)
 	}))
 	defer gw.Close()
-	api := newTestServer(gw.URL, "wrong-key")
+	api := newTestServer(t, gw.URL, "wrong-key")
 	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"message": "hello"})
 	var started map[string]string
 	decode(t, start.Body, &started)
@@ -96,7 +98,7 @@ func TestCancelStopsUpstreamTurn(t *testing.T) {
 		close(cancelled)
 	}))
 	defer gw.Close()
-	api := newTestServer(gw.URL, "")
+	api := newTestServer(t, gw.URL, "")
 	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"message": "wait"})
 	var started map[string]string
 	decode(t, start.Body, &started)
@@ -118,8 +120,70 @@ func TestCancelStopsUpstreamTurn(t *testing.T) {
 	}
 }
 
-func newTestServer(gatewayURL, key string) *httptest.Server {
-	cfg := config.Config{GatewayBaseURL: gatewayURL, GatewayAPIKey: key, DefaultModel: "default", ReadTimeout: 5 * time.Second}
+func TestSessionsAPIListsAndLoadsLegacySession(t *testing.T) {
+	stateDir := t.TempDir()
+	sessionsDir := filepath.Join(stateDir, "sessions")
+	if err := os.MkdirAll(sessionsDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sessionsDir, "session-1.json"), []byte(`{"session_id":"session-1","title":"Hello","messages":[{"role":"user","content":"hello"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sessionsDir, "_index.json"), []byte(`[{"session_id":"session-1","title":"Hello"}]`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir, DefaultModel: "default"}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listing map[string]any
+	decode(t, response.Body, &listing)
+	_ = response.Body.Close()
+	if len(listing["sessions"].([]any)) != 1 {
+		t.Fatalf("listing = %#v", listing)
+	}
+
+	response, err = http.Get(api.URL + "/api/sessions/session-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var loaded map[string]any
+	decode(t, response.Body, &loaded)
+	_ = response.Body.Close()
+	if loaded["session_id"] != "session-1" || len(loaded["messages"].([]any)) != 1 {
+		t.Fatalf("loaded = %#v", loaded)
+	}
+}
+
+func TestSessionsAPIRejectsUnsafeAndMissingIDs(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions/../x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusNotFound {
+		t.Fatalf("traversal status = %d", response.StatusCode)
+	}
+	_ = response.Body.Close()
+	response, err = http.Get(api.URL + "/api/sessions/missing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing status = %d", response.StatusCode)
+	}
+	_ = response.Body.Close()
+}
+
+func newTestServer(t *testing.T, gatewayURL, key string) *httptest.Server {
+	t.Helper()
+	cfg := config.Config{GatewayBaseURL: gatewayURL, GatewayAPIKey: key, DefaultModel: "default", ReadTimeout: 5 * time.Second, StateDir: t.TempDir()}
 	client := gateway.New(gateway.Config{BaseURL: gatewayURL, APIKey: key, ReadTimeout: 5 * time.Second})
 	return httptest.NewServer(NewWithGateway(cfg, client).Handler())
 }

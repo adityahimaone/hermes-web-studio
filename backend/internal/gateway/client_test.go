@@ -41,6 +41,25 @@ func TestParseSSESurfacesRunFailure(t *testing.T) {
 	}
 }
 
+func TestParseSSERunCompletedDoesNotRepeatStreamedAnswer(t *testing.T) {
+	input := strings.Join([]string{
+		"data: {\"choices\":[{\"delta\":{\"content\":\"Hello Hermes\"}}]}", "",
+		"event: run.completed", "data: {\"output\":\"Hello Hermes\"}", "",
+		"data: [DONE]", "",
+	}, "\n")
+	var events []Event
+	answer, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer != "Hello Hermes" {
+		t.Fatalf("answer = %q", answer)
+	}
+	if len(events) != 1 || events[0].Data["text"] != "Hello Hermes" {
+		t.Fatalf("events = %#v", events)
+	}
+}
+
 func TestHealthRejectsUnauthorizedModelProbe(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/models" {

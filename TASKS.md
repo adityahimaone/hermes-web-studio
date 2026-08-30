@@ -14,14 +14,19 @@ Status legend: `[x]` implemented and verified with automated tests, `[~]` implem
 - [x] Add mock Gateway integration tests for streaming, errors, headers, and cancel
 - [x] Add frontend parser/reducer tests
 - [x] Verify production frontend build (114.27 KiB gzip JS at M0)
-- [ ] Run live Hermes smoke test using operator credentials
-- [ ] Record live proof: date, Hermes version, model/provider, first-token latency, final response
+- [x] Suppress duplicate completion output when Gateway sends deltas and `run.completed.output`
+- [x] Add graceful shutdown, server timeouts, and a production container/reverse proxy baseline
+- [x] Run live Hermes smoke test using operator credentials
+- [x] Record live proof: date, Hermes version, model/provider, first-token latency, final response
+
+Production baseline is available with `docker build -t hermes-web-studio:local .`. Configure the Gateway URL and key as container environment variables. The image serves the built frontend through Nginx and keeps the Go BFF and Gateway credentials server-side.
 
 **Gate:** do not begin broad feature migration until a real Hermes response is visible in the new UI.
 
 ## M1 — Chat parity
 
-- [ ] Persist sessions using existing `~/.hermes/webui` data where possible
+- [~] Persist sessions using existing `~/.hermes/webui` data where possible (read-only legacy reader implemented; write path deferred)
+- [x] Add read-only sessions API contract and integration tests
 - [ ] Session CRUD, search, date grouping, rename, pin, archive, tags, projects
 - [ ] Load and resume existing session history
 - [ ] Edit/regenerate/retry and queue while processing

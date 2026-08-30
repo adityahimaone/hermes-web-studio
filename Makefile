@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-ui test test-api test-ui build build-ui build-api clean
+.PHONY: dev dev-api dev-ui test test-api test-ui build build-ui build-api prod-image clean
 
 ifneq (,$(wildcard .env))
 include .env
@@ -29,6 +29,9 @@ build-ui:
 
 build-api:
 	cd backend && go build -trimpath -ldflags='-s -w' -o ../hermes-web-studio ./cmd/hermes-web-studio
+
+prod-image:
+	docker build -t hermes-web-studio:local .
 
 clean:
 	rm -rf frontend/dist frontend/coverage hermes-web-studio

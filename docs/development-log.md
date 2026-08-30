@@ -1,0 +1,35 @@
+# Development log
+
+This log tracks implementation progress against `plan.md` and `TASKS.md`. A task is recorded as complete only after its stated acceptance evidence is available.
+
+## 2026-08-30
+
+### M0 - Real Hermes chat
+
+- Completed the Gateway completion de-duplication fix and regression test.
+- Completed graceful shutdown, HTTP timeout, and production container/reverse-proxy baseline.
+- Automated evidence: backend tests, backend vet/build, frontend tests, frontend production build, and diff check pass.
+- Initial live attempt was blocked because neither the BFF (`127.0.0.1:8787`) nor Hermes Gateway (`127.0.0.1:8642`) was running.
+- Live gate closed later the same day: smoke passed through the running BFF, one `done` event was observed, and `HERMES_CONNECTED` was returned. First-token latency was 4588 ms. Gateway version was not exposed by health metadata.
+- Planning decision: M1 may now begin, starting with session persistence inventory and compatibility tests.
+
+### Next action
+
+Begin the first M1 slice: session persistence inventory and compatibility tests, using the frozen upstream baseline before introducing a persistence format or route.
+
+### M1 - Session persistence inventory
+
+- Added `backend/internal/session.LegacySessionReader` as a read-only compatibility slice.
+- Supports state directory precedence, `_index.json` metadata listing, sidecar scan fallback, full transcript loading, unknown metadata fields, and path traversal rejection.
+- Added fixtures covering valid sessions, corrupt index recovery, traversal safety, override precedence, and read-only behavior.
+- Automated evidence: `GOCACHE=/tmp/hermes-web-studio-go-cache go test ./...` passes for all backend packages.
+- Compatibility status: `[~]`. No session write route or SQLite source of truth has been introduced.
+- Next task: expose a read-only sessions API contract and add browser session loading only after route shape is agreed against the upstream inventory.
+
+### M1 - Read-only sessions API
+
+- Added `GET /api/sessions` and `GET /api/sessions/{session_id}` over the legacy reader.
+- Added integration coverage for compact listing, ordered message loading, missing sessions, and traversal-safe routing.
+- Automated evidence: full backend tests and vet pass with host loopback access; frontend tests and production build remain green.
+- Compatibility status: API contract complete, persistence remains `[~]` because all session writes and browser loading are still deferred.
+- Next task: add typed frontend session loading and a recognizable session-history surface without changing the legacy source format.
