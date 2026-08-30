@@ -52,7 +52,8 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Frontend contract coverage expanded to six tests for session search/date grouping, usage normalization, and approval identity mapping.
 - Closed the edit/regenerate persistence gap with a tested truncate route and server-side transcript prefix semantics; pushed after the full backend/frontend verification pass.
 - Corrected multimodal mapping so image, PDF, and plain-text attachments use distinct Gateway content parts instead of treating every file as an image.
-- Live check against the current source BFF proved attachment upload; completion was safely rejected because the isolated verification process did not have the operator Gateway credential. The existing operator process was left untouched.
+- Live check against the current source BFF proved attachment upload and a real multimodal completion; the BFF was started on port 8788 through the Makefile so the configured credential was inherited without replacing the operator process on port 8787.
+- Live replay check with `Last-Event-ID` returned only the missed terminal event, confirming the bounded cursor path against the running Gateway-backed turn.
 - Attachment original name/MIME metadata is now persisted in a restrictive sidecar so resumed turns keep the file contract.
 - Added functional mobile navigation open/close behavior and session action controls with accessible labels and focus rings; frontend test/build remain green.
 - Fixed session API response serialization so legacy metadata fields are flattened to the browser contract; added integration coverage for pinned/tags metadata.
