@@ -117,3 +117,28 @@ binary files return `binary: true` and are only served through the download
 endpoint. Git output is informational and never blocks file access. Workspace
 state is independent from the chat stream, so an active stream does not clear
 the selected preview.
+
+## M3 identity and profile contract
+
+`GET /api/onboarding` reports whether local password setup is complete and
+which identity providers are configured. The first-run action is
+`POST /api/onboarding/password` with a password of at least 12 characters.
+`POST /api/auth/login` issues a signed, HttpOnly, SameSite cookie; the password
+and signing material remain in the server state directory. Login attempts are
+rate limited per client address. `POST /api/auth/logout` clears the cookie and
+`GET /api/auth/me` reports the current identity without exposing credentials.
+
+When password auth is enabled, protected requests require the signed cookie.
+Mutating requests with an `Origin` header must match the request host. A
+non-loopback server refuses protected traffic until authentication is set up.
+`HERMES_WEBUI_TRUSTED_USER_HEADER` enables an explicitly configured trusted
+header for deployments behind an authenticated reverse proxy. It must not be
+used on an untrusted network.
+
+`GET /api/profiles` returns only safe profile IDs, names, models, providers,
+and health labels. `POST /api/profiles/active` switches the active profile.
+Profiles are supplied through server-only `HERMES_WEBUI_PROFILES_JSON`; secrets
+and arbitrary fields are discarded during decoding. OIDC issuer discovery and
+WebAuthn ceremonies remain explicit capability states until deployment
+configuration is present; unavailable providers are not shown as working login
+paths.

@@ -49,12 +49,12 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 ## M3 — Profiles, auth, and onboarding
 
-- [ ] Profile discovery, model/provider picker, profile switch
-- [ ] Password auth and secure signed cookies
-- [ ] Rate limits, CSRF/origin rules, security headers
-- [ ] First-run Gateway configuration and diagnostics
-- [ ] Passkeys/WebAuthn
-- [ ] OIDC and trusted-header SSO
+- [x] Profile discovery, model/provider picker, profile switch
+- [x] Password auth and secure signed cookies
+- [x] Rate limits, CSRF/origin rules, security headers
+- [x] First-run Gateway configuration and diagnostics
+- [~] Passkeys/WebAuthn (capability is reported as unavailable until WebAuthn RP configuration is supplied)
+- [~] OIDC and trusted-header SSO (trusted-header mode is implemented; OIDC remains configuration/discovery-only until issuer client registration is supplied)
 
 ## M4 — Control center feature parity
 

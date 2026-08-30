@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/auth"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/session"
@@ -22,13 +23,26 @@ import (
 )
 
 type Server struct {
-	config       config.Config
-	gateway      *gateway.Client
-	sessions     *session.Store
-	turns        map[string]*turn
-	workspace    *workspace.Service
-	workspaceErr error
-	mu           sync.Mutex
+	config        config.Config
+	gateway       *gateway.Client
+	sessions      *session.Store
+	turns         map[string]*turn
+	workspace     *workspace.Service
+	workspaceErr  error
+	auth          *auth.Service
+	authErr       error
+	mu            sync.Mutex
+	profileMu     sync.RWMutex
+	profiles      []profile
+	activeProfile string
+}
+
+type profile struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Model    string `json:"model"`
+	Provider string `json:"provider,omitempty"`
+	Health   string `json:"health"`
 }
 
 type turn struct {
@@ -68,7 +82,15 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 		stateDir, _ = session.ResolveStateDir(os.Getenv, os.UserHomeDir)
 	}
 	ws, wsErr := workspace.New(cfg.WorkspaceRoot)
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr}
+	authService, authErr := auth.New(stateDir)
+	profiles := []profile{{ID: "default", Name: "Default", Model: cfg.DefaultModel, Provider: cfg.DefaultProvider, Health: "gateway"}}
+	if cfg.ProfilesJSON != "" {
+		var configured []profile
+		if json.Unmarshal([]byte(cfg.ProfilesJSON), &configured) == nil && len(configured) > 0 {
+			profiles = configured
+		}
+	}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, profiles: profiles, activeProfile: profiles[0].ID}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -99,7 +121,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/workspace/rename", s.handleWorkspaceRename)
 	mux.HandleFunc("DELETE /api/workspace/item", s.handleWorkspaceDelete)
 	mux.HandleFunc("POST /api/workspace/upload", s.handleWorkspaceUpload)
-	return securityHeaders(requestLog(mux))
+	mux.HandleFunc("GET /api/onboarding", s.handleOnboarding)
+	mux.HandleFunc("POST /api/onboarding/password", s.handlePasswordSetup)
+	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
+	mux.HandleFunc("GET /api/auth/me", s.handleAuthMe)
+	mux.HandleFunc("GET /api/profiles", s.handleProfiles)
+	mux.HandleFunc("POST /api/profiles/active", s.handleProfileSwitch)
+	mux.HandleFunc("GET /api/auth/providers", s.handleAuthProviders)
+	return securityHeaders(requestLog(s.authMiddleware(mux)))
 }
 
 func (s *Server) handleSessions(w http.ResponseWriter, _ *http.Request) {
@@ -316,7 +346,17 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if input.Model == "" {
-		input.Model = s.config.DefaultModel
+		s.profileMu.RLock()
+		for _, candidate := range s.profiles {
+			if candidate.ID == s.activeProfile {
+				input.Model, input.Provider = candidate.Model, candidate.Provider
+				break
+			}
+		}
+		s.profileMu.RUnlock()
+		if input.Model == "" {
+			input.Model = s.config.DefaultModel
+		}
 	}
 	if input.Provider == "" {
 		input.Provider = s.config.DefaultProvider

@@ -88,3 +88,6 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Added normalized workspace tree, preview, download, mutation, upload, and Git status API routes. Errors use safe codes without exposing filesystem contents.
 - Added a resizable desktop workspace panel and mobile sheet with breadcrumbs, text/code/Markdown/image/binary preview states, editing, file operations, upload, download, and Git branch/status context.
 - Workspace state is kept outside chat state so the selected preview remains visible while a response streams. Build and acceptance verification are tracked with the M2 checklist.
+- Added server-owned local password setup, iterative hashing, signed HttpOnly/SameSite cookies, login rate limiting, same-origin protection, remote-host setup gating, logout, and safe identity status.
+- Added profile discovery from server-only JSON, model/provider picker data, active profile switching, onboarding diagnostics, trusted-header mode, and explicit OIDC/WebAuthn capability reporting.
+- Added backend auth/profile tests and documented the credential boundary. OIDC authorization and WebAuthn ceremonies remain `[~]` until deployment-specific issuer/RP configuration is available; no unavailable provider is presented as working.

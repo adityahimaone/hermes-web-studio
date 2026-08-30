@@ -8,6 +8,7 @@ import { Composer } from './components/chat/composer'
 import { useChat } from './hooks/use-chat'
 import { useWorkspace } from './hooks/use-workspace'
 import { WorkspacePanel } from './components/workspace/workspace-panel'
+import { IdentityControls } from './components/auth/identity-controls'
 
 export function App() {
   const chat = useChat()
@@ -24,6 +25,7 @@ export function App() {
           <div className="min-w-0"><h2 className="truncate text-sm font-medium">{chat.sessions.find((session) => session.session_id === chat.activeSessionId)?.title || 'New Hermes conversation'}</h2><p className="text-[11px] text-muted-foreground">Default profile · Gateway runtime</p></div>
           <div className="ml-auto flex items-center gap-2">
             <ConnectionStatus />
+            <IdentityControls />
             <Button variant="ghost" size="icon" onClick={chat.reset} aria-label="Reset chat"><RotateCcw size={16} /></Button>
             <Button variant="ghost" size="icon" onClick={() => workspace.setOpen(!workspace.open)} aria-label={workspace.open ? 'Close workspace' : 'Open workspace'}><PanelRight size={17} /></Button>
           </div>

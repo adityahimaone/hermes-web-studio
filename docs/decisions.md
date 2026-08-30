@@ -51,3 +51,12 @@ encode attachment parts. When `HERMES_WEBUI_USE_RUNS_API=true`, turns carrying
 attachments therefore continue through the established chat-completions
 adapter. This prevents an opt-in feature flag from silently dropping user
 files while leaving the text-only Runs path available for approval parity work.
+## ADR-013 - Server-owned identity boundary
+
+Local password setup and signed session cookies are owned by the Go BFF. The
+browser receives only authentication state, never password hashes, cookie
+signing material, Gateway keys, provider credentials, or raw profile config.
+Remote binding is refused until authentication is configured. Trusted-header
+identity is opt-in for an already authenticated reverse proxy, while OIDC and
+WebAuthn remain explicit capability states until provider registration is
+configured.
