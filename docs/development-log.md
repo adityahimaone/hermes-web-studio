@@ -42,3 +42,9 @@ Begin the first M1 slice: session persistence inventory and compatibility tests,
 - Automated evidence: full backend tests and vet pass with host loopback access; frontend tests and production build remain green.
 - Compatibility status: API contract complete, persistence remains `[~]` because all session writes and browser loading are still deferred.
 - Next task: add typed frontend session loading and a recognizable session-history surface without changing the legacy source format.
+
+### M1 - Chat parity implementation pass
+
+- Added session CRUD/append continuity, active history loading, session search/date grouping, queueing, retry/edit entry points, rich Markdown/code/Mermaid rendering, tool/subagent/reasoning/approval/usage normalization, and loading/empty/error/streaming states.
+- Added server-owned attachment upload/download with 10 MiB and MIME validation, multimodal Gateway payload conversion, Runs approval forwarding, SSE event IDs, cursor replay, terminal duplicate suppression, and bounded five-minute replay retention.
+- Automated evidence: backend tests, frontend tests, frontend production build, and diff checks pass. Live approval, multimodal, network interruption replay, and browser keyboard/mobile matrix proof remain required before final M1 parity sign-off.

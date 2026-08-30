@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelChat, getSession, getSessions, startChat } from '../lib/api-client'
+import { cancelChat, getSession, getSessions, resolveApproval, startChat, uploadAttachment } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -50,13 +50,14 @@ export function useChat() {
     if (next) pumpRef.current(next)
   }, [closeSource])
 
-  const pump = useCallback(async (content: string) => {
+  const pump = useCallback(async (content: string, files: File[] = []) => {
     const clean = content.trim(); if (!clean) return
     closeSource(); answerRef.current = ''; terminalRef.current = null
     setMessages((current) => [...current, { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
-      const started = await startChat({ session_id: activeSessionRef.current, message: clean })
+      const uploaded = await Promise.all(files.map((file) => uploadAttachment(file, activeSessionRef.current)))
+      const started = await startChat({ session_id: activeSessionRef.current, message: clean, attachment_ids: uploaded.map((file) => file.id) })
       streamIdRef.current = started.stream_id
       setActiveSessionId(started.session_id || activeSessionRef.current)
       const source = new EventSource(`/api/chat/stream?stream_id=${encodeURIComponent(started.stream_id)}`)
@@ -82,13 +83,17 @@ export function useChat() {
   }, [closeSource, finish, refreshSessions])
   pumpRef.current = pump
 
-  const send = useCallback((content: string) => {
+  const send = useCallback((content: string, files: File[] = []) => {
     const clean = content.trim(); if (!clean) return
     setDraft('')
-    if (streamState.status === 'streaming' || streamIdRef.current) { queueRef.current.push(clean); setQueuedMessages([...queueRef.current]) } else pumpRef.current(clean)
-  }, [streamState.status])
+    if (streamState.status === 'streaming' || streamIdRef.current) { queueRef.current.push(clean); setQueuedMessages([...queueRef.current]) } else pump(clean, files)
+  }, [pump, streamState.status])
   const retry = useCallback((content: string) => send(content), [send])
   const edit = useCallback((content: string) => setDraft(content), [])
+  const approve = useCallback(async (id: string, decision: 'approved' | 'denied') => {
+    await resolveApproval(id, decision)
+    setStreamState((state) => ({ ...state, approvals: state.approvals.map((item) => item.id === id ? { ...item, status: decision } : item) }))
+  }, [])
   const cancel = useCallback(async () => {
     const streamId = streamIdRef.current; if (!streamId) return
     await cancelChat(streamId).catch(() => undefined); finish(streamId, { ...initialChatState, status: 'cancelled' }, 'cancelled')
@@ -99,5 +104,5 @@ export function useChat() {
   }, [closeSource])
   const reset = useCallback(() => { closeSource(); queueRef.current = []; setQueuedMessages([]); setMessages([]); setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
 
-  return { messages, streamState, send, cancel, reset, retry, edit, draft, setDraft, sessions, selectSession, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
+  return { messages, streamState, send, cancel, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

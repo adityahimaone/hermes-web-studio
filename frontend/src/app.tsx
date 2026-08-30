@@ -23,7 +23,7 @@ export function App() {
           </div>
         </header>
         <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-          <MessageList messages={chat.messages} stream={chat.streamState} />
+          <MessageList messages={chat.messages} stream={chat.streamState} onEdit={chat.edit} onRetry={chat.retry} onApproval={chat.approve} />
         </div>
         <Composer onSend={chat.send} onCancel={chat.cancel} isStreaming={chat.isStreaming} draft={chat.draft} onDraftChange={chat.setDraft} queuedMessages={chat.queuedMessages} />
       </main>

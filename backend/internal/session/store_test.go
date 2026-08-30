@@ -57,10 +57,18 @@ func TestStoreAppendMessagesSupportsResumeHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 	var first, second map[string]string
-	if err := json.Unmarshal(loaded.Messages[0], &first); err != nil { t.Fatal(err) }
-	if err := json.Unmarshal(loaded.Messages[1], &second); err != nil { t.Fatal(err) }
-	if first["role"] != "user" || first["content"] != "hello" { t.Fatalf("first message = %#v", first) }
-	if second["role"] != "assistant" || second["content"] != "world" { t.Fatalf("second message = %#v", second) }
+	if err := json.Unmarshal(loaded.Messages[0], &first); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(loaded.Messages[1], &second); err != nil {
+		t.Fatal(err)
+	}
+	if first["role"] != "user" || first["content"] != "hello" {
+		t.Fatalf("first message = %#v", first)
+	}
+	if second["role"] != "assistant" || second["content"] != "world" {
+		t.Fatalf("second message = %#v", second)
+	}
 }
 
 func TestStoreWritesLegacyIndexAndSafePermissions(t *testing.T) {

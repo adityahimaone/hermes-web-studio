@@ -31,3 +31,11 @@ Pixel parity is no longer a release requirement. We preserve the three-region co
 ## ADR-004 — Single binary remains the distribution target
 
 The repository starts with independently served frontend and Go API for fast iteration. Before M3, the frontend production output must be embedded into the Go binary. This sequencing prevents embed mechanics from blocking the chat integration spike.
+
+## ADR-008 - Bounded replay journal
+
+The BFF keeps normalized SSE events in memory, assigns monotonic IDs, and replays events after `Last-Event-ID` or `after`. A completed turn remains available for five minutes so EventSource reconnect can recover its cursor, then expires. Durable session transcripts remain the source for history.
+
+## ADR-009 - Server-owned attachment ingress
+
+The browser uploads files to the BFF using opaque attachment IDs. The BFF validates size and MIME, writes restrictive files, and converts them to multimodal Gateway payloads. Credentials remain server-side.

@@ -29,16 +29,26 @@ type Server struct {
 }
 
 type turn struct {
+	streamID  string
 	sessionID string
-	events    chan gateway.Event
 	cancel    context.CancelFunc
+	events    []replayEvent
+	subs      map[chan replayEvent]struct{}
+	done      bool
+	finished  time.Time
+}
+
+type replayEvent struct {
+	ID    int64
+	Event gateway.Event
 }
 
 type startRequest struct {
-	SessionID string `json:"session_id"`
-	Message   string `json:"message"`
-	Model     string `json:"model"`
-	Provider  string `json:"provider"`
+	SessionID     string   `json:"session_id"`
+	Message       string   `json:"message"`
+	Model         string   `json:"model"`
+	Provider      string   `json:"provider"`
+	AttachmentIDs []string `json:"attachment_ids"`
 }
 
 func New(cfg config.Config) *Server {
@@ -72,6 +82,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/chat/start", s.handleChatStart)
 	mux.HandleFunc("GET /api/chat/stream", s.handleChatStream)
 	mux.HandleFunc("POST /api/chat/cancel", s.handleChatCancel)
+	mux.HandleFunc("POST /api/runs/{run_id}/approval", s.handleApproval)
+	mux.HandleFunc("POST /api/attachments", s.handleAttachmentUpload)
+	mux.HandleFunc("GET /api/attachments/{attachment_id}", s.handleAttachmentDownload)
 	return securityHeaders(requestLog(mux))
 }
 
@@ -270,35 +283,41 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	streamID := newID()
+	attachments, err := s.sessions.LoadAttachments(input.AttachmentIDs)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_attachment", "One or more attachments are unavailable.")
+		return
+	}
 	ctx, cancel := context.WithCancel(context.Background())
-	item := &turn{sessionID: input.SessionID, events: make(chan gateway.Event, 256), cancel: cancel}
+	item := &turn{streamID: streamID, sessionID: input.SessionID, cancel: cancel, subs: make(map[chan replayEvent]struct{})}
 	s.mu.Lock()
 	s.turns[streamID] = item
 	s.mu.Unlock()
 
+	gatewayAttachments := make([]gateway.Attachment, 0, len(attachments))
+	for _, attachment := range attachments {
+		gatewayAttachments = append(gatewayAttachments, gateway.Attachment{Name: attachment.Name, MIME: attachment.MIME, Data: attachment.Bytes()})
+	}
 	go s.runTurn(ctx, item, gateway.ChatRequest{
-		SessionID: input.SessionID, Message: input.Message, Model: input.Model, Provider: input.Provider,
+		SessionID: input.SessionID, Message: input.Message, Model: input.Model, Provider: input.Provider, Attachments: gatewayAttachments,
 	})
 
 	writeJSON(w, http.StatusAccepted, map[string]any{"stream_id": streamID, "session_id": input.SessionID})
 }
 
 func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequest) {
-	defer close(item.events)
+	defer s.finishTurn(item)
 	if _, err := s.sessions.Load(input.SessionID); errors.Is(err, os.ErrNotExist) {
 		_, _ = s.sessions.Create(input.SessionID, input.Message, nil)
 	}
 	userMessage := mustMessage("user", input.Message)
 	_ = s.sessions.AppendMessages(input.SessionID, userMessage)
 	answer, err := s.gateway.Stream(ctx, input, func(event gateway.Event) {
-		select {
-		case item.events <- event:
-		case <-ctx.Done():
-		}
+		s.publish(item, event)
 	})
 	if err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
-			item.events <- gateway.Event{Name: "cancel", Data: map[string]any{"message": "Cancelled by user"}}
+			s.publish(item, gateway.Event{Name: "cancel", Data: map[string]any{"message": "Cancelled by user"}})
 			return
 		}
 		code := "gateway_unavailable"
@@ -307,11 +326,96 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		if errors.As(err, &httpErr) {
 			code, message = httpErr.Code, httpErr.Message
 		}
-		item.events <- gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": message}}
+		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": message}})
 		return
 	}
 	_ = s.sessions.AppendMessages(input.SessionID, mustMessage("assistant", answer))
-	item.events <- gateway.Event{Name: "done", Data: map[string]any{"answer": answer, "session_id": item.sessionID}}
+	s.publish(item, gateway.Event{Name: "done", Data: map[string]any{"answer": answer, "session_id": item.sessionID}})
+}
+
+func (s *Server) publish(item *turn, event gateway.Event) {
+	s.mu.Lock()
+	record := replayEvent{ID: int64(len(item.events) + 1), Event: event}
+	item.events = append(item.events, record)
+	for subscriber := range item.subs {
+		select {
+		case subscriber <- record:
+		default:
+		}
+	}
+	s.mu.Unlock()
+}
+
+func (s *Server) finishTurn(item *turn) {
+	s.mu.Lock()
+	item.done = true
+	item.finished = time.Now()
+	for subscriber := range item.subs {
+		close(subscriber)
+	}
+	item.subs = make(map[chan replayEvent]struct{})
+	s.mu.Unlock()
+	// Keep completed turns briefly so EventSource can reconnect with Last-Event-ID.
+	time.AfterFunc(5*time.Minute, func() {
+		s.mu.Lock()
+		if current := s.turns[item.streamID]; current == item && item.done {
+			delete(s.turns, item.streamID)
+		}
+		s.mu.Unlock()
+	})
+}
+
+func (s *Server) handleAttachmentUpload(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(session.MaxAttachmentSize + 1<<20); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_attachment", "The attachment upload is invalid.")
+		return
+	}
+	if rawSessionID := strings.TrimSpace(r.FormValue("session_id")); rawSessionID != "" {
+		if err := session.ValidateID(rawSessionID); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_session_id", "The session ID is invalid.")
+			return
+		}
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "file_required", "An attachment file is required.")
+		return
+	}
+	_ = file.Close()
+	attachment, err := s.sessions.SaveAttachment(header)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_attachment", "The attachment type or size is not allowed.")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"id": attachment.ID, "name": attachment.Name, "mime": attachment.MIME, "size": attachment.Size})
+}
+
+func (s *Server) handleAttachmentDownload(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("attachment_id"))
+	attachments, err := s.sessions.LoadAttachments([]string{id})
+	if err != nil || len(attachments) != 1 {
+		writeError(w, http.StatusNotFound, "attachment_not_found", "The attachment was not found.")
+		return
+	}
+	attachment := attachments[0]
+	w.Header().Set("Content-Type", attachment.MIME)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=%q", attachment.Name))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", attachment.Size))
+	_, _ = w.Write(attachment.Bytes())
+}
+
+func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Decision string `json:"decision"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	if err := s.gateway.ResolveApproval(r.Context(), r.PathValue("run_id"), input.Decision); err != nil {
+		writeError(w, http.StatusBadGateway, "approval_failed", "Hermes could not apply the approval decision.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": r.PathValue("run_id"), "decision": input.Decision})
 }
 
 func mustMessage(role, content string) json.RawMessage {
@@ -359,22 +463,38 @@ func (s *Server) handleChatStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
+	lastID := int64(0)
+	if raw := r.Header.Get("Last-Event-ID"); raw != "" {
+		_, _ = fmt.Sscan(raw, &lastID)
+	}
+	if raw := r.URL.Query().Get("after"); raw != "" {
+		_, _ = fmt.Sscan(raw, &lastID)
+	}
+	subscriber := make(chan replayEvent, 256)
+	s.mu.Lock()
+	for _, event := range item.events {
+		if event.ID > lastID {
+			subscriber <- event
+		}
+	}
+	if !item.done {
+		item.subs[subscriber] = struct{}{}
+	} else {
+		close(subscriber)
+	}
+	s.mu.Unlock()
+	defer func() { s.mu.Lock(); delete(item.subs, subscriber); s.mu.Unlock() }()
 
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
-	defer func() {
-		s.mu.Lock()
-		delete(s.turns, streamID)
-		s.mu.Unlock()
-	}()
 	for {
 		select {
-		case event, open := <-item.events:
+		case record, open := <-subscriber:
 			if !open {
 				return
 			}
-			payload, _ := json.Marshal(event.Data)
-			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Name, payload)
+			payload, _ := json.Marshal(record.Event.Data)
+			_, _ = fmt.Fprintf(w, "id: %d\nevent: %s\ndata: %s\n\n", record.ID, record.Event.Name, payload)
 			flusher.Flush()
 		case <-heartbeat.C:
 			_, _ = fmt.Fprint(w, ": heartbeat\n\n")

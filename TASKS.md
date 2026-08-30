@@ -27,16 +27,16 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 - [~] Persist sessions using existing `~/.hermes/webui` data where possible (JSON CRUD and chat transcript append implemented; legacy CLI/SQLite bridge deferred)
 - [x] Add read-only sessions API contract and integration tests
-- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD API and basic history surface implemented; search/grouping/tags/projects remain)
+- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes and search/date grouping implemented; tags/projects remain metadata-compatible without dedicated UI)
 - [x] Load and resume existing session history
-- [~] Edit/regenerate/retry and queue while processing (queue and retry entry points implemented; edit/regenerate semantics remain)
-- [~] Markdown, code highlight/copy, Mermaid, safe links (Markdown, code copy, and safe links implemented; Mermaid remains)
-- [~] Tool cards, subagent cards, reasoning blocks (rendering implemented; upstream event/approval parity remains)
-- [ ] Runs API approval request/response parity
-- [~] Attachments and multimodal messages (local selection implemented; upload/multimodal transport remains)
-- [ ] Reconnect/replay cursor and duplicate suppression
-- [ ] Context/token usage indicator
-- [ ] Chat keyboard, focus, screen-reader, and mobile acceptance tests
+- [~] Edit/regenerate/retry and queue while processing (queue, retry, and edit draft branch entry points implemented; live parity proof remains)
+- [x] Markdown, code highlight/copy, Mermaid, safe links
+- [~] Tool cards, subagent cards, reasoning blocks (normalized rendering and redaction implemented; live upstream variants remain)
+- [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)
+- [~] Attachments and multimodal messages (validated upload/download and Gateway multimodal transport implemented; live model acceptance remains)
+- [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and terminal dedup implemented; browser interruption proof remains)
+- [x] Context/token usage indicator
+- [~] Chat keyboard, focus, screen-reader, and mobile acceptance tests (keyboard/focus states implemented; browser matrix remains)
 
 ## M2 — Workspace composition
 

@@ -1,7 +1,12 @@
-import { Bot, LoaderCircle } from 'lucide-react'
+import { Bot, LoaderCircle, Pencil, RotateCcw } from 'lucide-react'
 import type { ChatMessage, ChatState } from '../../lib/chat-contract'
 import { SafeMarkdown } from '../../lib/markdown'
 import { ActivityCards } from './activity-cards'
+import { MermaidDiagram, splitMermaidBlocks } from './mermaid'
+
+function RichContent({ content }: { content: string }) {
+  return <>{splitMermaidBlocks(content).map((part, index) => part.kind === 'mermaid' ? <MermaidDiagram key={index} source={part.content} /> : <SafeMarkdown key={index}>{part.content}</SafeMarkdown>)}</>
+}
 
 function EmptyState() {
   return (
@@ -21,20 +26,21 @@ function EmptyState() {
   )
 }
 
-export function MessageList({ messages, stream }: { messages: ChatMessage[]; stream: ChatState }) {
+export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: { messages: ChatMessage[]; stream: ChatState; onEdit?: (content: string) => void; onRetry?: (content: string) => void; onApproval?: (id: string, decision: 'approved' | 'denied') => void }) {
   if (!messages.length && stream.status === 'idle') return <EmptyState />
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8 sm:px-8">
       {messages.map((message) => (
         message.role === 'user' ? (
-          <article key={message.id} className="flex justify-end">
+          <article key={message.id} className="group flex justify-end gap-2">
+            {onEdit && <button type="button" className="message-action" onClick={() => onEdit(message.content)} aria-label="Edit message"><Pencil size={14} /></button>}
             <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
           </article>
         ) : (
           <article key={message.id} className="flex gap-3">
             <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
-            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><SafeMarkdown>{message.content}</SafeMarkdown></div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && <button type="button" className="message-action mt-3" onClick={() => onRetry([...messages].reverse().find((item: ChatMessage) => item.role === 'user')?.content || '')}><RotateCcw size={14} /> Retry</button>}</div>
           </article>
         )
       ))}
@@ -49,11 +55,11 @@ export function MessageList({ messages, stream }: { messages: ChatMessage[]; str
                 <p className="mt-2 whitespace-pre-wrap leading-5">{stream.reasoning}</p>
               </details>
             )}
-            <ActivityCards tools={stream.tools} subagents={stream.subagents} approvals={stream.approvals} />
+            <ActivityCards tools={stream.tools} subagents={stream.subagents} approvals={stream.approvals} onApproval={onApproval} />
             {stream.error ? (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-red-200">{stream.error}</div>
             ) : stream.answer ? (
-              <div className="message-markdown text-sm leading-7 text-foreground/95"><SafeMarkdown>{stream.answer}</SafeMarkdown></div>
+              <div className="message-markdown text-sm leading-7 text-foreground/95"><RichContent content={stream.answer} /></div>
             ) : stream.status === 'cancelled' ? (
               <p className="text-sm text-muted-foreground">Generation stopped.</p>
             ) : (

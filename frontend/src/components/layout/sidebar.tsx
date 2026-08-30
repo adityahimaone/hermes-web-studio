@@ -2,7 +2,8 @@ import { Archive, Bot, BrainCircuit, CheckSquare2, Clock3, FolderKanban, Message
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/cn'
-import type { SessionSummary } from '../../lib/chat-contract'
+import { filterSessions, groupSessionsByDate, type SessionSummary } from '../../lib/chat-contract'
+import { useState } from 'react'
 
 const navigation = [
   { label: 'Chat', icon: MessageSquareText, active: true },
@@ -15,6 +16,8 @@ const navigation = [
 ]
 
 export function Sidebar({ onNewChat, sessions, activeSessionId, onSelectSession, loading, error }: { onNewChat: () => void; sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; loading: boolean; error?: string }) {
+  const [query, setQuery] = useState('')
+  const groups = groupSessionsByDate(filterSessions(sessions, query))
   return (
     <aside className="hidden h-screen w-[264px] shrink-0 flex-col border-r bg-card/55 p-3 backdrop-blur-xl lg:flex">
       <div className="flex h-12 items-center gap-3 px-2">
@@ -33,12 +36,14 @@ export function Sidebar({ onNewChat, sessions, activeSessionId, onSelectSession,
         ))}
       </nav>
 
-      <div className="mt-6 flex items-center px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"><span>Recent sessions</span><Search size={13} className="ml-auto" /></div>
+      <div className="mt-6 flex items-center gap-2 px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"><label htmlFor="session-search">Recent sessions</label><Search size={13} className="ml-auto" /></div>
+      <input id="session-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sessions" className="mt-2 h-8 w-full rounded-lg border bg-background/50 px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" />
       <div className="mt-2 space-y-1">
         {loading && <p className="px-3 py-2 text-xs text-muted-foreground" role="status">Loading session history…</p>}
         {error && <p className="px-3 py-2 text-xs text-destructive" role="alert">{error}</p>}
         {!loading && !error && !sessions.length && <p className="px-3 py-2 text-xs text-muted-foreground">No saved sessions yet.</p>}
-        {sessions.map((item) => <button key={item.session_id} type="button" onClick={() => onSelectSession(item.session_id)} aria-current={item.session_id === activeSessionId ? 'page' : undefined} className={cn('flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring', item.session_id === activeSessionId && 'bg-accent/60')}><Archive size={14} className="shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{item.title || 'Untitled session'}</span></button>)}
+        {!loading && !error && groups.map((group) => <div key={group.label} className="pt-2"><p className="px-3 pb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{group.label}</p>{group.sessions.map((item) => <button key={item.session_id} type="button" onClick={() => onSelectSession(item.session_id)} aria-current={item.session_id === activeSessionId ? 'page' : undefined} className={cn('flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring', item.session_id === activeSessionId && 'bg-accent/60')}><Archive size={14} className="shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{item.title || 'Untitled session'}</span></button>)}</div>)}
+        {!loading && !error && sessions.length > 0 && groups.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">No matching sessions.</p>}
       </div>
 
       <div className="mt-auto rounded-xl border bg-background/50 p-3">

@@ -31,6 +31,71 @@ export interface SessionSummary {
   [key: string]: unknown
 }
 
+export interface SessionGroup {
+  label: string
+  sessions: SessionSummary[]
+}
+
+function sessionSearchText(session: SessionSummary): string {
+  return [session.session_id, session.title, session.project_id, session.project, session.tags]
+    .filter((value) => typeof value === 'string' || Array.isArray(value))
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .join(' ')
+    .toLocaleLowerCase()
+}
+
+export function filterSessions(sessions: SessionSummary[], query: string): SessionSummary[] {
+  const needle = query.trim().toLocaleLowerCase()
+  if (!needle) return sessions
+  return sessions.filter((session) => sessionSearchText(session).includes(needle))
+}
+
+function sessionDate(session: SessionSummary): Date | null {
+  const raw = session.updated_at || session.created_at
+  if (!raw) return null
+  const date = new Date(raw)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function groupSessionsByDate(sessions: SessionSummary[], now = new Date()): SessionGroup[] {
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const groups = new Map<string, SessionSummary[]>()
+  for (const session of [...sessions].sort((a, b) => (sessionDate(b)?.getTime() || 0) - (sessionDate(a)?.getTime() || 0))) {
+    const date = sessionDate(session)
+    const age = date ? Math.floor((start - Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())) / 86400000) : -1
+    const label = age === 0 ? 'Today' : age === 1 ? 'Yesterday' : age >= 2 && age < 7 ? 'This week' : 'Earlier'
+    const list = groups.get(label) || []
+    list.push(session)
+    groups.set(label, list)
+  }
+  return ['Today', 'Yesterday', 'This week', 'Earlier'].flatMap((label) => {
+    const list = groups.get(label)
+    return list?.length ? [{ label, sessions: list }] : []
+  })
+}
+
+export function replaceSession(sessions: SessionSummary[], updated: SessionSummary): SessionSummary[] {
+  const found = sessions.some((session) => session.session_id === updated.session_id)
+  return (found ? sessions.map((session) => session.session_id === updated.session_id ? updated : session) : [updated, ...sessions])
+    .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()))
+}
+
+export function removeSession(sessions: SessionSummary[], sessionId: string): SessionSummary[] {
+  return sessions.filter((session) => session.session_id !== sessionId)
+}
+
+export function editMessageHistory(messages: ChatMessage[], messageId: string): { messages: ChatMessage[]; content: string } | null {
+  const index = messages.findIndex((message) => message.id === messageId && message.role === 'user')
+  if (index < 0) return null
+  return { messages: messages.slice(0, index), content: messages[index].content }
+}
+
+export function retryMessageHistory(messages: ChatMessage[], messageId?: string): { messages: ChatMessage[]; content: string } | null {
+  const index = messageId ? messages.findIndex((message) => message.id === messageId && message.role === 'user') : [...messages].map((message) => message.role).lastIndexOf('user')
+  if (index < 0) return null
+  return { messages: messages.slice(0, index), content: messages[index].content }
+}
+
 export interface SessionDetail extends SessionSummary {
   messages: ChatMessage[]
 }
@@ -124,7 +189,7 @@ export function reduceChatEvent(state: ChatState, event: ChatEvent): ChatState {
     }
     case 'usage': {
       const number = (...keys: string[]) => keys.map((key) => event.data[key]).find((value): value is number => typeof value === 'number')
-      return { ...state, usage: { input: number('input_tokens', 'input'), output: number('output_tokens', 'output'), total: number('total_tokens', 'total'), contextLimit: number('context_limit', 'contextLimit') } }
+      return { ...state, usage: { input: number('input_tokens', 'prompt_tokens', 'input'), output: number('output_tokens', 'completion_tokens', 'output'), total: number('total_tokens', 'total'), contextLimit: number('context_limit', 'context_window', 'contextLimit') } }
     }
     case 'done':
       return {

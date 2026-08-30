@@ -13,11 +13,21 @@ export interface StartChatInput {
   message: string
   model?: string
   provider?: string
+  attachment_ids?: string[]
 }
 
 export interface StartChatResponse {
   stream_id: string
   session_id: string
+}
+
+export interface UploadedAttachment { id: string; name: string; mime: string; size: number }
+
+export async function uploadAttachment(file: File, sessionId?: string) {
+  const body = new FormData()
+  body.append('file', file)
+  if (sessionId) body.append('session_id', sessionId)
+  return readJson<UploadedAttachment>(await fetch('/api/attachments', { method: 'POST', body }))
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -68,4 +78,20 @@ export async function setSessionArchived(sessionId: string, archived: boolean) {
 
 export async function deleteSession(sessionId: string) {
   return readJson<{ ok: boolean; session_id: string }>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }))
+}
+
+export async function updateSession(sessionId: string, patch: Record<string, unknown>) {
+  return readJson<SessionDetail>(await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+  }))
+}
+
+export async function resolveApproval(runId: string, decision: 'approved' | 'denied') {
+  return readJson<{ ok: boolean }>(await fetch(`/api/runs/${encodeURIComponent(runId)}/approval`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }))
+}
+
+export function streamUrl(streamId: string, lastEventId?: string): string {
+  const params = new URLSearchParams({ stream_id: streamId })
+  if (lastEventId) params.set('after', lastEventId)
+  return `/api/chat/stream?${params.toString()}`
 }

@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -25,10 +27,42 @@ type Client struct {
 }
 
 type ChatRequest struct {
-	SessionID string
-	Message   string
-	Model     string
-	Provider  string
+	SessionID   string
+	Message     string
+	Model       string
+	Provider    string
+	Attachments []Attachment
+}
+
+type Attachment struct {
+	Name string
+	MIME string
+	Data []byte
+}
+
+func (c *Client) ResolveApproval(ctx context.Context, runID, decision string) error {
+	if strings.TrimSpace(runID) == "" || (decision != "approved" && decision != "denied") {
+		return errors.New("invalid approval decision")
+	}
+	body, err := json.Marshal(map[string]string{"decision": decision})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.config.BaseURL+"/v1/runs/"+url.PathEscape(runID)+"/approval", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	c.addHeaders(req, "")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return &HTTPError{StatusCode: resp.StatusCode, Code: "approval_failed", Message: "Hermes rejected the approval decision."}
+	}
+	return nil
 }
 
 type Event struct {
@@ -87,10 +121,19 @@ func (c *Client) Health(ctx context.Context) error {
 }
 
 func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)) (string, error) {
+	content := any(input.Message)
+	if len(input.Attachments) > 0 {
+		parts := []map[string]any{{"type": "text", "text": input.Message}}
+		for _, attachment := range input.Attachments {
+			encoded := base64.StdEncoding.EncodeToString(attachment.Data)
+			parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": "data:" + attachment.MIME + ";base64," + encoded}})
+		}
+		content = parts
+	}
 	body := map[string]any{
 		"model":    input.Model,
 		"stream":   true,
-		"messages": []map[string]any{{"role": "user", "content": input.Message}},
+		"messages": []map[string]any{{"role": "user", "content": content}},
 	}
 	if input.Provider != "" {
 		body["provider"] = input.Provider
@@ -263,6 +306,12 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 		return []Event{{Name: "tool", Data: toolData(payload, false)}}, "", nil
 	case "tool.completed":
 		return []Event{{Name: "tool_complete", Data: toolData(payload, true)}}, "", nil
+	case "subagent.started", "subagent.completed", "subagent.failed":
+		return []Event{{Name: "subagent", Data: subagentData(payload, name)}}, "", nil
+	case "approval.requested", "approval.required", "approval":
+		return []Event{{Name: "approval", Data: approvalData(payload)}}, "", nil
+	case "usage", "run.usage", "usage.updated":
+		return []Event{{Name: "usage", Data: usageData(payload)}}, "", nil
 	case "run.completed":
 		output := stringValue(payload["output"])
 		if output != "" {
@@ -292,12 +341,63 @@ func toolData(payload map[string]any, complete bool) map[string]any {
 		result["tid"] = tid
 	}
 	if args, ok := payload["args"].(map[string]any); ok {
-		result["args"] = args
+		result["args"] = redact(args)
 	}
 	if complete {
 		result["is_error"] = payload["error"] != nil
 	}
 	return result
+}
+
+func subagentData(payload map[string]any, status string) map[string]any {
+	return map[string]any{"id": stringValue(payload["id"]), "name": stringValue(payload["name"]), "status": status, "result": redact(payload["result"])}
+}
+
+func approvalData(payload map[string]any) map[string]any {
+	id := stringValue(payload["id"])
+	if id == "" {
+		id = stringValue(payload["run_id"])
+	}
+	return map[string]any{"id": id, "kind": stringValue(payload["kind"]), "command": redact(payload["command"]), "status": stringValue(payload["status"]), "options": redact(payload["options"])}
+}
+
+func usageData(payload map[string]any) map[string]any {
+	result := map[string]any{}
+	for _, key := range []string{"prompt_tokens", "completion_tokens", "total_tokens", "input_tokens", "output_tokens", "context_window"} {
+		if value, ok := payload[key]; ok {
+			result[key] = value
+		}
+	}
+	if nested, ok := payload["usage"].(map[string]any); ok {
+		for key, value := range usageData(nested) {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+func redact(value any) any {
+	switch item := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(item))
+		for key, value := range item {
+			lower := strings.ToLower(key)
+			if strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || lower == "authorization" {
+				out[key] = "[redacted]"
+				continue
+			}
+			out[key] = redact(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(item))
+		for i, value := range item {
+			out[i] = redact(value)
+		}
+		return out
+	default:
+		return value
+	}
 }
 
 func stringValue(value any) string {
