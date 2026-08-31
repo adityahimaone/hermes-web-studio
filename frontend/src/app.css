@@ -178,6 +178,8 @@ button, textarea, input, select { font: inherit; }
 }
 .context-rail {
   width: var(--studio-context-width);
+  height: 100%;
+  min-height: 0;
   background: color-mix(in srgb, var(--card) 78%, var(--background));
 }
 .context-rail--shared { border-right-color: color-mix(in srgb, var(--primary) 13%, var(--border)); }
@@ -191,8 +193,15 @@ button, textarea, input, select { font: inherit; }
 .context-rail[aria-label="Context skills navigation"] .context-rail__body > .space-y-1 > button,
 .context-rail[aria-label="Context memory navigation"] .context-rail__body > .space-y-1 > button { min-height: 2.25rem; color: var(--foreground); font-size: 0.8125rem; }
 .view-shell__content > section { max-width: 72rem; }
+.view-shell__content { min-height: 0; overflow-y: auto; }
+.control-center-settings { height: 100%; min-height: 0; }
+#main-content > .min-h-0.flex-1.overflow-hidden > .relative.flex.min-h-full { height: 100%; min-height: 0; }
 .view-shell__rail-note { line-height: 1.45; }
 .context-rail__body { scrollbar-gutter: stable; }
+.skills-context-rail .context-rail__body { display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
+.skills-context-rail .skills-rail__filters { flex: 0 0 auto; }
+.skills-context-rail .skills-rail__list { min-height: 0; flex: 1 1 auto; overflow-y: scroll; overscroll-behavior: contain; }
+.skill-preview { overflow-wrap: anywhere; }
 
 .control-center-settings > div > section > div.grid { display: block; }
 .control-center-settings [aria-label="Settings navigation"] { display: flex; }
