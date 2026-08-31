@@ -429,3 +429,33 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** The task log records each slice and its evidence separately;
   open rows, Profiles parity, full visual matrices, live Hermes checks, hosted
   artifacts, beta, and cutover approval remain explicit blockers.
+
+## ADR-044: Converge Profiles through the shared ContextRail
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Render Profiles inside the existing `ContextRail` and keep
+  profile selection/activation state in the Profiles view. Use one compact
+  status-row presentation plus a feature slot before the list; provide a
+  mobile inline fallback because the desktop rail is intentionally hidden on
+  small screens.
+- **Reason:** Profiles was the remaining control-center view with a bespoke
+  card grid. Reusing the rail preserves the established collapse behavior and
+  makes profile metadata scannable without changing the server contract.
+- **Consequence:** Profile API behavior and activation remain compatible. The
+  slice improves shell parity without claiming the full M12 visual matrix or
+  exact reference dimensions are complete.
+## ADR-045: Expose extension and update status before enabling control
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Add server-owned read-only plugin/extension registry and
+  version/update diagnostics. Return explicit unavailable states for install,
+  execution, trust, update apply, shutdown, restart, and lock recovery.
+- **Reason:** The settings and operations surfaces need truthful status data,
+  but browser-triggered extension execution and process lifecycle control
+  would be unsafe without sandbox, consent, signed-update, and supervisor
+  contracts.
+- **Consequence:** P050/P052 gain testable platform contracts while sandboxed
+  extensions, MCP integration, signed updates, and lifecycle actions remain
+  open acceptance work.

@@ -155,6 +155,28 @@ The acceptance script verifies it is visible only on Chat.
   opens the shared Dialog.
 - Added Escape and outside-click dismissal to the shared dropdown menu.
 
+## 2026-08-31 - M7-M12 local acceptance coverage
+
+- Added `scripts/local-hermes-acceptance.sh`, a safe read-only route matrix for
+  the BFF-owned M7-M12 surfaces: readiness, diagnostics, capabilities,
+  profiles/providers, preferences, discovery, control collections, operator
+  views, and sessions. It validates JSON content types and rejects credential
+  field names in the diagnostics payload.
+- The runner invokes the existing live smoke/session probes only when
+  `/api/health/hermes` reports `reachable: true`; otherwise it records an
+  explicit live skip and leaves P059 open. It creates no state unless the
+  existing isolated live parity probe is actually eligible to run.
+- Local execution on this date: the route matrix and diagnostics sanitization
+  checks passed. A first smoke attempt exposed that the previous smoke script
+  accepted an empty `done` answer; the script now requires the exact answer
+  marker. The follow-up probe received `answer:""` and the local BFF/Gateway
+  process was no longer available, so no live chat, tool, approval, subagent,
+  or side-by-side claim was made. The visual browser runner remains
+  environment-blocked when Chromium cannot launch in the sandbox.
+- `scripts/local-acceptance.sh` now includes this runner before the visual
+  matrix, so future local Hermes sessions produce a single repeatable evidence
+  trail without conflating offline capability states with passing live gates.
+
 ## 2026-08-30 - M5 distribution checklist closure
 
 - Revalidated the complete local `make release-gate`: backend tests/vet/build,
@@ -437,3 +459,32 @@ The acceptance script verifies it is visible only on Chat.
   full visual/live/hosted/beta/cutover gate was marked complete.
 - Checklist impact: P024, P038, P041, P042, P057, P067, P069, and P071 have
   stronger bounded evidence but remain `[~]`; P068 and P072 remain open.
+
+## 2026-08-31 — M10 capability and operations contracts
+
+- Added server-owned read-only `/api/extensions` and strengthened `/api/plugins`
+  to return sanitized metadata plus explicit registry, execution, settings,
+  sidecar, iframe, and trust-boundary capability states. Plugin settings are
+  not returned to the browser.
+- Added `/api/operator/version` and `/api/operator/update` for runtime version,
+  health-route links, release-artifact evidence state, and explicit unavailable
+  update/apply/shutdown/restart/lock-recovery actions. No browser mutation or
+  process-control endpoint was added.
+- Added route and secret-boundary tests and updated the compatibility contract,
+  feature manifest, and M10 checklist. P050/P052 remain `[~]` because a real
+  sandboxed extension runtime, signed update source, supervisor integration,
+  and hosted release evidence are not present.
+
+## 2026-08-31 — M12 Profiles convergence slice
+
+- Moved Profiles into the existing `ContextRail` shell and reused its shared
+  collapse/expand seam control. The Profiles data API, activation action,
+  loading state, empty state, and safe error path remain unchanged.
+- Added the Profiles reference feature slot and compact status rows: runtime
+  model/provider metadata, health dot, active badge, profile selection, and a
+  detail pane. A dense mobile fallback keeps profile selection reachable when
+  the desktop rail is hidden.
+- Added focused profile presentation contract tests. Frontend tests now cover
+  33 cases and the production build passes. This is bounded local evidence;
+  P067/P068 remain partial until exact reference geometry and visual/live
+  acceptance evidence are complete.
