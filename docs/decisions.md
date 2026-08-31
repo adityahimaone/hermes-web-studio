@@ -504,9 +504,11 @@ recorded decision and explicit approval before MVP certification.
   preserves the product's three-region information architecture without adding
   non-functional navigation controls or changing API behavior.
 - **Consequence:** All utility views now share the same desktop rail and
-  responsive content treatment. Mobile continues to use the existing drawer and
-  bottom navigation contract; visual parity against the personal WebUI remains
-  an open P072 evidence gate.
+  responsive content treatment. The non-chat workspace is height-bounded so
+  the contextual rail reaches the bottom of the titlebar area while the main
+  pane owns overflow. Mobile continues to use the existing drawer and bottom
+  navigation contract; visual parity against the personal WebUI remains an open
+  P072 evidence gate.
 
 ## ADR-049: Keep authentication entry in Settings, not the titlebar
 
@@ -538,3 +540,25 @@ recorded decision and explicit approval before MVP certification.
   full editing, live events, and Dashboard-only orchestration require the
   authenticated Dashboard service. Board selection remains browser-local and
   does not mutate Hermes' shared CLI current-board pointer.
+
+## ADR-051: Bound Skills navigation and preview surfaces
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Group discovered skills by their first filesystem category
+  directory, place root-level skills in `(General)`, and make each group
+  expandable with a count. Keep the Skills search filter fixed while only the
+  results list scrolls, expose creation from the sidebar as an icon action,
+  and let the Skills content pane use the available width. SKILL.md previews
+  wrap long tokens and remain bounded by a scrollable preview region.
+- **Reason:** Large Hermes skill collections otherwise make filters and the
+  add action disappear during navigation, while narrow content and unbroken
+  Markdown lines can make the page overflow. These changes improve orientation
+  and resilience without changing the discovery API or CRUD workflow.
+- **Consequence:** Category grouping is client-side presentation derived from
+  the server-provided path; server filtering, selection, preview, edit, and
+  delete contracts remain unchanged. The rail is explicitly height-bounded so
+  its list, rather than the page, owns scrolling; rows follow the compact Chat
+  session rhythm, with the skill name above an optional meaningful description.
+  Placeholder-only descriptions are hidden. Mobile keeps its inline grouped
+  list and existing navigation.

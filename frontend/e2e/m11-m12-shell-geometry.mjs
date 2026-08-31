@@ -18,7 +18,7 @@ async function mockRuntime(page) {
     const path = url.pathname
     if (path === '/api/sessions') return json(route, { sessions: [{ session_id: 'm11-m12-session', title: 'Sanitized shell session', updated_at: '2026-01-01T00:00:00Z', pinned: false, archived: false, tags: [] }] })
     if (path === '/api/health/hermes') return json(route, { connected: true })
-    if (path === '/api/skills') return json(route, { skills: [{ name: 'sample-skill', path: 'sample-skill', description: 'Sanitized skill fixture' }] })
+    if (path === '/api/skills') return url.searchParams.has('name') ? json(route, { name: 'apple/apple-notes/SKILL.md', content: 'A'.repeat(3200) }) : json(route, { skills: [{ name: 'sample-skill', path: 'sample-skill/SKILL.md', description: 'Sanitized skill fixture' }, { name: 'apple-notes', path: 'apple/apple-notes/SKILL.md' }, { name: 'apple-reminders', path: 'apple/apple-reminders/SKILL.md' }] })
     if (path === '/api/memory') return json(route, { notes: [{ name: 'MEMORY.md', path: 'MEMORY.md' }] })
     if (path === '/api/profiles') return json(route, { profiles: [{ id: 'default', name: 'Default', model: 'default', health: 'ready' }], active: 'default' })
     if (path === '/api/preferences') return json(route, { preferences: { theme: 'dark', skin: 'default', locale: 'en' } })
@@ -61,8 +61,22 @@ try {
     const railBox = await rail.boundingBox()
     expect(railBox?.width ?? 0).toBeGreaterThanOrEqual(240)
     expect(railBox?.width ?? 0).toBeLessThanOrEqual(552)
-    await expect(rail.locator('.context-rail__body')).toHaveCSS('overflow-y', 'auto')
+    await expect(rail.locator('.context-rail__body')).toHaveCSS('overflow-y', target.view === 'skills' ? 'hidden' : 'auto')
     await expect(rail.locator('.context-rail__header')).toBeVisible()
+
+    if (target.view === 'skills') {
+      await expect(rail.getByRole('button', { name: 'Add skill' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'New skill' })).toBeHidden()
+      await expect(rail.locator('.skills-rail__list')).toHaveCSS('overflow-y', 'scroll')
+      await expect(rail.locator('.skills-rail__list')).toContainText('(general)')
+      await expect(rail.locator('.skills-rail__list')).toContainText('apple')
+      await rail.getByRole('button', { name: 'apple (2)' }).click()
+      await expect(rail.getByRole('button', { name: 'apple (2)' })).toHaveAttribute('aria-expanded', 'true')
+      await rail.getByRole('button', { name: 'apple-notes' }).click()
+      await expect(page.locator('.skill-preview')).toBeVisible()
+      const content = await page.locator('.discovery-content').boundingBox()
+      expect(content?.width ?? 0).toBeGreaterThan(700)
+    }
 
     const collapse = page.getByRole('button', { name: `Collapse ${target.label} sidebar` })
     await collapse.click()
