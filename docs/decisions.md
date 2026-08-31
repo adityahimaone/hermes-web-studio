@@ -351,3 +351,19 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** Settings reports unavailable optional diagnostics honestly
   and remains usable during partial upgrades; preferences still fail visibly if
   their required server route is unavailable.
+
+## ADR-039: Use one desktop rail scale and reserve its footer slot
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Use the same 24px icon scale and 56px control target for every
+  primary rail item, including Settings. Keep the navigation list flexible and
+  anchor Settings after it so the footer remains stable as items are reordered
+  or hidden.
+- **Reason:** The reference UI treats the rail as a persistent spatial anchor;
+  inconsistent small icons and a moving Settings control reduce scanability.
+  Chat/session controls also need a defined header grid so the New action never
+  overlaps its subtitle.
+- **Consequence:** The desktop rail is wider and more legible, the mobile
+  drawer keeps the same control scale, and session microcopy uses readable
+  small text while metadata remains intentionally compact.
