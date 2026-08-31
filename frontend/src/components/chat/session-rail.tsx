@@ -16,6 +16,7 @@ type SourceFilter = 'all' | 'webui' | 'cli'
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
 function sourceOf(session: SessionSummary): SourceFilter { const source = field(session, 'source', 'session_source', 'origin', 'session_type').toLocaleLowerCase(); return source.includes('cli') || source.includes('cron') ? 'cli' : 'webui' }
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
+export function filterAriaPressed(selected: string, value: string) { return selected === value }
 export function sessionActionVisibilityClass() { return 'absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100' }
 
 function formatCompactDate(dateStr?: string) {
@@ -76,11 +77,11 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
 
         {/* Source Segmented Filters */}
         <div className="mt-2 flex w-full gap-1.5" role="group" aria-label="Session source filter">
-          <button type="button" onClick={() => setSourceFilter(sourceFilter === 'webui' ? 'all' : 'webui')} className={cn('filter-pill flex-1 justify-center border', sourceFilter === 'webui' ? 'border-primary/40 bg-primary/15 text-primary font-medium' : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:text-foreground')}>
+          <button type="button" aria-pressed={filterAriaPressed(sourceFilter, 'webui')} onClick={() => setSourceFilter(sourceFilter === 'webui' ? 'all' : 'webui')} className={cn('filter-pill flex-1 justify-center border', sourceFilter === 'webui' ? 'border-primary/40 bg-primary/15 text-primary font-medium' : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:text-foreground')}>
             <span>WebUI sessions</span>
             <span className="opacity-70 tabular-nums">({webCount})</span>
           </button>
-          <button type="button" onClick={() => setSourceFilter(sourceFilter === 'cli' ? 'all' : 'cli')} className={cn('filter-pill flex-1 justify-center border', sourceFilter === 'cli' ? 'border-primary/40 bg-primary/15 text-primary font-medium' : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:text-foreground')}>
+          <button type="button" aria-pressed={filterAriaPressed(sourceFilter, 'cli')} onClick={() => setSourceFilter(sourceFilter === 'cli' ? 'all' : 'cli')} className={cn('filter-pill flex-1 justify-center border', sourceFilter === 'cli' ? 'border-primary/40 bg-primary/15 text-primary font-medium' : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:text-foreground')}>
             <span>CLI sessions</span>
             <span className="opacity-70 tabular-nums">({cliCount})</span>
           </button>
@@ -88,13 +89,13 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
 
         {/* Tag Filter Pills */}
         <div className="mt-2 flex flex-wrap items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Session tags">
-          <button type="button" onClick={() => setTagFilter('all')} className={cn('filter-pill border', tagFilter === 'all' ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>All</button>
-          <button type="button" onClick={() => setTagFilter('unassigned')} className={cn('filter-pill border', tagFilter === 'unassigned' ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>Unassigned</button>
+          <button type="button" aria-pressed={filterAriaPressed(tagFilter, 'all')} onClick={() => setTagFilter('all')} className={cn('filter-pill border', tagFilter === 'all' ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>All</button>
+          <button type="button" aria-pressed={filterAriaPressed(tagFilter, 'unassigned')} onClick={() => setTagFilter('unassigned')} className={cn('filter-pill border', tagFilter === 'unassigned' ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>Unassigned</button>
           {allTags.map((tag, i) => {
             const colors = ['bg-blue-400', 'bg-purple-400', 'bg-amber-400', 'bg-emerald-400', 'bg-rose-400', 'bg-cyan-400']
             const dotColor = colors[i % colors.length]
             return (
-              <button key={tag} type="button" onClick={() => setTagFilter(tagFilter === tag ? 'all' : tag)} className={cn('filter-pill border', tagFilter === tag ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>
+              <button key={tag} type="button" aria-pressed={filterAriaPressed(tagFilter, tag)} onClick={() => setTagFilter(tagFilter === tag ? 'all' : tag)} className={cn('filter-pill border', tagFilter === tag ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/50 bg-card/30 text-muted-foreground hover:text-foreground')}>
                 <span className={cn('size-1.5 rounded-full', dotColor)} />
                 <span className="max-w-24 truncate">{tag}</span>
               </button>
