@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 )
 
 func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +226,15 @@ func (s *Server) handleMemoryDelete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, 200, map[string]any{"tasks": true, "skills": true, "memory": true, "todos": true, "goals": true, "spaces": true, "preferences": true, "background": false, "voice": false, "terminal": false, "extensions": false, "reason": "Runtime integrations require an explicit Hermes provider contract."})
+	writeJSON(w, 200, map[string]any{
+		"tasks": true, "skills": true, "memory": true, "todos": true, "goals": true,
+		"spaces": true, "preferences": true, "background": false, "voice": false,
+		"terminal": false, "extensions": false,
+		"registrations": map[string]any{
+			"skins": true, "navigation": true, "tts": false, "extensions": false,
+		},
+		"reason": "Runtime integrations require an explicit Hermes provider contract.",
+	})
 }
 
 func (s *Server) handleTerminalCapability(w http.ResponseWriter, _ *http.Request) {
@@ -237,7 +247,96 @@ func (s *Server) handleTerminalCapability(w http.ResponseWriter, _ *http.Request
 	})
 }
 func (s *Server) handlePlugins(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, 200, map[string]any{"plugins": discoverFiles(filepath.Join(s.config.StateDir, "plugins"), ""), "empty": true, "supported_hooks": []string{"pre_tool_call", "post_tool_call", "pre_llm_call", "post_llm_call"}})
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	configured := store.Plugins()
+	plugins := make([]map[string]any, 0)
+	for _, item := range discoverFiles(filepath.Join(s.config.StateDir, "plugins"), "") {
+		id := item["path"]
+		plugin := configured[id]
+		if plugin.ID == "" {
+			plugin = control.Plugin{ID: id, Name: item["name"], Path: id, Enabled: true, Status: "available"}
+		}
+		plugins = append(plugins, safePlugin(plugin))
+	}
+	for id, plugin := range configured {
+		if !containsPlugin(plugins, id) {
+			plugin.Status = "missing"
+			plugins = append(plugins, safePlugin(plugin))
+		}
+	}
+	writeJSON(w, 200, map[string]any{
+		"plugins": plugins, "empty": len(plugins) == 0,
+		"read_only":       true,
+		"supported_hooks": []string{"pre_tool_call", "post_tool_call", "pre_llm_call", "post_llm_call"},
+		"capabilities":    extensionCapabilityContract("plugin metadata is readable; plugin execution is disabled"),
+	})
+}
+
+func safePlugin(plugin control.Plugin) map[string]any {
+	return map[string]any{"id": plugin.ID, "name": plugin.Name, "path": plugin.Path, "enabled": plugin.Enabled, "status": plugin.Status}
+}
+
+func containsPlugin(plugins []map[string]any, id string) bool {
+	for _, plugin := range plugins {
+		if plugin["id"] == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) handleExtensions(w http.ResponseWriter, _ *http.Request) {
+	root := filepath.Join(s.config.StateDir, "extensions")
+	extensions := discoverDirectories(root)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"extensions":   extensions,
+		"empty":        len(extensions) == 0,
+		"read_only":    true,
+		"capabilities": extensionCapabilityContract("extension execution requires an explicit sandbox and trust contract"),
+	})
+}
+
+func extensionCapabilityContract(reason string) map[string]any {
+	return map[string]any{
+		"registry":        map[string]any{"available": true, "state": "metadata-only"},
+		"install":         map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"toggle":          map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"uninstall":       map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"settings":        map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"sidecar_consent": map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"iframe":          map[string]any{"available": false, "state": "unavailable", "reason": reason},
+		"trust_boundary":  map[string]any{"available": false, "state": "unavailable", "reason": reason},
+	}
+}
+
+func discoverDirectories(root string) []map[string]string {
+	items, err := os.ReadDir(root)
+	if err != nil {
+		return []map[string]string{}
+	}
+	result := make([]map[string]string, 0)
+	for _, item := range items {
+		if !item.IsDir() || !validRegistrationName(item.Name()) {
+			continue
+		}
+		result = append(result, map[string]string{"id": item.Name(), "name": item.Name(), "state": "registered"})
+	}
+	return result
+}
+
+func validRegistrationName(name string) bool {
+	if name == "" || name == "." || name == ".." || filepath.Base(name) != name {
+		return false
+	}
+	for _, char := range name {
+		if !(char == '-' || char == '_' || char == '.' || char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9') {
+			return false
+		}
+	}
+	return true
 }
 func discoverFiles(root, extension string) []map[string]string {
 	items, err := os.ReadDir(root)

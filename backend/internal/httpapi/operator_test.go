@@ -131,3 +131,29 @@ func TestOperatorDiagnosticsIsReadOnlyAndSanitized(t *testing.T) {
 		t.Fatalf("diagnostics leaked sensitive data: %s", rec.Body.String())
 	}
 }
+
+func TestOperatorVersionAndUpdateAreReadOnlyContracts(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+
+	for _, path := range []string{"/api/operator/version", "/api/operator/update"} {
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s=%d %s", path, rec.Code, rec.Body.String())
+		}
+		var body map[string]any
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("%s invalid JSON: %v", path, err)
+		}
+		if body["read_only"] != true {
+			t.Fatalf("%s did not declare read_only: %s", path, rec.Body.String())
+		}
+	}
+
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/operator/update", nil))
+	if !strings.Contains(rec.Body.String(), `"available":false`) || !strings.Contains(rec.Body.String(), "service supervisor") {
+		t.Fatalf("update contract exposed an optimistic action: %s", rec.Body.String())
+	}
+}

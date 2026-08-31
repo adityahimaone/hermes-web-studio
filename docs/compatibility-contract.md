@@ -283,6 +283,20 @@ provider CRUD responses contain only safe metadata; provider secrets are
 represented by `has_key` and are never returned. The control surface reports
 15 supported locale identifiers with English fallback.
 
+Extension and update surfaces are currently read-only contracts. `GET
+/api/plugins` returns sanitized plugin metadata and explicit capability states;
+`GET /api/extensions` returns registered extension directory names without
+loading extension settings or executing code. Registry visibility is available,
+while install, toggle, uninstall, settings, sidecar consent, iframe loading,
+and trust-boundary operations return capability metadata marked unavailable
+until a sandbox and consent contract exists. The existing plugin settings
+mutation remains server-owned and filters secret-shaped keys; the read-only
+registry response does not expose settings. `GET /api/operator/version`
+reports server runtime version metadata, and `GET /api/operator/update`
+reports health links, release-artifact evidence state, and explicit unavailable
+check/apply/shutdown/restart/lock-recovery actions. Updates are never applied
+from the browser; process lifecycle remains owned by the service supervisor.
+
 Conversation runtime helpers define disclosure, compaction repair, branch
 lineage, session projection, model search, safe export, and deterministic
 lifecycle rows. These helpers do not certify the corresponding upstream/live

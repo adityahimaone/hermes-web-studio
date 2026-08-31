@@ -61,7 +61,7 @@ on contracts and sanitized behavior, not on private production state.
 | Conversation/Appearance/Preferences/Providers/Plugins/Extensions/System/Help | Control Center/settings API | partial | P045/P046 | searchable settings and persistence |
 | 15 locales, fallback, RTL, CJK/IME | frontend i18n | gap | P047 | locale and input matrix |
 | PWA, offline shell, subpath, update invalidation | distribution assets | partial | P048/P053 | hosted/browser release matrix |
-| MCP and extension registry/settings/sidecar trust boundary | extension services | gap | P049/P050 | consent, validation, secret filtering |
+| MCP and extension registry/settings/sidecar trust boundary | extension services | partial | P049/P050 | consent, validation, secret filtering, sandbox execution |
 | Voice/TTS and unsupported capability states | browser/server media services | partial | P051 | permission and fallback rows |
 | Docker, installer, multi-arch, Nix, migration/rollback | root `Dockerfile`, `scripts/`, release docs | partial | P053/P062-P066 | release artifacts and copied-state rehearsal |
 

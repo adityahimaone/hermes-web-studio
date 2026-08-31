@@ -184,6 +184,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/operator/logs", s.handleOperatorLogs)
 	mux.HandleFunc("GET /api/operator/diagnostics", s.handleOperatorDiagnostics)
 	mux.HandleFunc("GET /api/operator/insights", s.handleOperatorInsights)
+	mux.HandleFunc("GET /api/operator/version", s.handleOperatorVersion)
+	mux.HandleFunc("GET /api/operator/update", s.handleOperatorUpdate)
 	mux.HandleFunc("GET /api/kanban", s.handleKanban)
 	mux.HandleFunc("POST /api/kanban/boards", s.handleKanbanBoardCreate)
 	mux.HandleFunc("POST /api/kanban/cards", s.handleKanbanCardCreate)
@@ -192,6 +194,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/capabilities", s.handleCapabilities)
 	mux.HandleFunc("GET /api/terminal", s.handleTerminalCapability)
 	mux.HandleFunc("GET /api/plugins", s.handlePlugins)
+	mux.HandleFunc("GET /api/mcp/servers", s.handleMCPServers)
+	mux.HandleFunc("POST /api/mcp/servers", s.handleMCPServers)
+	mux.HandleFunc("PATCH /api/mcp/servers/{id}", s.handleMCPServers)
+	mux.HandleFunc("DELETE /api/mcp/servers/{id}", s.handleMCPServerDelete)
+	mux.HandleFunc("GET /api/mcp/servers/{id}/tools", s.handleMCPServerTools)
+	mux.HandleFunc("PATCH /api/plugins/{id}", s.handlePluginUpdate)
+	mux.HandleFunc("GET /api/extensions", s.handleExtensions)
 	return securityHeaders(requestLog(s.authMiddleware(mux)))
 }
 

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -252,6 +254,52 @@ func (s *Server) handleOperatorDiagnostics(w http.ResponseWriter, _ *http.Reques
 		"counts": map[string]any{
 			"sessions":    sessionCount,
 			"collections": collections,
+		},
+		"contracts": map[string]string{
+			"extensions": "/api/extensions",
+			"updates":    "/api/operator/update",
+			"version":    "/api/operator/version",
+		},
+	})
+}
+
+func (s *Server) handleOperatorVersion(w http.ResponseWriter, _ *http.Request) {
+	version := strings.TrimSpace(os.Getenv("HERMES_WEB_STUDIO_VERSION"))
+	if version == "" {
+		version = "development"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"read_only":  true,
+		"version":    version,
+		"go_version": runtime.Version(),
+		"service":    "hermes-web-studio",
+		"source":     "server runtime",
+	})
+}
+
+func (s *Server) handleOperatorUpdate(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"read_only": true,
+		"state":     "not_configured",
+		"reason":    "Update metadata is not configured for this server.",
+		"version":   "/api/operator/version",
+		"health": map[string]string{
+			"liveness":    "/health",
+			"readiness":   "/ready",
+			"gateway":     "/api/health/hermes",
+			"diagnostics": "/api/operator/diagnostics",
+		},
+		"actions": map[string]any{
+			"check":         map[string]any{"available": false, "state": "unavailable", "reason": "No signed update source is configured."},
+			"apply":         map[string]any{"available": false, "state": "unavailable", "reason": "Updates are never applied from the browser."},
+			"shutdown":      map[string]any{"available": false, "state": "unavailable", "reason": "Process lifecycle is owned by the service supervisor."},
+			"restart":       map[string]any{"available": false, "state": "unavailable", "reason": "Process lifecycle is owned by the service supervisor."},
+			"lock_recovery": map[string]any{"available": false, "state": "unavailable", "reason": "No update lock is managed by the BFF."},
+		},
+		"release": map[string]any{
+			"status":    "repository-checks-only",
+			"artifacts": []string{"embedded-frontend", "docker", "installer", "nix", "multi-architecture"},
+			"verified":  false,
 		},
 	})
 }

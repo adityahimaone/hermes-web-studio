@@ -123,3 +123,31 @@ func TestTerminalCapabilityIsExplicitlyUnavailableWithoutProcessRoutes(t *testin
 		}
 	}
 }
+
+func TestExtensionAndPluginContractsAreReadOnlyAndSanitized(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "extensions", "safe-extension"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(stateDir, "plugins"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stateDir, "plugins", "plugin.json"), []byte(`{"api_key":"must-not-be-read"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir, HermesHome: t.TempDir()}
+	h := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+
+	for _, path := range []string{"/api/extensions", "/api/plugins"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"read_only":true`) || strings.Contains(rec.Body.String(), "must-not-be-read") {
+			t.Fatalf("%s=%d body=%s", path, rec.Code, rec.Body.String())
+		}
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/extensions", nil))
+	if !strings.Contains(rec.Body.String(), "safe-extension") || !strings.Contains(rec.Body.String(), "metadata-only") {
+		t.Fatalf("extension registry=%s", rec.Body.String())
+	}
+}
