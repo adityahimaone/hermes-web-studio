@@ -311,8 +311,9 @@ exists.
 
 The local certification runners are evidence generators, not parity approval:
 the route matrix checks registered aliases, the visual matrix writes sanitized
-screenshots under `/tmp`, and the accessibility audit reports open
-touch-target gaps instead of treating them as passed. Hosted, live-Hermes,
+screenshots under `/tmp`, and the accessibility audit reports open gaps instead
+of treating them as passed; the current local audit passes the 44px touch-target
+contract. Hosted, live-Hermes,
 screen-reader, and independent-review gates remain required for M11.
 
 External sessions are projected from server-owned session metadata. The rail

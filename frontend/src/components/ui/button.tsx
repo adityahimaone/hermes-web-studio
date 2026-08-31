@@ -15,9 +15,9 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button({ cla
         variant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/90',
         variant === 'ghost' && 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         variant === 'outline' && 'border bg-transparent text-foreground hover:bg-accent',
-        size === 'default' && 'h-10 px-4',
-        size === 'sm' && 'h-8 px-3 text-xs',
-        size === 'icon' && 'size-9',
+        size === 'default' && 'h-11 px-4',
+        size === 'sm' && 'h-11 px-3 text-xs',
+        size === 'icon' && 'size-11',
         className,
       )}
       {...props}

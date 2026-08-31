@@ -13,7 +13,7 @@ function Code({ children, className, ...props }: ComponentPropsWithoutRef<'code'
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1400)
   }
-  return <div className="code-block"><div className="code-block__toolbar"><span>{className.replace('language-', '') || 'code'}</span><Button type="button" variant="ghost" size="sm" onClick={copy} aria-label="Copy code" className="h-7 gap-1.5 px-2 text-xs">{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</Button></div><pre><code className={className} {...props}>{children}</code></pre></div>
+  return <div className="code-block"><div className="code-block__toolbar"><span>{className.replace('language-', '') || 'code'}</span><Button type="button" variant="ghost" size="sm" onClick={copy} aria-label="Copy code" className="min-h-11 gap-1.5 px-2 text-xs">{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</Button></div><pre><code className={className} {...props}>{children}</code></pre></div>
 }
 
 export function SafeMarkdown({ children }: { children: string }) {

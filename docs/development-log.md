@@ -374,8 +374,8 @@ The acceptance script verifies it is visible only on Chat.
   copied-state rollback runners. The visual matrix passed 252 local
   viewport/theme/skin rows; frontend tests/build, backend tests/vet, contract,
   secret, platform, and gzip checks passed.
-- Accessibility evidence now verifies session-action focus restoration and
-  records remaining sub-44px target gaps; therefore P028/P031/P046/P056/P057/P058/P060/P064/
+- Accessibility evidence now verifies session-action focus restoration and the
+  44px target contract locally; therefore P028/P031/P046/P056/P057/P058/P060/P064/
   P066 remain `[~]` and no live, hosted, beta, or cutover gate is claimed.
 
 ## 2026-08-31 — External session projection slice
