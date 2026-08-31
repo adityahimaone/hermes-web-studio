@@ -367,3 +367,19 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** The desktop rail is wider and more legible, the mobile
   drawer keeps the same control scale, and session microcopy uses readable
   small text while metadata remains intentionally compact.
+
+## ADR-040: Keep rail controls compact but legible
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Cap the desktop primary rail at 72px with 48px controls and
+  20px icons. Keep the brand mark slightly larger than navigation controls, but
+  avoid using the larger mobile-drawer scale on the desktop rail.
+- **Reason:** The first visual pass made the rail consume too much horizontal
+  space and gave outline icons more visual weight than the chat content. The
+  reference relies on a compact rail with clear hit areas, not oversized
+  decoration.
+- **Consequence:** Navigation remains keyboard and touch friendly while the
+  chat canvas and session list recover the intended visual balance. Small
+  session filters and titlebar metadata stay compact; action labels remain
+  readable through the shared control sizes.
