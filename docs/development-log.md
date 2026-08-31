@@ -451,6 +451,37 @@ The acceptance script verifies it is visible only on Chat.
   and Settings use the shared shell, while Profiles and the full reference
   visual matrix remain open.
 
+## 2026-08-31 — Chat density and overlay follow-up
+
+- Compacted the Chat session search to a bounded control, reduced source
+  filters and session rows to the sidebar type scale, and kept session action
+  menus in a dedicated high stacking layer above neighboring content.
+- Composer selects now support explicit upward placement to avoid clipping at
+  the viewport bottom. The context usage counter opens a compact context-window
+  popover with used/remaining and auto-compress thresholds.
+- Evidence: frontend Vitest 33/33, production build, Node syntax check, and
+  Playwright design-contract shell checks pass.
+
+## 2026-08-31 — Design contract implementation slice
+
+- Implemented the first production UI slice from `design.md`: the primary icon
+  rail now uses the responsive 64px desktop contract with larger, consistent
+  icon targets and Settings pinned by flex layout; mobile navigation remains
+  hidden at desktop breakpoints.
+- Tightened `ContextRail` into a shared shell with explicit header/body zones,
+  one sidebar scroll owner, a seam-centered circular collapse/expand control,
+  responsive 280–320px widths, and compact controls.
+- Applied the audited density to Chat: session filters and rows are 36–40px
+  controls with 14px primary labels, transcript width is capped at 960px, and
+  the composer at 1040px. Existing rename, archive, delete, pin, duplicate,
+  keyboard, streaming, and mobile flows remain unchanged.
+- Applied the utility content width and Settings navigation visibility fixes;
+  the legacy CSS rule that hid the shared Settings navigation was removed.
+- Evidence: frontend Vitest 33/33 and production build pass; `git diff
+  --check` passes. This is an implementation slice, not full reference parity:
+  browser screenshot/computed-style evidence and exact personal-WebUI
+  side-by-side comparison remain open under P067–P072.
+
 ## 2026-08-31 — M7-M12 bounded implementation wave
 
 - Added a typed local slash-command registry for `/help` and `/clear`, keyboard

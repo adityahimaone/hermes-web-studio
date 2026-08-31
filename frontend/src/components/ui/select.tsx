@@ -72,12 +72,13 @@ export function Select({ className, children, value, defaultValue, onChange, dis
 
   const { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy, 'aria-describedby': ariaDescribedBy, ...nativeProps } = selectProps
 
+  const openUp = className?.split(/\s+/).includes('select-menu-up')
   return <div ref={rootRef} className="relative min-w-0">
     <select ref={nativeRef} name={name} form={form} required={required} disabled={disabled} value={selectedValue} onChange={onChange} {...nativeProps} tabIndex={-1} aria-hidden="true" className="sr-only">{children}</select>
     <button id={id} type="button" disabled={disabled} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-describedby={ariaDescribedBy} aria-required={required || undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined} className={cn('flex h-10 min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-card px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50', className)} onClick={() => setOpen(current => !current)} onKeyDown={onTriggerKeyDown}>
       <span className="min-w-0 truncate text-left">{selectedOption?.label}</span><ChevronDown size={14} className={cn('shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} aria-hidden="true" />
     </button>
-    {open && options.length > 0 && <div id={listboxId} role="listbox" aria-label={ariaLabel} className="absolute left-0 top-[calc(100%+0.35rem)] z-50 max-h-64 w-full min-w-40 overflow-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-xl">
+    {open && options.length > 0 && <div id={listboxId} role="listbox" aria-label={ariaLabel} className={cn('absolute left-0 z-[120] max-h-64 w-full min-w-40 overflow-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-xl', openUp ? 'bottom-[calc(100%+0.35rem)]' : 'top-[calc(100%+0.35rem)]')}>
       {options.map((option, index) => <button key={`${option.value}-${index}`} id={`${listboxId}-${index}`} type="button" role="option" aria-selected={index === selectedIndex} disabled={option.disabled} className={cn('flex min-h-9 w-full items-center rounded-md px-2.5 py-2 text-left text-sm outline-none', index === activeIndex && 'bg-accent text-accent-foreground', option.disabled && 'cursor-not-allowed opacity-45')} onMouseEnter={() => setActiveIndex(index)} onClick={() => commit(index)}>{option.label}</button>)}
     </div>}
   </div>

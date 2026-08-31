@@ -472,3 +472,21 @@ recorded decision and explicit approval before MVP certification.
   network, or credential authority.
 - **Consequence:** P049 has a proven local API/UI status slice, while live tool
   discovery, plugin execution, consent, and sandbox trust remain explicit gates.
+
+## ADR-047: Use the responsive design contract over the superseded literal grid
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Implement the design contract with a 64px desktop icon rail,
+  52–64px titlebar, and responsive 280–320px ContextRail rather than the
+  superseded 88px/64px/552px values from the earlier audit draft. The shared
+  rail owns its header, tools, body, and collapse seam; only the body owns
+  vertical scrolling.
+- **Reason:** The current reference interaction requires usable content width
+  at laptop breakpoints and the existing app already establishes a compact
+  rail. Applying 552px universally would regress the chat composer and utility
+  panes while contradicting the responsive conflict-resolution section in
+  `design.md`.
+- **Consequence:** P067–P071 can converge incrementally on one shell without
+  changing API or navigation behavior. Exact screenshot, computed-style, and
+  hosted personal-WebUI comparison evidence remains a separate P072 gate.

@@ -38,7 +38,7 @@ export function App() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar onNavigate={handleNavigate} currentView={view} mobileOpen={mobileNavOpen} onClose={() => { setMobileNavOpen(false); requestAnimationFrame(() => mobileNavTrigger.current?.focus()) }} customizeOpen={customizeNavigationOpen} onCustomizeOpenChange={setCustomizeNavigationOpen} />
       <main id="main-content" className="flex min-w-0 flex-1 flex-col" aria-label="Hermes Studio workspace">
-        <header data-testid="titlebar" className="flex h-12 shrink-0 items-center gap-3 border-b bg-background/70 px-3 backdrop-blur-xl sm:px-5">
+        <header data-testid="titlebar" className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/70 px-3 backdrop-blur-xl sm:px-5">
           <Button ref={mobileNavTrigger} variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu size={18} /></Button>
           <div className="min-w-0"><h2 className="truncate text-sm font-medium">{view === 'chat' ? (chat.sessions.find((session) => session.session_id === chat.activeSessionId)?.title || 'New Hermes conversation') : view}</h2>{view === 'chat' && <p className="text-[11px] text-muted-foreground">Default profile · Gateway runtime</p>}</div>
           <div className="ml-auto flex items-center gap-2">

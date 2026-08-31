@@ -32,17 +32,17 @@ export function MessageList({ messages, stream, onEdit, onRetry, onApproval }: {
   if (!messages.length && stream.status === 'idle') return <EmptyState />
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8 sm:px-8">
+    <div className="mx-auto w-full max-w-[960px] space-y-8 px-4 py-8 sm:px-8">
       {messages.map((message) => (
         message.role === 'user' ? (
           <article key={message.id} className="group flex justify-end gap-2">
             {onEdit && <Button type="button" variant="ghost" size="icon" className="message-action" onClick={() => onEdit(message)} aria-label="Edit message"><Pencil size={14} /></Button>}
-            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-sm leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
+            <div className="max-w-[60%] rounded-2xl rounded-br-md bg-secondary px-4 py-3 text-[15px] leading-6 text-secondary-foreground shadow-sm">{message.content}</div>
           </article>
         ) : (
           <article key={message.id} className="flex gap-3">
             <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl border bg-card text-primary"><Bot size={16} /></div>
-            <div className="message-markdown min-w-0 flex-1 pt-1 text-sm leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && (() => { const previous = [...messages].reverse().find((item: ChatMessage) => item.role === 'user'); return previous ? <Button type="button" variant="ghost" size="sm" className="message-action mt-3" onClick={() => onRetry(previous)}><RotateCcw size={14} /> Retry</Button> : null })()}</div>
+            <div className="message-markdown min-w-0 flex-1 pt-1 text-[15px] leading-7 text-foreground/95"><RichContent content={message.content} />{onRetry && (() => { const previous = [...messages].reverse().find((item: ChatMessage) => item.role === 'user'); return previous ? <Button type="button" variant="ghost" size="sm" className="message-action mt-3" onClick={() => onRetry(previous)}><RotateCcw size={14} /> Retry</Button> : null })()}</div>
           </article>
         )
       ))}
