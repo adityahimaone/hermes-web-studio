@@ -406,3 +406,14 @@ The acceptance script verifies it is visible only on Chat.
   Preferences, Providers, Plugins, Extensions, System, Help, and Customize
   navigation entry points while preserving the existing server-backed
   preference behavior.
+
+## 2026-08-31 — Literal design-system gap tracking
+
+- Recorded the Claude design audit as a separate M12 convergence backlog rather
+  than marking existing UI work as complete. The audit identifies missing
+  Profiles rail/row parity, page-specific shared-shell row variants, unified
+  seam ownership, exact 88px/64px/552px geometry, and screenshot/computed-style
+  evidence.
+- Existing ContextRail work is documented as partial: Chat, Skills, Memory,
+  and Settings use the shared shell, while Profiles and the full reference
+  visual matrix remain open.

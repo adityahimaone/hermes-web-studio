@@ -399,3 +399,19 @@ recorded decision and explicit approval before MVP certification.
   behavior and row scale. Mobile keeps the existing bottom navigation and
   inline list fallback because the desktop rail is intentionally hidden below
   the large breakpoint.
+
+## ADR-042: Track literal design convergence separately from feature parity
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Treat the supplied Hermes Studio design-system spec as a
+  separate M12 visual-convergence track. Existing shared-rail and typography
+  work remains valid implementation history, but does not certify the literal
+  88px rail, 64px navbar, 552px sidebar, seam-control ownership, Profiles row
+  anatomy, or screenshot/computed-style thresholds.
+- **Reason:** Feature parity and visual parity have different evidence gates.
+  Collapsing a sidebar and matching a few screenshots is not proof that every
+  page uses the same shell or that dimensions, tokens, and states match.
+- **Consequence:** P067-P072 must be completed and evidenced independently;
+  MVP exit remains blocked by the open visual and Profiles rows even though the
+  current utility rail implementation is reusable.

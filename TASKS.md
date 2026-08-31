@@ -209,3 +209,16 @@ personal source as the new acceptance baseline.
 - [~] P064 Rehearse backup, migration, release validation, rollback, and operator communication using copied state (sanitized copied-state rollback script passes; migration/release/operator communication rehearsal remains)
 - [ ] P065 Request explicit user cutover approval; do not archive or modify the personal WebUI before approval
 - [~] P066 Keep rollback artifacts and the personal implementation available until the agreed rollback window closes (local copied-state rehearsal is available; user-approved rollback window and hosted artifacts remain)
+
+## M12 — Reference UI convergence
+
+These tasks capture the remaining implementation work identified by the literal
+Hermes Studio design-system audit. They are separate from the existing feature
+parity tasks so visual convergence is not mistaken for backend certification.
+
+- [~] P067 Promote the shared ContextRail and seam collapse control to the full Chat, Skills, Memory, Profiles, and Settings layout shell (Chat, Skills, Memory, and Settings shared rail slices are implemented; Profiles and the single page-layout-owned seam control remain)
+- [ ] P068 Implement the reference row variants inside the shared shell: compact Chat session rows, Skill toggle rows, Settings/Memory navigation rows, Profile status rows, and the Profiles feature-card/info slot
+- [~] P069 Apply the audited page grid and density contract: 88px icon rail, 64px navbar, 552px sidebar, independent sidebar/content scrolling, 44px seam control, and compact 40–48px rows (current shell uses a compact transitional rail/sidebar scale; reference geometry proof remains)
+- [~] P070 Apply the literal type/color/component tokens across navbar, rail, sidebar, empty states, settings cards, chat transcript, and composer (shared semantic tokens and compact utility typography exist; exact token mapping and page-wide adoption remain)
+- [~] P071 Complete navbar parity: profile/app/title ordering, optional count badge, right-side state controls, non-clipping password action, and page-specific single-line title behavior (password clipping and non-chat repeated subtitle fixed; full reference ordering and state matrix remain)
+- [ ] P072 Add reference visual acceptance rows for Chat, Skills, Memory, Profiles, and Settings at required viewports, collapsed/expanded rails, long lists, empty/detail states, themes, and skins; record screenshot/DOM/computed-style evidence

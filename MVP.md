@@ -132,6 +132,19 @@ implementation history; they are not retroactive MVP parity certification.
   progressively disclosed and action-required approval/error states stay
   prominent.
 
+### 5.1 Reference UI convergence backlog
+
+The literal Hermes Studio design-system audit is now tracked separately in
+M12/P067-P072. The current implementation has a shared collapsible rail for
+Chat, Skills, Memory, and Settings, compact utility typography, and a slimmer
+non-chat titlebar. It is not yet visual parity certification: Profiles still
+needs the shared shell and profile-specific rows, the page-layout-owned seam
+control is not unified across every page, and the audited 88px/64px/552px
+geometry and exact token map require screenshot and computed-style evidence.
+The reference sidebar remains a 552px target even though the current
+transitional implementation uses a narrower compact width while convergence is
+in progress.
+
 ## 6. Locale and responsive contract
 
 Required locales: English, Italian, Japanese, Russian, Spanish, German,
