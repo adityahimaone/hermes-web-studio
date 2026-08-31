@@ -396,3 +396,13 @@ The acceptance script verifies it is visible only on Chat.
 - Added a regression test for the legacy plain-text proxy response. The API
   process must still be restarted after deploying routes introduced by a newer
   commit.
+
+## 2026-08-31 — Rail and settings navigation cleanup
+
+- Increased shared interactive targets and rail icon scale, removed duplicate
+  Settings/Customize actions from the primary rail, and moved New conversation
+  into the Chat recent-session sidebar.
+- Added a Settings-local navigation sidebar with Conversation, Appearance,
+  Preferences, Providers, Plugins, Extensions, System, Help, and Customize
+  navigation entry points while preserving the existing server-backed
+  preference behavior.

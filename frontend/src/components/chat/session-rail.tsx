@@ -1,4 +1,4 @@
-import { Archive, ArchiveX, Check, ChevronLeft, Copy, Download, Pencil, Pin, Search, Trash2 } from 'lucide-react'
+import { Archive, ArchiveX, Check, ChevronLeft, CirclePlus, Copy, Download, Pencil, Pin, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -9,14 +9,14 @@ import { projectSessions } from '../../lib/conversation-runtime'
 import { sessionExportUrl } from '../../lib/api-client'
 import { DropdownMenu } from '../ui/dropdown-menu'
 
-type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; loading: boolean; error?: string; onToggle: () => void }
+type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
 type SourceFilter = 'all' | 'webui' | 'cli'
 
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
 function sourceOf(session: SessionSummary): SourceFilter { const source = field(session, 'source', 'session_source', 'origin', 'session_type').toLocaleLowerCase(); return source.includes('cli') || source.includes('cron') ? 'cli' : 'webui' }
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 
-export function SessionRail({ sessions, activeSessionId, onSelectSession, onSearch, onRename, onPin, onArchive, onDelete, onDuplicate, loading, error, onToggle }: Props) {
+export function SessionRail({ sessions, activeSessionId, onSelectSession, onSearch, onRename, onPin, onArchive, onDelete, onDuplicate, onNewChat, loading, error, onToggle }: Props) {
   const [query, setQuery] = useState(''); const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all'); const [projectFilter, setProjectFilter] = useState('all'); const [selected, setSelected] = useState<string[]>([]); const [batchMode, setBatchMode] = useState(false); const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null); const [deleteTarget, setDeleteTarget] = useState<SessionSummary | null>(null); const [renameValue, setRenameValue] = useState('')
   const projects = useMemo(() => Array.from(new Set(sessions.map(item => item.project || item.project_id).filter((item): item is string => Boolean(item)))).sort(), [sessions])
   const visible = filterSessions(sessions, query).filter(item => (sourceFilter === 'all' || sourceOf(item) === sourceFilter) && (projectFilter === 'all' || (item.project || item.project_id) === projectFilter))
@@ -28,7 +28,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
 
   return <>
     <aside className="hidden w-[280px] shrink-0 flex-col border-r bg-card/25 p-3 lg:flex" aria-label="Recent sessions">
-      <div className="flex items-center gap-2 border-b pb-3"><div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground">Chat</p><p className="mt-0.5 text-[11px] text-muted-foreground">Recent sessions</p></div><Button variant="ghost" size="icon" className="ml-auto size-11 shrink-0" onClick={onToggle} aria-label="Collapse session sidebar"><ChevronLeft size={16} /></Button></div>
+      <div className="flex items-center gap-2 border-b pb-3"><div className="min-w-0 flex-1"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground">Chat</p><p className="mt-0.5 text-[11px] text-muted-foreground">Recent sessions</p></div><Button type="button" size="sm" className="h-11 shrink-0 px-2 text-xs" onClick={onNewChat}><CirclePlus size={14} />New</Button><Button variant="ghost" size="icon" className="size-11 shrink-0" onClick={onToggle} aria-label="Collapse session sidebar"><ChevronLeft size={16} /></Button></div>
       <div className="relative mt-3"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input id="session-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search titles and content" className="h-9 bg-background/50 pl-9 text-xs" aria-label="Search sessions" /></div>
       <div className="mt-2 flex gap-1" role="group" aria-label="Session source filter">{(['all', 'webui', 'cli'] as const).map(filter => <Button key={filter} size="sm" variant={sourceFilter === filter ? 'default' : 'outline'} className="min-h-11 flex-1 px-1 text-[10px]" onClick={() => setSourceFilter(filter)}>{filter === 'all' ? 'All' : filter === 'webui' ? 'WebUI' : 'CLI'}</Button>)}</div>
       <div className="mt-2 flex gap-1 overflow-x-auto pb-1" role="group" aria-label="Session project filter"><Button size="sm" variant={projectFilter === 'all' ? 'default' : 'outline'} className="min-h-11 shrink-0 px-2 text-[10px]" onClick={() => setProjectFilter('all')}>All projects</Button>{projects.map(project => <Button key={project} size="sm" variant={projectFilter === project ? 'default' : 'outline'} className="min-h-11 max-w-28 shrink-0 truncate px-2 text-[10px]" onClick={() => setProjectFilter(project)}>{project}</Button>)}</div>

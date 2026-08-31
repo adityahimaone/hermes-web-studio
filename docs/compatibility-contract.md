@@ -165,7 +165,10 @@ workspace contents and mutations remain server-owned.
 Primary navigation visibility and order are layout preferences. The
 customization dialog persists those preferences locally, keeps Chat visible,
 and only exposes destinations that have a working Studio view. Full reference
-section registry parity remains a later task.
+section registry parity remains a later task. The compact primary rail does not
+duplicate Settings or expose Customize navigation; that action is owned by the
+Settings navigation sidebar. New conversation is owned by the Chat/session
+sidebar so session actions stay adjacent to recent sessions.
 
 Theme boot reads local layout preferences before the React module loads and
 sets `data-theme` and `data-skin` on the document root. Preferences also
