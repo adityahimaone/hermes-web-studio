@@ -459,3 +459,31 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** P050/P052 gain testable platform contracts while sandboxed
   extensions, MCP integration, signed updates, and lifecycle actions remain
   open acceptance work.
+
+## ADR-046: Keep MCP and plugin management metadata-only until sandbox proof
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Store validated MCP server/tool metadata and plugin settings in
+  the server-owned control store. Do not launch MCP processes or execute plugin
+  code from the BFF. Filter secret-shaped keys before persistence and response.
+- **Reason:** Configuration management is useful for parity and can be tested
+  without granting the browser or an untrusted integration process execution,
+  network, or credential authority.
+- **Consequence:** P049 has a proven local API/UI status slice, while live tool
+  discovery, plugin execution, consent, and sandbox trust remain explicit gates.
+
+## ADR-046: Keep MCP and plugin configuration server-owned
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Persist only validated MCP metadata and non-secret plugin
+  settings in the server control state. Expose tool metadata read-only and do
+  not start processes, connect to remote MCP endpoints, install plugins, or
+  return credential-shaped values from this slice.
+- **Reason:** The browser must not own credentials or arbitrary runtime
+  execution. Validation and secret filtering are useful compatibility
+  contracts even before a sandboxed MCP/plugin runtime is available.
+- **Consequence:** P049 has a proven local API/settings slice. Live MCP
+  discovery, tool execution, plugin install, and full trust-boundary behavior
+  remain explicit follow-up gates.

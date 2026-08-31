@@ -46,7 +46,10 @@ start="$(curl -fsS -X POST "${api_url}/api/chat/start" \
 stream_id="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["stream_id"])' <<<"${start}")"
 stream="$(curl -fsS -N "${api_url}/api/chat/stream?stream_id=${stream_id}")"
 grep -q 'event: done' <<<"${stream}"
-grep -q 'M1_LIVE_OK' <<<"${stream}"
+if ! grep -q 'M1_LIVE_OK' <<<"${stream}"; then
+  echo "Live chat completed without the expected answer marker: ${stream}" >&2
+  exit 1
+fi
 
 history="$(curl -fsS "${api_url}/api/sessions/${session_id}")"
 grep -q 'M1_LIVE_OK' <<<"${history}"

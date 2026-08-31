@@ -23,6 +23,9 @@ if ! grep -q 'event: done' <<<"${result}"; then
   echo "Hermes stream did not complete: ${result}" >&2
   exit 1
 fi
+if ! grep -q 'HERMES_CONNECTED' <<<"${result}"; then
+  echo "Hermes stream completed without the expected answer marker: ${result}" >&2
+  exit 1
+fi
 
 echo "Live Hermes chat completed successfully."
-

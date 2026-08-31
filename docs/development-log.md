@@ -177,6 +177,17 @@ The acceptance script verifies it is visible only on Chat.
   matrix, so future local Hermes sessions produce a single repeatable evidence
   trail without conflating offline capability states with passing live gates.
 
+### Follow-up live observation
+
+- After the local Hermes runtime became available, the strengthened runner
+  passed the CLI/provider marker (`Hermes Agent v0.19.0`, upstream marker
+  `d604141d`), all read-only M7-M12 route JSON checks, diagnostics sanitization,
+  the real BFF smoke marker, and isolated session CRUD/chat/history/truncate
+  parity. This is local Hermes evidence only.
+- P059 remains open because no structured approval, subagent, external-channel,
+  scheduled-work, compression, or recovery side-by-side row was observed in
+  this run. P062/P063/P065 and reference visual gates remain open as well.
+
 ## 2026-08-30 - M5 distribution checklist closure
 
 - Revalidated the complete local `make release-gate`: backend tests/vet/build,
@@ -475,6 +486,17 @@ The acceptance script verifies it is visible only on Chat.
   sandboxed extension runtime, signed update source, supervisor integration,
   and hosted release evidence are not present.
 
+## 2026-08-31 — M10 P049 MCP and plugin settings slice
+
+- Added validated, server-owned MCP server metadata CRUD and read-only tool
+  metadata retrieval. The BFF does not launch MCP processes or execute tools.
+- Added plugin status/settings updates for discovered plugins. Secret-shaped
+  settings are filtered before persistence and are never returned to the UI.
+- Focused backend tests cover invalid transports/endpoints, safe settings,
+  tool metadata, CRUD, and discovered plugin updates. P049 remains `[~]` for
+  live MCP transport, tool discovery, plugin execution, consent, and sandbox
+  trust evidence.
+
 ## 2026-08-31 — M12 Profiles convergence slice
 
 - Moved Profiles into the existing `ContextRail` shell and reused its shared
@@ -488,3 +510,30 @@ The acceptance script verifies it is visible only on Chat.
   33 cases and the production build passes. This is bounded local evidence;
   P067/P068 remain partial until exact reference geometry and visual/live
   acceptance evidence are complete.
+
+## 2026-08-31 — M10 P049 MCP and plugin management slice
+
+- Added server-owned MCP server metadata CRUD with transport, endpoint,
+  command, tool-count, and input-size validation. Tool metadata is exposed by
+  a separate read-only route and no MCP process or remote endpoint is started.
+- Extended plugin status with persisted enabled/settings state and added a
+  constrained settings update route for discovered plugins. Secret-shaped
+  keys such as tokens, passwords, API keys, credentials, and private keys are
+  filtered before persistence and response.
+- Evidence: focused MCP/plugin HTTP tests, backend vet, frontend tests (33),
+  and production build pass. Full backend test execution remains affected by
+  the sandbox refusing an existing httptest listener to bind a local port;
+  live Hermes MCP execution and plugin lifecycle remain unverified.
+- Checklist impact: P049 is now `[~]`; P050 remains partial because install,
+  execution, consent, iframe, and trust-boundary contracts are not included.
+-
+## 2026-08-31 — Local Hermes acceptance follow-up
+
+- The bounded `scripts/local-hermes-acceptance.sh` runner passed the local
+  Hermes CLI marker probe, BFF JSON route matrix, diagnostics sanitization,
+  live smoke chat, and isolated M1 session lifecycle.
+- This is partial live evidence for chat and session persistence only. No
+  claim was made for structured tools, subagents, approvals, external
+  channels, scheduled work, hosted artifacts, or reference visual parity.
+- `hermes serve` was separately identified as a headless JSON-RPC surface,
+  not the OpenAI-compatible Gateway expected by the Studio BFF.

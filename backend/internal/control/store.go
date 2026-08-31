@@ -32,6 +32,36 @@ type State struct {
 	TaskHistory []RunRecord       `json:"task_history"`
 	Artifacts   []Item            `json:"artifacts"`
 	Boards      []Item            `json:"boards"`
+	MCPServers  []MCPServer       `json:"mcp_servers"`
+	Plugins     map[string]Plugin `json:"plugins"`
+}
+
+type MCPTool struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+}
+
+type MCPServer struct {
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Transport  string            `json:"transport"`
+	Endpoint   string            `json:"endpoint,omitempty"`
+	Command    string            `json:"command,omitempty"`
+	Args       []string          `json:"args,omitempty"`
+	Enabled    bool              `json:"enabled"`
+	Status     string            `json:"status"`
+	Tools      []MCPTool         `json:"tools,omitempty"`
+	Settings   map[string]string `json:"settings,omitempty"`
+	SecretKeys []string          `json:"secret_keys,omitempty"`
+}
+
+type Plugin struct {
+	ID       string            `json:"id"`
+	Name     string            `json:"name"`
+	Path     string            `json:"path"`
+	Enabled  bool              `json:"enabled"`
+	Status   string            `json:"status"`
+	Settings map[string]string `json:"settings,omitempty"`
 }
 type RunRecord struct {
 	ID         string     `json:"id"`
@@ -51,7 +81,7 @@ func New(stateDir string) (*Store, error) {
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		return nil, err
 	}
-	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Tasks: []Item{}, Todos: []Item{}, Goals: []Item{}, Spaces: []Item{}, Artifacts: []Item{}, Boards: []Item{}, Preferences: map[string]string{}, TaskHistory: []RunRecord{}}}
+	s := &Store{path: filepath.Join(stateDir, "control.json"), state: State{Tasks: []Item{}, Todos: []Item{}, Goals: []Item{}, Spaces: []Item{}, Artifacts: []Item{}, Boards: []Item{}, Preferences: map[string]string{}, TaskHistory: []RunRecord{}, MCPServers: []MCPServer{}, Plugins: map[string]Plugin{}}}
 	data, err := os.ReadFile(s.path)
 	if err == nil {
 		if json.Unmarshal(data, &s.state) != nil {
@@ -81,6 +111,12 @@ func New(stateDir string) (*Store, error) {
 	}
 	if s.state.Boards == nil {
 		s.state.Boards = []Item{}
+	}
+	if s.state.MCPServers == nil {
+		s.state.MCPServers = []MCPServer{}
+	}
+	if s.state.Plugins == nil {
+		s.state.Plugins = map[string]Plugin{}
 	}
 	return s, nil
 }
@@ -230,6 +266,126 @@ func (s *Store) SetPreferences(values map[string]string) error {
 		s.state.Preferences[key] = value
 	}
 	return s.persist()
+}
+
+func (s *Store) MCPServers() []MCPServer {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]MCPServer, len(s.state.MCPServers))
+	copy(result, s.state.MCPServers)
+	return result
+}
+
+func (s *Store) CreateMCPServer(server MCPServer) (MCPServer, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	server.ID = newID()
+	server.Enabled = true
+	server.Status = "configured"
+	server.Settings = cloneSafeMap(server.Settings)
+	server.SecretKeys = nil
+	server.Tools = append([]MCPTool{}, server.Tools...)
+	s.state.MCPServers = append(s.state.MCPServers, server)
+	return server, s.persist()
+}
+
+func (s *Store) UpdateMCPServer(id string, patch MCPServer) (MCPServer, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.state.MCPServers {
+		if s.state.MCPServers[i].ID != id {
+			continue
+		}
+		current := &s.state.MCPServers[i]
+		if patch.Name != "" {
+			current.Name = patch.Name
+		}
+		if patch.Transport != "" {
+			current.Transport = patch.Transport
+		}
+		if patch.Endpoint != "" {
+			current.Endpoint = patch.Endpoint
+		}
+		if patch.Command != "" {
+			current.Command = patch.Command
+		}
+		if patch.Args != nil {
+			current.Args = append([]string{}, patch.Args...)
+		}
+		if patch.Settings != nil {
+			current.Settings = cloneSafeMap(patch.Settings)
+		}
+		current.Enabled = patch.Enabled
+		if current.Enabled {
+			current.Status = "configured"
+		} else {
+			current.Status = "disabled"
+		}
+		return *current, s.persist()
+	}
+	return MCPServer{}, ErrNotFound
+}
+
+func (s *Store) DeleteMCPServer(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.state.MCPServers {
+		if s.state.MCPServers[i].ID == id {
+			s.state.MCPServers = append(s.state.MCPServers[:i], s.state.MCPServers[i+1:]...)
+			return s.persist()
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Store) Plugins() map[string]Plugin {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := map[string]Plugin{}
+	for id, plugin := range s.state.Plugins {
+		plugin.Settings = cloneSafeMap(plugin.Settings)
+		result[id] = plugin
+	}
+	return result
+}
+
+func (s *Store) UpdatePlugin(id string, patch Plugin) (Plugin, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	plugin, ok := s.state.Plugins[id]
+	if !ok {
+		return Plugin{}, ErrNotFound
+	}
+	plugin.Enabled = patch.Enabled
+	plugin.Status = "disabled"
+	if plugin.Enabled {
+		plugin.Status = "available"
+	}
+	if patch.Settings != nil {
+		plugin.Settings = cloneSafeMap(patch.Settings)
+	}
+	s.state.Plugins[id] = plugin
+	return plugin, s.persist()
+}
+
+func (s *Store) UpsertPlugin(plugin Plugin) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	plugin.Settings = cloneSafeMap(plugin.Settings)
+	s.state.Plugins[plugin.ID] = plugin
+	return s.persist()
+}
+
+func cloneSafeMap(values map[string]string) map[string]string {
+	result := map[string]string{}
+	for key, value := range values {
+		lower := strings.ToLower(strings.TrimSpace(key))
+		if strings.Contains(lower, "secret") || strings.Contains(lower, "token") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || strings.Contains(lower, "apikey") || strings.Contains(lower, "authorization") || strings.Contains(lower, "credential") || strings.Contains(lower, "private_key") {
+			continue
+		}
+		result[key] = value
+	}
+	return result
 }
 func (s *Store) items(collection string) ([]Item, error) {
 	if !validCollections[collection] {

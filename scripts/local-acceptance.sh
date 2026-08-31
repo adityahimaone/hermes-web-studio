@@ -6,6 +6,8 @@ base_url="${BASE_URL:-http://127.0.0.1:5173}"
 
 echo 'P056 contract/state effects'
 sh "$root/scripts/check-contract-matrix.sh"
+echo 'M7-M12 local Hermes/API acceptance'
+sh "$root/scripts/local-hermes-acceptance.sh"
 echo 'P057 visual matrix'
 (cd "$root/frontend" && node e2e/p057-visual-matrix.mjs)
 echo 'M11/M12 bounded shell geometry'

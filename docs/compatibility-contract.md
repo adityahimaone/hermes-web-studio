@@ -283,15 +283,20 @@ provider CRUD responses contain only safe metadata; provider secrets are
 represented by `has_key` and are never returned. The control surface reports
 15 supported locale identifiers with English fallback.
 
-Extension and update surfaces are currently read-only contracts. `GET
+MCP and extension surfaces are server-owned contracts. `GET/POST/PATCH/DELETE
+/api/mcp/servers` stores validated stdio, HTTP, or SSE server metadata without
+executing a process, and `GET /api/mcp/servers/{id}/tools` exposes only
+sanitized tool metadata as read-only state. MCP settings remove
+secret-shaped keys before persistence and response. `GET
 /api/plugins` returns sanitized plugin metadata and explicit capability states;
 `GET /api/extensions` returns registered extension directory names without
 loading extension settings or executing code. Registry visibility is available,
 while install, toggle, uninstall, settings, sidecar consent, iframe loading,
 and trust-boundary operations return capability metadata marked unavailable
 until a sandbox and consent contract exists. The existing plugin settings
-mutation remains server-owned and filters secret-shaped keys; the read-only
-registry response does not expose settings. `GET /api/operator/version`
+mutation remains server-owned and filters secret-shaped keys; `PATCH
+/api/plugins/{id}` can update discovered plugin metadata/settings without
+executing plugin code. The registry response does not expose settings. `GET /api/operator/version`
 reports server runtime version metadata, and `GET /api/operator/update`
 reports health links, release-artifact evidence state, and explicit unavailable
 check/apply/shutdown/restart/lock-recovery actions. Updates are never applied
@@ -342,3 +347,11 @@ Capability panels use the shared response reader. Structured JSON error
 messages remain user-facing, while non-JSON proxy/server responses are mapped
 to an HTTP status error; a parser exception is never shown as the product
 state.
+
+MCP and plugin settings are server-owned. `GET` and `POST /api/mcp/servers`
+plus `PATCH` and `DELETE /api/mcp/servers/{id}` manage validated metadata;
+`GET /api/mcp/servers/{id}/tools` is read-only and never executes a tool.
+HTTP/SSE endpoints require HTTP(S) URLs without userinfo, stdio requires a
+command, and secret-shaped settings are filtered before persistence and
+response. `PATCH /api/plugins/{id}` can update settings for a discovered
+plugin, while install, execution, and remote MCP discovery remain deferred.
