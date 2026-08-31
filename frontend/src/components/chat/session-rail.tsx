@@ -16,6 +16,7 @@ type SourceFilter = 'all' | 'webui' | 'cli'
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
 function sourceOf(session: SessionSummary): SourceFilter { const source = field(session, 'source', 'session_source', 'origin', 'session_type').toLocaleLowerCase(); return source.includes('cli') || source.includes('cron') ? 'cli' : 'webui' }
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
+export function sessionActionVisibilityClass() { return 'absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100' }
 
 function formatCompactDate(dateStr?: string) {
   if (!dateStr) return ''
@@ -146,7 +147,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
                     {channel && <span className="shrink-0 rounded bg-muted px-1 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">{channel}</span>}
                     {dateBadge && <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/60">{dateBadge}</span>}
                   </Button>
-                  <div className="absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <div className={sessionActionVisibilityClass()}>
                     <DropdownMenu label={`Actions for ${item.title || 'session'}`} items={[
                       { label: 'Rename conversation', icon: Pencil, onSelect: () => { setRenameTarget(item); setRenameValue(item.title || '') } },
                       { label: 'Duplicate conversation', icon: Copy, onSelect: () => { if (onDuplicate) void onDuplicate(item.session_id) } },

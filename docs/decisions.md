@@ -78,6 +78,8 @@ safe offline UI while Hermes is restarting.
 
 ## ADR-017 - Shared UI primitives and Chat-owned session navigation
 
+Session overflow actions remain visible by default, while preserving existing hover/focus-within styling, so keyboard and touch users can reach them without hover.
+
 Visible controls use the repository's copy-owned shadcn-style `Button`,
 `Input`, `Select`, and `Textarea` primitives so focus, sizing, and disabled
 states stay consistent across the workspace. The file chooser remains a

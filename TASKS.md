@@ -27,7 +27,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 
 - [x] Persist sessions using existing `~/.hermes/webui` data where possible (JSON CRUD, metadata-preserving edits, attachment sidecars, and chat transcript append tested; no chat SQLite/CLI source is present in the resolved state directory)
 - [x] Add read-only sessions API contract and integration tests
-- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, session actions, inline tag/project metadata, and isolated live parity runner verified; original-WebUI side-by-side proof remains)
+- [~] Session CRUD, search, date grouping, rename, pin, archive, tags, projects (CRUD/action routes, search/date grouping, session actions, inline tag/project metadata, overflow actions visible for keyboard and touch, and isolated live parity runner verified; original-WebUI side-by-side proof remains)
 - [x] Load and resume existing session history
 - [~] Edit/regenerate/retry and queue while processing (server-side edit truncation awaited before edit/retry, queued text/attachment delivery and live persisted branch semantics verified; original-UI side-by-side click proof remains)
 - [x] Markdown, code highlight/copy, Mermaid, safe links
