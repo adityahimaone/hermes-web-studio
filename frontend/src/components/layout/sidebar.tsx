@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, BarChart3, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, MessageSquareText, Settings2, SlidersHorizontal, Sparkles, Terminal, UsersRound, Wrench, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, BrainCircuit, CheckSquare2, CircleStar, Clock3, FolderKanban, KanbanSquare, MessageSquareText, Settings2, SlidersHorizontal, Sparkles, Terminal, UsersRound, Wrench, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../ui/button'
 import { Tooltip } from '../ui/tooltip'
@@ -8,6 +8,7 @@ import { cn } from '../../lib/cn'
 const defaultNavigation = [
   { label: 'Chat', icon: MessageSquareText },
   { label: 'Tasks', icon: Clock3 },
+  { label: 'Kanban', icon: KanbanSquare },
   { label: 'Skills', icon: Wrench },
   { label: 'Memory', icon: BrainCircuit },
   { label: 'Profiles', icon: UsersRound },

@@ -2,6 +2,26 @@
 
 This document is the migration guardrail between `nesquena/hermes-webui` and Hermes Web Studio.
 
+## Kanban contract
+
+Kanban uses native Hermes state through a server-side transport adapter. The
+CLI is the default transport; an authenticated Hermes Dashboard may be used
+when configured and healthy. The browser never receives the CLI path, Dashboard
+session token, provider key, or subprocess details.
+
+The canonical statuses are `triage`, `todo`, `scheduled`, `ready`, `running`,
+`blocked`, `review`, `done`, and `archived`. Studio stores the selected board
+locally and passes it explicitly to CLI requests, so normal board selection does
+not change Hermes' shared current-board pointer. A Space is resolved to an
+upstream workspace value; no native `space` field is sent.
+
+CLI mode supports board reads, task creation, dispatch, assignment, comments,
+links, and named Hermes transitions. Generic task editing, arbitrary status
+patches, plugin bulk mutations, and live event streaming are capability-gated
+until the Dashboard transport is available. The earlier local `/api/kanban`
+placeholder handlers remain deprecated compatibility routes while migration
+and live acceptance are incomplete.
+
 ## Chat browser contract (implemented)
 
 ### Start

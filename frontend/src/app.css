@@ -178,7 +178,20 @@ button, textarea, input, select { font: inherit; }
 }
 .context-rail {
   width: var(--studio-context-width);
+  background: color-mix(in srgb, var(--card) 78%, var(--background));
 }
+.context-rail--shared { border-right-color: color-mix(in srgb, var(--primary) 13%, var(--border)); }
+.context-rail__header { min-height: 42px; }
+.context-rail__body > .relative:first-child { position: sticky; top: -0.5rem; z-index: 10; margin: -0.5rem -0.75rem 0; padding: 0.5rem 0.75rem; background: color-mix(in srgb, var(--card) 96%, transparent); }
+.context-rail__body > .relative:first-child input { width: 100%; }
+.context-rail[aria-label="Context skills navigation"] .context-rail__body > .relative:first-child,
+.context-rail[aria-label="Context memory navigation"] .context-rail__body > .relative:first-child { margin: 0 0 0.5rem; padding: 0; }
+.context-rail[aria-label="Context skills navigation"] .context-rail__header > div:last-child > button:first-child,
+.context-rail[aria-label="Context memory navigation"] .context-rail__header > div:last-child > button:first-child { width: 2rem; height: 2rem; padding: 0; font-size: 0; }
+.context-rail[aria-label="Context skills navigation"] .context-rail__body > .space-y-1 > button,
+.context-rail[aria-label="Context memory navigation"] .context-rail__body > .space-y-1 > button { min-height: 2.25rem; color: var(--foreground); font-size: 0.8125rem; }
+.view-shell__content > section { max-width: 72rem; }
+.view-shell__rail-note { line-height: 1.45; }
 .context-rail__body { scrollbar-gutter: stable; }
 
 .control-center-settings > div > section > div.grid { display: block; }
@@ -203,4 +216,3 @@ section.mx-auto.w-full.max-w-3xl h1.text-2xl { font-size: 26px; line-height: 1.2
   .mobile-composer { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-panel { transition: none; } }
-

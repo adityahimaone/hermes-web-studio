@@ -1,4 +1,4 @@
-import { BarChart3, BrainCircuit, Clock3, Menu, MessageSquareText, PanelRight, RotateCcw, Settings2, Wrench } from 'lucide-react'
+import { BarChart3, BrainCircuit, Clock3, KanbanSquare, Menu, MessageSquareText, PanelRight, RotateCcw, Settings2, Wrench } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Sidebar } from './components/layout/sidebar'
 import { Button } from './components/ui/button'
@@ -23,7 +23,7 @@ export function App() {
   const [view, setView] = useState('chat')
   const [chatSessionsOpen, setChatSessionsOpen] = useState(true)
   const [controlSidebarOpen, setControlSidebarOpen] = useState(true)
-  const mobileNavigation = [{ label: 'Chat', view: 'chat', icon: MessageSquareText }, { label: 'Tasks', view: 'tasks', icon: Clock3 }, { label: 'Insights', view: 'insights', icon: BarChart3 }, { label: 'Skills', view: 'skills', icon: Wrench }, { label: 'Memory', view: 'memory', icon: BrainCircuit }, { label: 'Settings', view: 'settings', icon: Settings2 }]
+  const mobileNavigation = [{ label: 'Chat', view: 'chat', icon: MessageSquareText }, { label: 'Tasks', view: 'tasks', icon: Clock3 }, { label: 'Kanban', view: 'kanban', icon: KanbanSquare }, { label: 'Insights', view: 'insights', icon: BarChart3 }, { label: 'Skills', view: 'skills', icon: Wrench }, { label: 'Memory', view: 'memory', icon: BrainCircuit }, { label: 'Settings', view: 'settings', icon: Settings2 }]
   const handleNavigate = (nextView: string) => {
     if (nextView === 'chat' && view === 'chat') {
       setChatSessionsOpen(open => !open)
@@ -53,7 +53,7 @@ export function App() {
           )}
           <div className="flex items-center gap-1.5">
             <ConnectionStatus />
-            <IdentityControls />
+            <IdentityControls showAuthForm={false} />
             <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground" onClick={() => workspace.setOpen(!workspace.open)} aria-label={workspace.open ? 'Close workspace' : 'Open workspace'} title={workspace.open ? 'Close workspace' : 'Open workspace'}><PanelRight size={16} /></Button>
           </div>
         </header>

@@ -552,3 +552,36 @@ The acceptance script verifies it is visible only on Chat.
   channels, scheduled work, hosted artifacts, or reference visual parity.
 - `hermes serve` was separately identified as a headless JSON-RPC surface,
   not the OpenAI-compatible Gateway expected by the Studio BFF.
+
+## 2026-08-31 — Kanban native CLI vertical slice
+
+- Replaced the Kanban placeholder's frontend entry point with a dedicated
+  Chat-like Kanban rail and native Hermes board lanes.
+- Added authenticated server-side CLI-backed board reads, task creation,
+  dispatch, safe named task actions, capability reporting, board-local
+  selection, filtering, task preview, and loading/empty/error states.
+- Added regression tests proving CLI JSON routing, task creation response
+  redaction, and CLI capability gating. The local control-store Kanban routes
+  remain deprecated during migration and are not used by the new UI.
+- Evidence: frontend production build passes; focused Kanban backend tests are
+  added. Full backend suite is blocked in this sandbox by macOS bind/cache
+  permissions, and live Hermes/Dashboard, drag-and-drop, bulk, event-stream,
+  migration, and visual parity evidence remain open under P033.
+- Follow-up: hardened the CLI JSON boundary to extract one machine-readable
+  document when Hermes emits harmless status text, and improved frontend
+  errors to include a bounded safe response detail. Focused backend tests and
+  the 33-test frontend suite pass after the fix.
+- Kanban follow-up: expanded the New task flow to match the reference field
+  set, including status, tenant, Space selection, execution mode, advanced
+  workspace path, skills, max runtime, and parent dependencies. Added board-
+  aware actions and desktop drag targets with safe CLI capability messaging.
+  Frontend build and all 33 frontend tests pass.
+- Kanban modal follow-up: the shared Dialog now keeps its header fixed and
+  scrolls long content inside the viewport. The task Space selector reads the
+  registered Spaces tab data, selects the active Space when available, and
+  composes its path into the Hermes workspace value. Frontend build/tests pass.
+- Kanban detail follow-up: upgraded card preview into a responsive,
+  keyboard-closeable task detail drawer backed by the native task endpoint.
+  It shows task metadata, workspace, skills, dependencies, result, activity
+  counts, and safe supported status actions. Frontend build and all 33 tests
+  pass; full editable Dashboard detail parity remains open under P033.

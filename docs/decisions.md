@@ -490,3 +490,51 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** P067–P071 can converge incrementally on one shell without
   changing API or navigation behavior. Exact screenshot, computed-style, and
   hosted personal-WebUI comparison evidence remains a separate P072 gate.
+
+## ADR-048: Give every utility view the same contextual sidebar shell
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Route Tasks, Spaces, Todos, Goals, Terminal, and Insights
+  through the shared `ViewShell` used by the existing Skills, Memory, Profiles,
+  and Settings surfaces. The shell owns the contextual rail, collapse seam,
+  and content width; view components retain their existing data and actions.
+- **Reason:** Utility views previously bypassed the sidebar system and appeared
+  as unrelated narrow pages. Consistent shell ownership improves orientation and
+  preserves the product's three-region information architecture without adding
+  non-functional navigation controls or changing API behavior.
+- **Consequence:** All utility views now share the same desktop rail and
+  responsive content treatment. Mobile continues to use the existing drawer and
+  bottom navigation contract; visual parity against the personal WebUI remains
+  an open P072 evidence gate.
+
+## ADR-049: Keep authentication entry in Settings, not the titlebar
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** The global titlebar exposes profile context only; password setup,
+  sign-in, and sign-out controls render in the Settings account section. The
+  existing `/api/onboarding/password`, `/api/auth/login`, and logout flows are
+  unchanged.
+- **Reason:** Password creation is configuration, not conversation runtime
+  state. Removing its form from the titlebar reduces header competition and
+  gives the security-sensitive action a clear labeled home.
+- **Consequence:** Unconfigured users must open Settings to create a password.
+  The browser still never receives provider credentials or Gateway keys.
+
+## ADR-050: Use a CLI-first native Kanban transport with Dashboard capability upgrade
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Kanban reads and safe named actions use `hermes kanban` by
+  default. When an authenticated Dashboard plugin is configured and healthy,
+  Studio may upgrade automatically to its richer REST/WebSocket contract.
+  Unsupported CLI operations are capability-gated in the UI.
+- **Reason:** The installed Hermes CLI is the safest available default but does
+  not expose the Dashboard's generic task patch, plugin bulk, or live event
+  surface. Direct SQLite/Python access would duplicate Hermes behavior and
+  violate the BFF boundary.
+- **Consequence:** CLI-only deployments receive a useful, honest Kanban slice;
+  full editing, live events, and Dashboard-only orchestration require the
+  authenticated Dashboard service. Board selection remains browser-local and
+  does not mutate Hermes' shared CLI current-board pointer.
