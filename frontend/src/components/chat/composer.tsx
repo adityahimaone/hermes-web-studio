@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { ArrowUp, Cpu, FileText, FolderOpen, Mic, Paperclip, Square, TerminalSquare, UserRound, X } from 'lucide-react'
+import { ArrowUp, Bookmark, ChevronDown, Cpu, FileText, FolderOpen, Mic, Paperclip, Sparkles, Square, Timer, UserRound, X } from 'lucide-react'
 import { Button } from '../ui/button'
-import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
-import { Badge } from '../ui/badge'
+import { Textarea } from '../ui/textarea'
 import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/turn-control'
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
+import { cn } from '../../lib/cn'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
+
+const QUICK_PROMPTS = [
+  { label: 'Inspect codebase', prompt: 'Inspect my current workspace and summarize its structure.' },
+  { label: 'Plan implementation', prompt: 'Plan a focused implementation step by step.' },
+  { label: 'Debug error', prompt: 'Help debug this error and propose a minimal fix:' },
+  { label: 'Explain architecture', prompt: 'Explain the architecture and key contracts of this system.' },
+]
+
 export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStreaming, draft, onDraftChange, queuedMessages, contextUsage, workspacePath = '.', onWorkspaceOpen }: Props) {
   const [localValue, setLocalValue] = useState('')
   const value = draft ?? localValue
@@ -16,13 +24,24 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   const [attachments, setAttachments] = useState<File[]>([])
   const ref = useRef<HTMLTextAreaElement>(null)
   const [commandsOpen, setCommandsOpen] = useState(false)
+  const [promptsOpen, setPromptsOpen] = useState(false)
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [profileId, setProfileId] = useState('default')
   const [model, setModel] = useState('default')
   const [turnMode, setTurnMode] = useState<TurnMode>('queue')
+  const [contextOpen, setContextOpen] = useState(false)
   const activeProfile = profiles.find(profile => profile.id === profileId)
   const commandSuggestions = slashCommandSuggestions(value)
-  useEffect(() => { void fetch('/api/profiles').then(response => response.json()).then(data => { const next = (data.profiles || []) as Profile[]; setProfiles(next); const active = typeof data.active === 'string' ? data.active : next[0]?.id || 'default'; setProfileId(active); setModel(next.find(profile => profile.id === active)?.model || 'default') }).catch(() => undefined) }, [])
+
+  useEffect(() => {
+    void fetch('/api/profiles').then(response => response.json()).then(data => {
+      const next = (data.profiles || []) as Profile[]
+      setProfiles(next)
+      const active = typeof data.active === 'string' ? data.active : next[0]?.id || 'default'
+      setProfileId(active)
+      setModel(next.find(profile => profile.id === active)?.model || 'default')
+    }).catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const input = ref.current
@@ -33,7 +52,12 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
 
   function submit() {
     if (!value.trim()) return
-    if (value.trim().startsWith('/') && onCommand && localSlashCommand(value.trim())) { onCommand(value.trim()); setValue(''); setCommandsOpen(false); return }
+    if (value.trim().startsWith('/') && onCommand && localSlashCommand(value.trim())) {
+      onCommand(value.trim())
+      setValue('')
+      setCommandsOpen(false)
+      return
+    }
     onSend(value, attachments, { model, provider: activeProfile?.provider }, turnMode)
     setValue('')
     setAttachments([])
@@ -63,33 +87,192 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
     }
   }
 
+  const modelDisplay = model === 'default' ? (activeProfile?.model || 'GPT 5.5') : model
+  const profileDisplay = activeProfile?.name || 'default'
+  const workspaceDisplay = workspacePath === '.' ? 'Home' : workspacePath
+
   return (
-    <div className="mobile-composer mx-auto w-full max-w-3xl px-3 pb-4 sm:px-6">
-      <div className="rounded-2xl border bg-card/90 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl focus-within:border-primary/35 focus-within:ring-1 focus-within:ring-primary/20">
-        {attachments.length > 0 && <div className="flex flex-wrap gap-2 px-2 pt-2" aria-label="Selected attachments">{attachments.map((file, index) => <span key={`${file.name}-${index}`} className="attachment-chip"><FileText size={13} />{file.name}<Button type="button" variant="ghost" size="icon" className="size-5" onClick={() => setAttachments((current) => current.filter((_, item) => item !== index))} aria-label={`Remove ${file.name}`}><X size={13} /></Button></span>)}</div>}
-        <Textarea ref={ref} value={value} onChange={(event) => { setValue(event.target.value); setCommandsOpen(event.target.value.startsWith('/')) }} onKeyDown={onKeyDown} rows={1} placeholder={isStreaming ? 'Queue a message for Hermes…' : 'Message Hermes…'} aria-label="Message Hermes" className="max-h-44 min-h-12 resize-none border-0 bg-transparent px-3 py-3 leading-6 shadow-none focus-visible:ring-0" />
-        {commandsOpen && commandSuggestions.length > 0 && <div className="grid gap-1 px-2 pb-2" aria-label="Slash commands" role="listbox">{commandSuggestions.map(command => <Button key={command.name} type="button" variant="outline" size="sm" className="justify-start gap-2 text-left" role="option" onClick={() => { setValue(`${command.name} `); setCommandsOpen(false); ref.current?.focus() }}><span className="font-mono">{command.name}</span><span className="text-muted-foreground">{command.description}</span></Button>)}</div>}
-        <div className="composer-toolbar px-1 pb-1">
-          <div className="composer-toolbar__controls">
-          <Button type="button" variant="ghost" size="icon" aria-label="Attach files" onClick={() => document.getElementById('composer-attachments')?.click()}><Paperclip size={16} /></Button><input id="composer-attachments" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain" className="sr-only" onChange={chooseFiles} />
-          <Button type="button" variant="ghost" size="sm" disabled className="gap-1.5"><TerminalSquare size={14} /> Tools</Button>
-          <label className="sr-only" htmlFor="composer-turn-mode">Turn mode</label><Select id="composer-turn-mode" aria-label="Turn mode" value={turnMode} onChange={event => setTurnMode(normalizeTurnMode(event.target.value))} className="h-8 max-w-24 px-2 text-[11px]"><option value="queue">Queue</option><option value="interrupt">Interrupt</option><option value="steer">Steer</option></Select>
-          <Button type="button" variant="ghost" size="icon" aria-label="Use voice input" onClick={() => { const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return; const recognition = new Speech(); recognition.onresult = (event: Event & { results: SpeechRecognitionResultList }) => setValue(`${value} ${event.results[0][0].transcript}`.trim()); recognition.start() }}><Mic size={15} /></Button>
-          <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
-          <label className="sr-only" htmlFor="composer-profile">Profile</label><span className="hidden items-center gap-1 text-[10px] text-muted-foreground sm:flex"><UserRound size={12} /></span><Select id="composer-profile" aria-label="Conversation profile" value={profileId} onChange={event => { const next = profiles.find(profile => profile.id === event.target.value); setProfileId(event.target.value); setModel(next?.model || 'default'); void fetch('/api/profiles/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: event.target.value }) }) }} className="h-8 max-w-28 px-2 text-[11px]"><option value="default">Default</option>{profiles.filter(profile => profile.id !== 'default').map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</Select>
-          <label className="sr-only" htmlFor="composer-model">Model</label><span className="hidden items-center gap-1 text-[10px] text-muted-foreground sm:flex"><Cpu size={12} /></span><Select id="composer-model" aria-label="Conversation model" value={model} onChange={event => setModel(event.target.value)} className="h-8 max-w-32 px-2 text-[11px]"><option value="default">Default model</option>{activeProfile?.model && activeProfile.model !== 'default' && <option value={activeProfile.model}>{activeProfile.model}</option>}</Select>
-          <Button type="button" variant="outline" size="sm" className="min-h-11 max-w-28 gap-1 px-2 text-[11px]" onClick={onWorkspaceOpen} aria-label={`Workspace ${workspacePath}`}><FolderOpen size={12} /><span className="truncate">{workspacePath}</span></Button>
-          {contextUsage?.total !== undefined && contextUsage.contextLimit !== undefined && <Badge className="h-7 gap-1 px-2 text-[10px]" title="Context usage"><span className="inline-block size-2 rounded-full bg-primary" />{Math.min(100, Math.round((contextUsage.total / Math.max(1, contextUsage.contextLimit)) * 100))}%</Badge>}
+    <div className="mobile-composer mx-auto w-full max-w-[1000px] px-3 pb-4 sm:px-6">
+      <div className="relative rounded-2xl border border-border/70 bg-card/85 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/30">
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-2 pt-1 pb-2" aria-label="Selected attachments">
+            {attachments.map((file, index) => (
+              <span key={`${file.name}-${index}`} className="attachment-chip">
+                <FileText size={12} className="text-primary" />
+                <span className="max-w-40 truncate">{file.name}</span>
+                <button type="button" onClick={() => setAttachments((current) => current.filter((_, item) => item !== index))} aria-label={`Remove ${file.name}`}>
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
           </div>
+        )}
+
+        <Textarea
+          ref={ref}
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value)
+            setCommandsOpen(event.target.value.startsWith('/'))
+          }}
+          onKeyDown={onKeyDown}
+          rows={1}
+          placeholder={isStreaming ? 'Queue a message for Hermes…' : 'Message Hermes…'}
+          aria-label="Message Hermes"
+          className="max-h-44 min-h-11 resize-none border-0 bg-transparent px-3 py-2 text-sm leading-6 placeholder:text-muted-foreground/60 shadow-none focus-visible:ring-0"
+        />
+
+        {commandsOpen && commandSuggestions.length > 0 && (
+          <div className="grid gap-1 px-2 pb-2" aria-label="Slash commands" role="listbox">
+            {commandSuggestions.map(command => (
+              <Button key={command.name} type="button" variant="outline" size="sm" className="justify-start gap-2 text-left text-xs" role="option" onClick={() => { setValue(`${command.name} `); setCommandsOpen(false); ref.current?.focus() }}>
+                <span className="font-mono text-primary">{command.name}</span>
+                <span className="text-muted-foreground">{command.description}</span>
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {promptsOpen && (
+          <div className="mb-2 grid grid-cols-1 gap-1.5 rounded-xl border border-border/80 bg-popover/90 p-2 text-xs sm:grid-cols-2">
+            {QUICK_PROMPTS.map(item => (
+              <button key={item.label} type="button" onClick={() => { setValue(item.prompt); setPromptsOpen(false); ref.current?.focus() }} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs text-foreground/90 transition-colors hover:bg-accent hover:text-foreground">
+                <Sparkles size={12} className="shrink-0 text-primary" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="composer-toolbar px-1 pt-1 pb-0.5">
+          <div className="composer-toolbar__controls">
+            {/* Attachment Button */}
+            <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground" aria-label="Attach files" title="Attach files" onClick={() => document.getElementById('composer-attachments')?.click()}>
+              <Paperclip size={14} />
+            </Button>
+            <input id="composer-attachments" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain" className="sr-only" onChange={chooseFiles} />
+
+            {/* Voice Input */}
+            <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground" aria-label="Use voice input" title="Voice input" onClick={() => { const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return; const recognition = new Speech(); recognition.onresult = (event: Event & { results: SpeechRecognitionResultList }) => setValue(`${value} ${event.results[0][0].transcript}`.trim()); recognition.start() }}>
+              <Mic size={14} />
+            </Button>
+
+            {/* Prompts Bookmark */}
+            <Button type="button" variant="ghost" size="icon" className={cn('size-7 rounded-lg transition-colors', promptsOpen ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground')} aria-label="Prompt templates" title="Quick prompt templates" onClick={() => setPromptsOpen(v => !v)}>
+              <Bookmark size={14} />
+            </Button>
+
+            {/* Profile Pill */}
+            <div className="relative inline-flex items-center">
+              <Select
+                aria-label="Conversation profile"
+                value={profileId}
+                onChange={event => {
+                  const next = profiles.find(p => p.id === event.target.value)
+                  setProfileId(event.target.value)
+                  setModel(next?.model || 'default')
+                  void fetch('/api/profiles/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: event.target.value }) })
+                }}
+                className="select-menu-up h-7 min-h-7 max-w-28 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
+              >
+                <option value="default">Default</option>
+                {profiles.filter(p => p.id !== 'default').map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </Select>
+            </div>
+
+            {/* Workspace / Directory Pill */}
+            <button type="button" onClick={onWorkspaceOpen} className="flex h-7 items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 text-[11px] font-medium text-foreground/90 transition-colors hover:border-border hover:bg-muted/70" aria-label={`Workspace ${workspacePath}`} title={`Workspace ${workspacePath}`}>
+              <FolderOpen size={11} className="text-muted-foreground" />
+              <span className="max-w-24 truncate">{workspaceDisplay}</span>
+              <ChevronDown size={10} className="text-muted-foreground" />
+            </button>
+
+            {/* Model Pill */}
+            <div className="relative inline-flex items-center">
+              <Select
+                aria-label="Conversation model"
+                value={model}
+                onChange={event => setModel(event.target.value)}
+                className="select-menu-up h-7 min-h-7 max-w-36 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
+              >
+                <option value="default">Default model</option>
+                {activeProfile?.model && activeProfile.model !== 'default' && <option value={activeProfile.model}>{activeProfile.model}</option>}
+                <option value="GPT 5.5">GPT 5.5</option>
+                <option value="Claude 3.7 Sonnet">Claude 3.7 Sonnet</option>
+                <option value="Gemini 2.0 Flash">Gemini 2.0 Flash</option>
+              </Select>
+            </div>
+
+            {/* Reasoning Effort / Turn Mode Pill */}
+            <div className="relative inline-flex items-center">
+              <Select
+                aria-label="Turn mode"
+                value={turnMode}
+                onChange={event => setTurnMode(normalizeTurnMode(event.target.value))}
+                className="select-menu-up h-7 min-h-7 max-w-24 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
+              >
+                <option value="queue">High</option>
+                <option value="interrupt">Interrupt</option>
+                <option value="steer">Steer</option>
+              </Select>
+            </div>
+
+            {/* Context Token Window Pill */}
+            {contextUsage?.total !== undefined && contextUsage.contextLimit !== undefined && (
+              <div className="relative">
+                <button type="button" className="inline-flex size-6 items-center justify-center rounded-full border border-border/60 bg-muted/60 text-[9px] font-semibold tabular-nums text-muted-foreground hover:border-primary/60 hover:text-foreground" aria-label="Context window usage" aria-expanded={contextOpen} onClick={() => setContextOpen(value => !value)}>
+                  {Math.min(100, Math.round((contextUsage.total / Math.max(1, contextUsage.contextLimit)) * 100))}
+                </button>
+                {contextOpen && (
+                  <div className="absolute bottom-[calc(100%+0.5rem)] right-0 z-[200] w-64 rounded-xl border border-border/80 bg-popover/95 p-3 text-left text-xs text-muted-foreground shadow-2xl shadow-black/50 backdrop-blur-xl animate-in fade-in-0 zoom-in-95">
+                    <p className="text-sm font-semibold text-foreground">Context window</p>
+                    <p className="mt-2">Context window: {Math.round((contextUsage.total / Math.max(1, contextUsage.contextLimit)) * 100)}% used</p>
+                    <p className="mt-1">{contextUsage.total.toLocaleString()} / {contextUsage.contextLimit.toLocaleString()} tokens</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="composer-toolbar__actions">
-          <span className="ml-auto mr-2 hidden text-[11px] text-muted-foreground sm:inline">Enter to send · Shift Enter for newline</span>
-          {isStreaming && <Button type="button" size="icon" variant="outline" onClick={onCancel} aria-label="Stop Hermes"><Square size={13} fill="currentColor" /></Button>}
-          <Button type="button" size="icon" onClick={submit} disabled={!value.trim()} aria-label={isStreaming ? 'Queue message' : 'Send message'}><ArrowUp size={17} /></Button>
+            <span className="mr-1 hidden text-[10px] text-muted-foreground/60 sm:inline">Enter to send · Shift Enter for newline</span>
+            {isStreaming && (
+              <Button type="button" size="icon" variant="outline" className="size-8 rounded-full border-border/80" onClick={onCancel} aria-label="Stop Hermes">
+                <Square size={12} fill="currentColor" />
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="icon"
+              onClick={submit}
+              disabled={!value.trim()}
+              aria-label={isStreaming ? 'Queue message' : 'Send message'}
+              className="size-8 rounded-full bg-primary/90 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+            >
+              <ArrowUp size={15} />
+            </Button>
           </div>
         </div>
       </div>
-      <p className="mt-2 text-center text-[10px] text-muted-foreground">{queuedMessages?.length ? `${queuedMessages.length} message${queuedMessages.length === 1 ? '' : 's'} queued` : attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'} ready` : 'Hermes can make mistakes and run tools. Review important actions.'}</p>
-      {queuedMessages?.length ? <div className="mt-2 space-y-1" aria-label="Pending messages">{queuedMessages.map((item, index) => <div key={`${item.content}-${index}`} className="flex items-center gap-2 rounded-lg border bg-card/50 px-2 py-1 text-left text-[11px]"><span className="min-w-0 flex-1 truncate">{item.content}{item.attachmentNames.length ? ` · ${item.attachmentNames.join(', ')}` : ''}</span>{onRemoveQueued && <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0" onClick={() => onRemoveQueued(index)} aria-label={`Remove queued message ${index + 1}`}><X size={12} /></Button>}</div>)}</div> : null}
+
+      <p className="mt-1.5 text-center text-[10px] text-muted-foreground/60">
+        {queuedMessages?.length ? `${queuedMessages.length} message${queuedMessages.length === 1 ? '' : 's'} queued` : attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'} ready` : 'Hermes can make mistakes and run tools. Review important actions.'}
+      </p>
+
+      {queuedMessages?.length ? (
+        <div className="mt-1.5 space-y-1" aria-label="Pending messages">
+          {queuedMessages.map((item, index) => (
+            <div key={`${item.content}-${index}`} className="flex items-center gap-2 rounded-lg border bg-card/50 px-2.5 py-1 text-left text-[11px]">
+              <span className="min-w-0 flex-1 truncate">{item.content}{item.attachmentNames.length ? ` · ${item.attachmentNames.join(', ')}` : ''}</span>
+              {onRemoveQueued && (
+                <Button type="button" variant="ghost" size="icon" className="size-5 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => onRemoveQueued(index)} aria-label={`Remove queued message ${index + 1}`}>
+                  <X size={11} />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

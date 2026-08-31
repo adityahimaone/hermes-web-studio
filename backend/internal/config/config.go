@@ -8,20 +8,23 @@ import (
 )
 
 type Config struct {
-	Host              string
-	Port              string
-	GatewayBaseURL    string
-	GatewayAPIKey     string
-	StateDir          string
-	HermesHome        string
-	WorkspaceRoot     string
-	AuthTrustedHeader string
-	OIDCIssuer        string
-	ProfilesJSON      string
-	DefaultModel      string
-	DefaultProvider   string
-	UseRunsAPI        bool
-	ReadTimeout       time.Duration
+	Host                 string
+	Port                 string
+	GatewayBaseURL       string
+	GatewayAPIKey        string
+	StateDir             string
+	HermesHome           string
+	WorkspaceRoot        string
+	AuthTrustedHeader    string
+	OIDCIssuer           string
+	ProfilesJSON         string
+	DefaultModel         string
+	DefaultProvider      string
+	UseRunsAPI           bool
+	ReadTimeout          time.Duration
+	HermesCLIPath        string
+	KanbanDashboardURL   string
+	KanbanDashboardToken string
 }
 
 func Load() Config {
@@ -34,20 +37,23 @@ func Load() Config {
 		}
 	}
 	return Config{
-		Host:              env("HERMES_WEBUI_HOST", "127.0.0.1"),
-		Port:              env("HERMES_WEBUI_PORT", "8787"),
-		GatewayBaseURL:    strings.TrimRight(env("HERMES_WEBUI_GATEWAY_BASE_URL", "http://127.0.0.1:8642"), "/"),
-		GatewayAPIKey:     firstEnv("HERMES_WEBUI_GATEWAY_API_KEY", "API_SERVER_KEY"),
-		StateDir:          stateDir,
-		HermesHome:        hermesHome,
-		WorkspaceRoot:     env("HERMES_WEBUI_DEFAULT_WORKSPACE", ""),
-		AuthTrustedHeader: env("HERMES_WEBUI_TRUSTED_USER_HEADER", ""),
-		OIDCIssuer:        env("HERMES_WEBUI_OIDC_ISSUER", ""),
-		ProfilesJSON:      os.Getenv("HERMES_WEBUI_PROFILES_JSON"),
-		DefaultModel:      env("HERMES_WEBUI_DEFAULT_MODEL", "default"),
-		DefaultProvider:   os.Getenv("HERMES_WEBUI_DEFAULT_PROVIDER"),
-		UseRunsAPI:        strings.EqualFold(env("HERMES_WEBUI_USE_RUNS_API", "false"), "true"),
-		ReadTimeout:       durationEnv("HERMES_WEBUI_GATEWAY_READ_TIMEOUT", 10*time.Minute),
+		Host:                 env("HERMES_WEBUI_HOST", "127.0.0.1"),
+		Port:                 env("HERMES_WEBUI_PORT", "8787"),
+		GatewayBaseURL:       strings.TrimRight(env("HERMES_WEBUI_GATEWAY_BASE_URL", "http://127.0.0.1:8642"), "/"),
+		GatewayAPIKey:        firstEnv("HERMES_WEBUI_GATEWAY_API_KEY", "API_SERVER_KEY"),
+		StateDir:             stateDir,
+		HermesHome:           hermesHome,
+		WorkspaceRoot:        env("HERMES_WEBUI_DEFAULT_WORKSPACE", ""),
+		AuthTrustedHeader:    env("HERMES_WEBUI_TRUSTED_USER_HEADER", ""),
+		OIDCIssuer:           env("HERMES_WEBUI_OIDC_ISSUER", ""),
+		ProfilesJSON:         os.Getenv("HERMES_WEBUI_PROFILES_JSON"),
+		DefaultModel:         env("HERMES_WEBUI_DEFAULT_MODEL", "default"),
+		DefaultProvider:      os.Getenv("HERMES_WEBUI_DEFAULT_PROVIDER"),
+		UseRunsAPI:           strings.EqualFold(env("HERMES_WEBUI_USE_RUNS_API", "false"), "true"),
+		ReadTimeout:          durationEnv("HERMES_WEBUI_GATEWAY_READ_TIMEOUT", 10*time.Minute),
+		HermesCLIPath:        env("HERMES_CLI_PATH", "hermes"),
+		KanbanDashboardURL:   strings.TrimRight(os.Getenv("HERMES_WEBUI_KANBAN_DASHBOARD_URL"), "/"),
+		KanbanDashboardToken: os.Getenv("HERMES_WEBUI_KANBAN_DASHBOARD_TOKEN"),
 	}
 }
 

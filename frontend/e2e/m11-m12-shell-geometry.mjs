@@ -48,9 +48,9 @@ try {
   await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
   const primaryRail = await box(page, '[data-testid="primary-rail"]')
   const titlebar = await box(page, '[data-testid="titlebar"]')
-  expect(primaryRail.width).toBe(72)
+  expect(primaryRail.width).toBe(64)
   expect(primaryRail.height).toBe(desktop.height)
-  expect(titlebar.height).toBe(48)
+  expect(titlebar.height).toBe(64)
   await expect(page.getByTestId('mobile-bottom-nav')).toBeHidden()
 
   for (const target of utilityViews) {
@@ -61,7 +61,8 @@ try {
     const railBox = await rail.boundingBox()
     expect(railBox?.width ?? 0).toBeGreaterThanOrEqual(240)
     expect(railBox?.width ?? 0).toBeLessThanOrEqual(552)
-    await expect(rail.locator('.thin-scrollbar')).toHaveCSS('overflow-y', 'auto')
+    await expect(rail.locator('.context-rail__body')).toHaveCSS('overflow-y', 'auto')
+    await expect(rail.locator('.context-rail__header')).toBeVisible()
 
     const collapse = page.getByRole('button', { name: `Collapse ${target.label} sidebar` })
     await collapse.click()
@@ -79,7 +80,7 @@ try {
   await expect(page.getByRole('heading', { name: 'Capability status' })).toBeHidden()
 
   await context.close()
-  console.log('M11/M12 bounded shell geometry checks passed: rail, utility views, collapse, desktop mobile-nav boundary, and settings capability filtering.')
+  console.log('Design contract shell checks passed: responsive rail, utility views, single scroll owner, collapse, desktop mobile-nav boundary, and settings capability filtering.')
 } finally {
   await browser.close()
 }

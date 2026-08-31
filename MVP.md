@@ -101,7 +101,7 @@ theme/locale form is not equivalent to this surface.
 | Composer/runtime | searchable grouped models, custom providers, reasoning effort, toolsets, slash commands, attachments, voice/TTS, context/cost/TPS, mode controls | Partial |
 | Workspace | multi-space registration, tree, broad preview matrix, edit/file ops, upload/extract, terminal, git operations/status, artifacts, worktrees | Partial |
 | Tasks/cron | create/edit/delete, schedule builder, delivery, skills, run/pause/resume, history, alerts, live status | Placeholder-level |
-| Kanban | boards, tasks, bulk actions, links, assignees, dispatch, event stream, stats | Missing |
+| Kanban | boards, tasks, bulk actions, links, assignees, dispatch, event stream, stats | CLI-backed vertical slice; full Dashboard/live parity remains |
 | Skills | grouped search, content and linked files, create/edit/delete/toggle, usage | Read-only partial |
 | Memory/notes | MEMORY/USER rendering, source search, timestamps, create/edit entries, external notes | Read-only partial |
 | Profiles | create/switch/update/delete, profile-local state/workspaces, OAuth linking, runtime refresh and isolation | Switch-only partial |

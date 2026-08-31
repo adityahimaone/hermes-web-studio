@@ -184,7 +184,7 @@ Each row becomes a slice with a contract, implementation, tests, migration note,
 | Authentication | Password, cookie, passkeys, OIDC, trusted headers | M3 |
 | Onboarding | First run and provider/Gateway diagnostics | M3 |
 | Tasks | Cron/task CRUD, run, pause, history, alerts | M4 |
-| Kanban | Boards, tasks, links, assignees, dispatch, events, stats | M9 |
+| Kanban | Boards, tasks, links, assignees, dispatch, events, stats; see `docs/kanban-plan.md` | M9 |
 | Skills | List, inspect, activate/configure | M4 |
 | Memory/notes | MEMORY.md, USER.md, external sources | M4 |
 | Todos/goals | Todo and goal lifecycle | M4 |
