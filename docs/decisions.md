@@ -335,3 +335,19 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** P028/P031 and M11 certification tasks remain partial while
   paste/extract, mutating Git, screen-reader/device, hosted, and live gates are
   completed.
+
+## ADR-038: Keep optional Settings diagnostics non-blocking
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Parse Settings responses through the shared non-JSON-safe API
+  reader. Treat capability and operator diagnostics as optional status data, so
+  an unavailable or stale route cannot blank the preference editor. Render the
+  Capability status card only for the unfiltered view or matching searches.
+- **Reason:** An embedded/older server can return an HTML fallback or a missing
+  diagnostic route while the preferences route remains usable. Showing the
+  capability card in every filtered Settings section also obscures the section
+  the user selected.
+- **Consequence:** Settings reports unavailable optional diagnostics honestly
+  and remains usable during partial upgrades; preferences still fail visibly if
+  their required server route is unavailable.
