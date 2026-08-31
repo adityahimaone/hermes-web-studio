@@ -14,11 +14,15 @@ func TestStorePersistsCollectionsAndFiltersSecrets(t *testing.T) {
 	if _, err := s.Update("todos", item.ID, Item{Status: "done"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetPreferences(map[string]string{"theme": "dark", "api_token": "hidden"}); err != nil {
+	if err := s.SetPreferences(map[string]string{
+		"theme": "dark", "api_token": "hidden", "API_KEY": "hidden", "password": "hidden",
+		"Authorization": "Bearer hidden", "safe_key": "kept",
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if s.Preferences()["api_token"] != "" || s.Preferences()["theme"] != "dark" {
-		t.Fatalf("preferences=%v", s.Preferences())
+	preferences := s.Preferences()
+	if preferences["api_token"] != "" || preferences["API_KEY"] != "" || preferences["password"] != "" || preferences["Authorization"] != "" || preferences["theme"] != "dark" || preferences["safe_key"] != "kept" {
+		t.Fatalf("preferences=%v", preferences)
 	}
 	s2, err := New(s.path[:len(s.path)-len("control.json")])
 	if err != nil {

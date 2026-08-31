@@ -169,6 +169,10 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	defer s.profileMu.Unlock()
 	for i := range s.profiles {
 		if s.profiles[i].ID == patch.ID {
+			if patch.ProviderID != "" && s.profiles[i].ID == s.activeProfile && !s.providerExists(patch.ProviderID) {
+				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The active profile cannot reference an unavailable provider.")
+				return
+			}
 			if patch.Name != "" {
 				s.profiles[i].Name = patch.Name
 			}
@@ -239,6 +243,19 @@ func (s *Server) handleProviderCreate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleProviderDelete(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	if id == "" || id == "gateway" {
+		writeError(w, http.StatusBadRequest, "provider_delete_rejected", "The gateway provider cannot be deleted.")
+		return
+	}
+	s.profileMu.RLock()
+	for _, profile := range s.profiles {
+		if profile.ID == s.activeProfile && (profile.ProviderID == id || profile.Provider == id) {
+			s.profileMu.RUnlock()
+			writeError(w, http.StatusConflict, "provider_in_use", "The active profile is using this provider.")
+			return
+		}
+	}
+	s.profileMu.RUnlock()
 	s.providerMu.Lock()
 	defer s.providerMu.Unlock()
 	for i, item := range s.providers {
@@ -265,12 +282,27 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 	defer s.profileMu.Unlock()
 	for _, p := range s.profiles {
 		if p.ID == input.ID {
+			if p.ProviderID != "" && !s.providerExists(p.ProviderID) {
+				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The profile references an unavailable provider.")
+				return
+			}
 			s.activeProfile = p.ID
 			writeJSON(w, 200, map[string]any{"active": p})
 			return
 		}
 	}
 	writeError(w, 404, "profile_not_found", "The profile was not found.")
+}
+
+func (s *Server) providerExists(id string) bool {
+	s.providerMu.RLock()
+	defer s.providerMu.RUnlock()
+	for _, item := range s.providers {
+		if item.ID == id {
+			return true
+		}
+	}
+	return false
 }
 func (s *Server) handleAuthProviders(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"password": true, "trusted_header": s.config.AuthTrustedHeader != "", "oidc": s.config.OIDCIssuer != "", "passkey": false, "oidc_issuer": s.config.OIDCIssuer})

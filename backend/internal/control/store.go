@@ -223,7 +223,8 @@ func (s *Store) SetPreferences(values map[string]string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for key, value := range values {
-		if strings.HasPrefix(key, "secret") || strings.Contains(strings.ToLower(key), "token") {
+		lowerKey := strings.ToLower(strings.TrimSpace(key))
+		if strings.HasPrefix(lowerKey, "secret") || strings.Contains(lowerKey, "token") || strings.Contains(lowerKey, "password") || strings.Contains(lowerKey, "api_key") || strings.Contains(lowerKey, "apikey") || strings.Contains(lowerKey, "authorization") {
 			continue
 		}
 		s.state.Preferences[key] = value

@@ -131,6 +131,28 @@ func TestProfileAndProviderCRUDRedactsCredentials(t *testing.T) {
 	if strings.Contains(string(body), "do-not-return") || !strings.Contains(string(body), `"has_key":true`) {
 		t.Fatalf("provider leaked credential: %s", body)
 	}
+	providers, err := api.Client().Get(api.URL + "/api/providers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerList := readBody(providers)
+	if strings.Contains(providerList, "do-not-return") || strings.Contains(providerList, "api_key") {
+		t.Fatalf("provider list exposed credential fields: %s", providerList)
+	}
+
+	settingsRequest, err := http.NewRequest(http.MethodPut, api.URL+"/api/preferences", strings.NewReader(`{"theme":"dark","api_key":"should-not-persist","password":"should-not-persist"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	settingsRequest.Header.Set("Content-Type", "application/json")
+	settingsResponse, err := api.Client().Do(settingsRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settingsBody := readBody(settingsResponse)
+	if settingsResponse.StatusCode != http.StatusOK || strings.Contains(settingsBody, "should-not-persist") || !strings.Contains(settingsBody, `"theme":"dark"`) {
+		t.Fatalf("unsafe settings response=%d body=%s", settingsResponse.StatusCode, settingsBody)
+	}
 	response, err := api.Client().Get(api.URL + "/api/settings/capabilities")
 	if err != nil {
 		t.Fatal(err)
@@ -139,4 +161,102 @@ func TestProfileAndProviderCRUDRedactsCredentials(t *testing.T) {
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("capabilities=%d", response.StatusCode)
 	}
+}
+
+func TestActiveProfileCannotBeLeftWithoutItsProvider(t *testing.T) {
+	api := newTestServer(t, "http://127.0.0.1:1", "")
+	defer api.Close()
+
+	provider := postJSON(t, api.URL+"/api/providers", map[string]any{
+		"id": "local", "name": "Local", "kind": "openai-compatible",
+		"base_url": "http://127.0.0.1:9000/v1", "api_key": "server-only-key",
+	})
+	if provider.StatusCode != http.StatusCreated {
+		t.Fatalf("provider create=%d %s", provider.StatusCode, readBody(provider))
+	}
+	_ = provider.Body.Close()
+
+	profile := postJSON(t, api.URL+"/api/profiles", map[string]any{
+		"id": "local-profile", "name": "Local", "model": "q4", "provider_id": "local",
+	})
+	if profile.StatusCode != http.StatusCreated {
+		t.Fatalf("profile create=%d %s", profile.StatusCode, readBody(profile))
+	}
+	_ = profile.Body.Close()
+
+	switchResponse := postJSON(t, api.URL+"/api/profiles/active", map[string]any{"id": "local-profile"})
+	if switchResponse.StatusCode != http.StatusOK {
+		t.Fatalf("profile switch=%d %s", switchResponse.StatusCode, readBody(switchResponse))
+	}
+	_ = switchResponse.Body.Close()
+
+	deleteRequest, err := http.NewRequest(http.MethodDelete, api.URL+"/api/providers?id=local", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleteResponse, err := api.Client().Do(deleteRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleteResponse.StatusCode != http.StatusConflict || !strings.Contains(readBody(deleteResponse), "provider_in_use") {
+		t.Fatalf("active provider delete=%d", deleteResponse.StatusCode)
+	}
+
+	update := postJSON(t, api.URL+"/api/profiles/active", map[string]any{"id": "missing"})
+	if update.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing profile switch=%d", update.StatusCode)
+	}
+	_ = update.Body.Close()
+
+	gatewayDelete, err := api.Client().Do(mustRequest(t, http.MethodDelete, api.URL+"/api/providers?id=gateway"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gatewayDelete.StatusCode != http.StatusBadRequest || !strings.Contains(readBody(gatewayDelete), "provider_delete_rejected") {
+		t.Fatalf("gateway delete=%d", gatewayDelete.StatusCode)
+	}
+}
+
+func TestProfileSwitchRejectsUnavailableProviderWithoutChangingActiveProfile(t *testing.T) {
+	cfg := config.Config{
+		GatewayBaseURL: "http://127.0.0.1:1",
+		DefaultModel:   "default",
+		ProfilesJSON:   `[{"id":"safe","name":"Safe","model":"default"},{"id":"broken","name":"Broken","model":"q4","provider_id":"missing"}]`,
+		StateDir:       t.TempDir(),
+	}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+
+	response := postJSON(t, api.URL+"/api/profiles/active", map[string]any{"id": "broken"})
+	if response.StatusCode != http.StatusConflict || !strings.Contains(readBody(response), "profile_provider_unavailable") {
+		t.Fatalf("broken profile switch=%d", response.StatusCode)
+	}
+
+	profiles, err := api.Client().Get(api.URL + "/api/profiles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Active string `json:"active"`
+	}
+	decode(t, profiles.Body, &payload)
+	_ = profiles.Body.Close()
+	if payload.Active != "safe" {
+		t.Fatalf("active profile changed after rejected switch: %q", payload.Active)
+	}
+}
+
+func mustRequest(t *testing.T, method, url string) *http.Request {
+	t.Helper()
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return request
+}
+
+func readBody(response *http.Response) string {
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	return string(body)
 }
