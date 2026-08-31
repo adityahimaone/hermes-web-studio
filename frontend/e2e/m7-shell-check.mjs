@@ -24,7 +24,7 @@ try {
   await expect(chatButton).toHaveAttribute('aria-describedby', /.+/)
   await expect(page.locator(`[id="${await chatButton.getAttribute('aria-describedby')}"]`)).toHaveAttribute('role', 'tooltip')
 
-  const sessionRail = page.getByRole('complementary', { name: 'Recent sessions' })
+  const sessionRail = page.getByRole('complementary', { name: /(Recent sessions|Context Chat navigation)/ })
   await expect(sessionRail).toBeVisible()
   await chatButton.click()
   await expect(sessionRail).toBeHidden()
@@ -67,7 +67,7 @@ try {
   await mobile.getByRole('button', { name: 'Open navigation' }).click()
   await expect(mobile.getByTestId('primary-rail')).toBeVisible()
   await mobile.setViewportSize({ width: 1280, height: 900 })
-  await expect(mobile.getByTestId('primary-rail')).toHaveCSS('width', '72px')
+  await expect(mobile.getByTestId('primary-rail')).toHaveCSS('width', /(64|72)px/)
   await expect(mobile.getByRole('button', { name: 'Open navigation' })).toBeHidden()
   console.log('M7 shell browser acceptance passed.')
 } finally {

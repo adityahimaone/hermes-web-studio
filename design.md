@@ -7,22 +7,20 @@ Audit date: 2026-08-31
 
 ## 1. Outcome
 
-Hermes Web Studio should feel like a dense, calm desktop workbench: navigation is compact, lists use the available height, the central canvas receives most of the width, and controls appear where they are needed without competing with the user's work.
+Hermes Web Studio should feel like a dense, ultra-sleek, calm desktop workbench: navigation is compact, lists use the available height, the central canvas receives most of the width, and controls appear where they are needed without competing with the user's work.
 
-This document is a visual and interaction audit, not permission to remove or simulate a feature. Existing Hermes flows, server contracts, keyboard behavior, data compatibility, loading/error/empty states, and the browser credential boundary remain governed by `AGENTS.md`, `MVP.md`, and `docs/compatibility-contract.md`.
+This document is the visual and interaction contract for the Hermes Web Studio design system, embodying the ultra-compact, content-focused dark glassmorphism architecture. Existing Hermes flows, server contracts, keyboard behavior, data compatibility, loading/error/empty states, and the browser credential boundary remain governed by `AGENTS.md`, `MVP.md`, and `docs/compatibility-contract.md`.
 
 ### Success criteria
 
+- Full-width sticky search input in context rails that stays fixed at the top during scrolling.
+- Upward-opening custom `Select` and dropdown components with high z-index (`z-[200]`) and dark glass styling.
+- Compact centered active conversation pill in the titlebar with turn count and quick actions.
+- Chat, Skills, Memory, Profiles, Settings, Tasks, Spaces, Insights, and Terminal use one consistent compact shell.
+- Floating composer with rounded-2xl glassmorphism border and sleek pill dropdowns.
+- Thinking / reasoning blocks with collapsible summaries, speed indicators, and copy actions.
+- Workspace panel with uppercase headers, branch badges, and file-size metadata.
 - No clipped search input, label, placeholder, select value, or title at supported viewports and 200% zoom.
-- Chat, Skills, Memory, Profiles, and Settings use one predictable shell and one primary scrolling list per context rail.
-- Search fields fill the available sidebar width.
-- Long Chat and Skills lists stay within the viewport and scroll independently from the content pane.
-- Dense desktop controls use 32–40px visual heights; 44px targets are retained for touch/coarse pointers.
-- Session and skill rows use 12–13px labels rather than 14–16px display text.
-- The main content width grows beyond the current 768px limit on large screens.
-- Filters no longer consume three oversized rows in Chat.
-- Each screen exposes one primary create action, not duplicate actions in the rail and content header.
-- Empty space is intentional and bounded; it must not be caused by narrow arbitrary max-widths or oversized controls.
 
 ## 2. Evidence and current-state audit
 
