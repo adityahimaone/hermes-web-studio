@@ -17,9 +17,21 @@ function readOptions(children: ReactNode): Option[] {
   })
 }
 
-type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> & { onChange?: ChangeEventHandler<HTMLSelectElement> }
+export type SelectSize = 'default' | 'compact'
 
-export function Select({ className, children, value, defaultValue, onChange, disabled, id, name, form, required, ...selectProps }: Props) {
+export function selectTriggerClassName({ size = 'default', invalid = false, className }: { size?: SelectSize; invalid?: boolean; className?: string }) {
+  return cn(
+    'flex w-full min-w-0 items-center justify-between gap-1.5 border bg-card px-2.5 text-xs text-foreground outline-none transition-all hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50',
+    size === 'default' && 'h-9 rounded-xl border-border/70',
+    size === 'compact' && 'h-7 rounded-lg border-border/60 px-2 text-[11px]',
+    invalid ? 'border-destructive/60 focus-visible:ring-destructive/40' : 'border-border/70',
+    className,
+  )
+}
+
+type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'size'> & { onChange?: ChangeEventHandler<HTMLSelectElement>; size?: SelectSize; invalid?: boolean }
+
+export function Select({ className, children, value, defaultValue, onChange, disabled, id, name, form, required, size = 'default', invalid = false, ...selectProps }: Props) {
   const options = readOptions(children)
   const listboxId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -75,12 +87,12 @@ export function Select({ className, children, value, defaultValue, onChange, dis
   const openUp = className?.split(/\s+/).includes('select-menu-up')
   return <div ref={rootRef} className="relative min-w-0">
     <select ref={nativeRef} name={name} form={form} required={required} disabled={disabled} value={selectedValue} onChange={onChange} {...nativeProps} tabIndex={-1} aria-hidden="true" className="sr-only">{children}</select>
-    <button id={id} type="button" disabled={disabled} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-describedby={ariaDescribedBy} aria-required={required || undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined} className={cn('flex h-9 min-h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border border-border/70 bg-card/80 px-2.5 text-xs text-foreground outline-none transition-all hover:bg-accent/40 focus-visible:ring-1 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50', className)} onClick={() => setOpen(current => !current)} onKeyDown={onTriggerKeyDown}>
+    <button id={id} type="button" disabled={disabled} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-describedby={ariaDescribedBy} aria-required={required || undefined} aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined} className={selectTriggerClassName({ size, invalid, className })} onClick={() => setOpen(current => !current)} onKeyDown={onTriggerKeyDown}>
       <span className="min-w-0 truncate text-left font-medium">{selectedOption?.label}</span>
       <ChevronDown size={13} className={cn('shrink-0 text-muted-foreground transition-transform duration-200', open && 'rotate-180 text-primary')} aria-hidden="true" />
     </button>
     {open && options.length > 0 && <div id={listboxId} role="listbox" aria-label={ariaLabel} className={cn('absolute left-0 z-[200] max-h-60 w-max min-w-full overflow-auto rounded-xl border border-border/80 bg-popover/95 p-1 text-popover-foreground shadow-2xl shadow-black/50 backdrop-blur-xl animate-in fade-in-0 zoom-in-95', openUp ? 'bottom-[calc(100%+0.4rem)]' : 'top-[calc(100%+0.4rem)]')}>
-      {options.map((option, index) => <button key={`${option.value}-${index}`} id={`${listboxId}-${index}`} type="button" role="option" aria-selected={index === selectedIndex} disabled={option.disabled} className={cn('flex min-h-8 w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium outline-none transition-colors', index === activeIndex ? 'bg-primary/20 text-primary' : 'text-foreground/90 hover:bg-accent hover:text-foreground', option.disabled && 'cursor-not-allowed opacity-45')} onMouseEnter={() => setActiveIndex(index)} onClick={() => commit(index)}>
+      {options.map((option, index) => <button key={`${option.value}-${index}`} id={`${listboxId}-${index}`} type="button" role="option" aria-selected={index === selectedIndex} disabled={option.disabled} className={cn('flex min-h-7 w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[11px] font-medium outline-none transition-colors', index === activeIndex ? 'bg-primary/20 text-primary' : 'text-foreground/90 hover:bg-accent hover:text-foreground', option.disabled && 'cursor-not-allowed opacity-45')} onMouseEnter={() => setActiveIndex(index)} onClick={() => commit(index)}>
         <span>{option.label}</span>
         {index === selectedIndex && <span className="size-1.5 rounded-full bg-primary" />}
       </button>)}
