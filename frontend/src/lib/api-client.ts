@@ -31,9 +31,17 @@ export async function uploadAttachment(file: File, sessionId?: string) {
   return readJson<UploadedAttachment>(await fetch('/api/attachments', { method: 'POST', body }))
 }
 
-async function readJson<T>(response: Response): Promise<T> {
-  const data = (await response.json()) as T & { message?: string }
-  if (!response.ok) throw new Error(data.message || `Request failed (${response.status})`)
+export async function readJson<T>(response: Response): Promise<T> {
+  const raw = await response.text()
+  let data: (T & { message?: string }) | null = null
+  try {
+    data = raw.trim() ? JSON.parse(raw) as T & { message?: string } : null
+  } catch {
+    const detail = raw.trim().replace(/\s+/g, ' ').slice(0, 160)
+    throw new Error(response.ok ? `Invalid JSON response from server${detail ? `: ${detail}` : '.'}` : `Request failed (${response.status})${detail ? `: ${detail}` : ''}`)
+  }
+  if (!response.ok) throw new Error(data?.message || `Request failed (${response.status})`)
+  if (!data) throw new Error('Server returned an empty response.')
   return data
 }
 

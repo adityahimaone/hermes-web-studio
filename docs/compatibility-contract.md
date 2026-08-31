@@ -320,3 +320,8 @@ External sessions are projected from server-owned session metadata. The rail
 may show source, channel, identity, and routing labels and an explicit
 unavailable handoff state, but it does not fabricate channel transport,
 round summaries, or model-switch behavior without a Gateway channel contract.
+
+Capability panels use the shared response reader. Structured JSON error
+messages remain user-facing, while non-JSON proxy/server responses are mapped
+to an HTTP status error; a parser exception is never shown as the product
+state.

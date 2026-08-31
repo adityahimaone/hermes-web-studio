@@ -10,6 +10,7 @@ import { applyTheme, skins, type ThemePreference } from '../../lib/theme'
 import { initialDiscoveryState, reduceDiscoveryState } from '../../lib/discovery-state'
 import { terminalCapability, type TerminalCapability } from '../../lib/terminal-contract'
 import { InsightsView } from './insights-view'
+import { readJson } from '../../lib/api-client'
 
 const collections = ['tasks', 'todos', 'goals', 'spaces'] as const
 type Props = { view: string }
@@ -31,8 +32,7 @@ function TerminalView() {
 
   useEffect(() => {
     void fetch('/api/terminal').then(async response => {
-      const data: unknown = await response.json()
-      if (!response.ok) throw new Error('Terminal capability could not be checked.')
+      const data: unknown = await readJson<unknown>(response)
       setCapability(terminalCapability(data))
     }).catch(err => setError(err instanceof Error ? err.message : 'Terminal capability could not be checked.')).finally(() => setLoading(false))
   }, [])
@@ -62,7 +62,7 @@ function TasksView() {
 
 function SpacesView() {
   const [spaces, setSpaces] = useState<ControlItem[]>([]); const [active, setActive] = useState(''); const [title, setTitle] = useState(''); const [path, setPath] = useState(''); const [error, setError] = useState(''); const [loading, setLoading] = useState(true)
-  const refresh = async () => { setLoading(true); try { const response = await fetch('/api/spaces'); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Spaces unavailable'); setSpaces(Array.isArray(data.spaces) ? data.spaces : []); setActive(data.active || '') } catch (err) { setError(err instanceof Error ? err.message : 'Spaces unavailable') } finally { setLoading(false) } }
+  const refresh = async () => { setLoading(true); try { const data = await readJson<{ spaces?: ControlItem[]; active?: string }>(await fetch('/api/spaces')); setSpaces(Array.isArray(data.spaces) ? data.spaces : []); setActive(data.active || '') } catch (err) { setError(err instanceof Error ? err.message : 'Spaces unavailable') } finally { setLoading(false) } }
   useEffect(() => { void refresh() }, [])
   const add = async () => { if (!title.trim() || !path.trim()) return; const response = await fetch('/api/control/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), metadata: { path: path.trim() } }) }); if (!response.ok) { setError('Space could not be registered'); return }; setTitle(''); setPath(''); await refresh() }
   const activate = async (id: string) => { const response = await fetch('/api/spaces/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); if (!response.ok) { setError('Space could not be activated'); return }; setActive(id) }

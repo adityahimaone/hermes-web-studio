@@ -385,3 +385,14 @@ The acceptance script verifies it is visible only on Chat.
   unavailable handoff action.
 - P039 is now `[~]`; live channel transport, round summaries, identity
   semantics, and model-switch warnings still require Gateway/live evidence.
+
+## 2026-08-31 — Safe JSON parsing for capability panels
+
+- Fixed Terminal, Insights, and Spaces error handling when an older API
+  process returns plain-text `404 page not found` instead of JSON. The shared
+  frontend response reader now preserves structured API messages and converts
+  non-JSON responses into an actionable HTTP error instead of exposing a JSON
+  parser exception.
+- Added a regression test for the legacy plain-text proxy response. The API
+  process must still be restarted after deploying routes introduced by a newer
+  commit.

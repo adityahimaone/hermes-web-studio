@@ -23,9 +23,9 @@ export interface InsightsResponse {
   cost: { available: boolean; reason?: string }
 }
 
+import { readJson } from './api-client'
+
 export async function getInsights(signal?: AbortSignal): Promise<InsightsResponse> {
   const response = await fetch('/api/operator/insights', { signal })
-  const data = await response.json() as Partial<InsightsResponse> & { message?: string }
-  if (!response.ok) throw new Error(data.message || 'Insights are unavailable.')
-  return data as InsightsResponse
+  return readJson<InsightsResponse>(response)
 }

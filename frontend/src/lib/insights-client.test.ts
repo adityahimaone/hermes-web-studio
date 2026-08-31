@@ -17,4 +17,10 @@ describe('getInsights', () => {
 
     await expect(getInsights()).rejects.toThrow('Insights state could not be read.')
   })
+
+  it('turns a non-JSON legacy proxy response into an actionable HTTP error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('404 page not found\n', { status: 404 }))
+
+    await expect(getInsights()).rejects.toThrow('Request failed (404): 404 page not found')
+  })
 })
