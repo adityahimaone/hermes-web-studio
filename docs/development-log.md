@@ -511,22 +511,6 @@ The acceptance script verifies it is visible only on Chat.
   P067/P068 remain partial until exact reference geometry and visual/live
   acceptance evidence are complete.
 
-## 2026-08-31 — M10 P049 MCP and plugin management slice
-
-- Added server-owned MCP server metadata CRUD with transport, endpoint,
-  command, tool-count, and input-size validation. Tool metadata is exposed by
-  a separate read-only route and no MCP process or remote endpoint is started.
-- Extended plugin status with persisted enabled/settings state and added a
-  constrained settings update route for discovered plugins. Secret-shaped
-  keys such as tokens, passwords, API keys, credentials, and private keys are
-  filtered before persistence and response.
-- Evidence: focused MCP/plugin HTTP tests, backend vet, frontend tests (33),
-  and production build pass. Full backend test execution remains affected by
-  the sandbox refusing an existing httptest listener to bind a local port;
-  live Hermes MCP execution and plugin lifecycle remain unverified.
-- Checklist impact: P049 is now `[~]`; P050 remains partial because install,
-  execution, consent, iframe, and trust-boundary contracts are not included.
--
 ## 2026-08-31 — Local Hermes acceptance follow-up
 
 - The bounded `scripts/local-hermes-acceptance.sh` runner passed the local
