@@ -415,3 +415,17 @@ recorded decision and explicit approval before MVP certification.
 - **Consequence:** P067-P072 must be completed and evidenced independently;
   MVP exit remains blocked by the open visual and Profiles rows even though the
   current utility rail implementation is reusable.
+
+## ADR-043: Integrate M7-M12 work as bounded parity slices
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Integrate independently testable M7-M12 slices when their local
+  contract is proven, while keeping the parent milestone partial until its
+  live, browser, hosted, or reference-comparison gates pass.
+- **Reason:** Parallel implementation can improve coverage quickly, but a
+  slash-command registry, diagnostics endpoint, security hardening, or shell
+  geometry probe does not prove the complete personal WebUI workflow.
+- **Consequence:** The task log records each slice and its evidence separately;
+  open rows, Profiles parity, full visual matrices, live Hermes checks, hosted
+  artifacts, beta, and cutover approval remain explicit blockers.

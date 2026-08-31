@@ -5,6 +5,7 @@ import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
 import { Badge } from '../ui/badge'
 import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/turn-control'
+import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -20,6 +21,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   const [model, setModel] = useState('default')
   const [turnMode, setTurnMode] = useState<TurnMode>('queue')
   const activeProfile = profiles.find(profile => profile.id === profileId)
+  const commandSuggestions = slashCommandSuggestions(value)
   useEffect(() => { void fetch('/api/profiles').then(response => response.json()).then(data => { const next = (data.profiles || []) as Profile[]; setProfiles(next); const active = typeof data.active === 'string' ? data.active : next[0]?.id || 'default'; setProfileId(active); setModel(next.find(profile => profile.id === active)?.model || 'default') }).catch(() => undefined) }, [])
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
 
   function submit() {
     if (!value.trim()) return
-    if (value.trim().startsWith('/') && onCommand) { onCommand(value.trim()); setValue(''); setCommandsOpen(false); return }
+    if (value.trim().startsWith('/') && onCommand && localSlashCommand(value.trim())) { onCommand(value.trim()); setValue(''); setCommandsOpen(false); return }
     onSend(value, attachments, { model, provider: activeProfile?.provider }, turnMode)
     setValue('')
     setAttachments([])
@@ -43,6 +45,18 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (commandsOpen && commandSuggestions.length > 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      const current = commandSuggestions.findIndex(command => command.name === value.trim().toLocaleLowerCase())
+      const next = event.key === 'ArrowDown' ? (current + 1) % commandSuggestions.length : (current - 1 + commandSuggestions.length) % commandSuggestions.length
+      setValue(`${commandSuggestions[next].name} `)
+      return
+    }
+    if (commandsOpen && commandSuggestions.length > 0 && event.key === 'Tab') {
+      event.preventDefault()
+      setValue(`${commandSuggestions[0].name} `)
+      return
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       submit()
@@ -54,7 +68,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
       <div className="rounded-2xl border bg-card/90 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl focus-within:border-primary/35 focus-within:ring-1 focus-within:ring-primary/20">
         {attachments.length > 0 && <div className="flex flex-wrap gap-2 px-2 pt-2" aria-label="Selected attachments">{attachments.map((file, index) => <span key={`${file.name}-${index}`} className="attachment-chip"><FileText size={13} />{file.name}<Button type="button" variant="ghost" size="icon" className="size-5" onClick={() => setAttachments((current) => current.filter((_, item) => item !== index))} aria-label={`Remove ${file.name}`}><X size={13} /></Button></span>)}</div>}
         <Textarea ref={ref} value={value} onChange={(event) => { setValue(event.target.value); setCommandsOpen(event.target.value.startsWith('/')) }} onKeyDown={onKeyDown} rows={1} placeholder={isStreaming ? 'Queue a message for Hermes…' : 'Message Hermes…'} aria-label="Message Hermes" className="max-h-44 min-h-12 resize-none border-0 bg-transparent px-3 py-3 leading-6 shadow-none focus-visible:ring-0" />
-        {commandsOpen && <div className="flex flex-wrap gap-1 px-2 pb-2" aria-label="Slash commands"><Button type="button" variant="outline" size="sm" onClick={() => { setValue('/help'); setCommandsOpen(false) }}>/help</Button><Button type="button" variant="outline" size="sm" onClick={() => { setValue('/clear'); setCommandsOpen(false) }}>/clear</Button></div>}
+        {commandsOpen && commandSuggestions.length > 0 && <div className="grid gap-1 px-2 pb-2" aria-label="Slash commands" role="listbox">{commandSuggestions.map(command => <Button key={command.name} type="button" variant="outline" size="sm" className="justify-start gap-2 text-left" role="option" onClick={() => { setValue(`${command.name} `); setCommandsOpen(false); ref.current?.focus() }}><span className="font-mono">{command.name}</span><span className="text-muted-foreground">{command.description}</span></Button>)}</div>}
         <div className="composer-toolbar px-1 pb-1">
           <div className="composer-toolbar__controls">
           <Button type="button" variant="ghost" size="icon" aria-label="Attach files" onClick={() => document.getElementById('composer-attachments')?.click()}><Paperclip size={16} /></Button><input id="composer-attachments" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain" className="sr-only" onChange={chooseFiles} />

@@ -182,6 +182,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/spaces/active", s.handleSpaceActivate)
 	mux.HandleFunc("GET /api/operator/health", s.handleOperatorHealth)
 	mux.HandleFunc("GET /api/operator/logs", s.handleOperatorLogs)
+	mux.HandleFunc("GET /api/operator/diagnostics", s.handleOperatorDiagnostics)
 	mux.HandleFunc("GET /api/operator/insights", s.handleOperatorInsights)
 	mux.HandleFunc("GET /api/kanban", s.handleKanban)
 	mux.HandleFunc("POST /api/kanban/boards", s.handleKanbanBoardCreate)

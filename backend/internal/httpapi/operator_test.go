@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 )
 
@@ -91,5 +92,42 @@ func TestOperatorInsightsReportsPersistedSessionFactsAndNoCostClaim(t *testing.T
 	}
 	if len(body.ProviderHistory) != 1 || body.ProviderHistory[0].Provider != "local" || body.ProviderHistory[0].Model != "qwen" {
 		t.Fatalf("unexpected provider history: %#v", body.ProviderHistory)
+	}
+}
+
+func TestOperatorDiagnosticsIsReadOnlyAndSanitized(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", GatewayAPIKey: "do-not-leak", StateDir: t.TempDir()}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL, APIKey: cfg.GatewayAPIKey}))
+	if _, err := server.control.Create("todos", control.Item{Title: "Review projection"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.sessions.Create("diagnostic-session", "Safe session", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/operator/diagnostics", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("diagnostics=%d %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Status     string `json:"status"`
+		ReadOnly   bool   `json:"read_only"`
+		Components map[string]struct {
+			Available bool `json:"available"`
+		} `json:"components"`
+		Counts struct {
+			Sessions    int            `json:"sessions"`
+			Collections map[string]int `json:"collections"`
+		} `json:"counts"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Status != "ready" || !body.ReadOnly || !body.Components["gateway"].Available || !body.Components["workspace"].Available || body.Counts.Sessions != 1 || body.Counts.Collections["todos"] != 1 {
+		t.Fatalf("unexpected diagnostics: %#v", body)
+	}
+	if strings.Contains(rec.Body.String(), "do-not-leak") || (cfg.WorkspaceRoot != "" && strings.Contains(rec.Body.String(), cfg.WorkspaceRoot)) {
+		t.Fatalf("diagnostics leaked sensitive data: %s", rec.Body.String())
 	}
 }

@@ -212,6 +212,50 @@ func (s *Server) handleOperatorLogs(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"entries": []any{}, "source": "hermes-web-studio runtime", "available": true})
 }
 
+// handleOperatorDiagnostics exposes a sanitized, read-only snapshot for operators.
+// It deliberately reports capabilities and counts only: credentials, workspace
+// paths, and mutation controls do not belong in a browser diagnostic payload.
+func (s *Server) handleOperatorDiagnostics(w http.ResponseWriter, _ *http.Request) {
+	components := map[string]any{
+		"gateway":   map[string]any{"available": s.gateway != nil},
+		"workspace": map[string]any{"available": s.workspaceErr == nil && s.workspace != nil},
+		"control":   map[string]any{"available": s.controlErr == nil && s.control != nil},
+		"sessions":  map[string]any{"available": s.sessions != nil},
+	}
+
+	collections := map[string]int{}
+	if s.control != nil && s.controlErr == nil {
+		for _, name := range []string{"tasks", "todos", "goals", "spaces", "artifacts", "boards"} {
+			items, err := s.control.List(name)
+			if err == nil {
+				collections[name] = len(items)
+			}
+		}
+	}
+
+	sessionCount := 0
+	if s.sessions != nil {
+		if sessions, err := s.sessions.List(); err == nil {
+			sessionCount = len(sessions)
+		}
+	}
+
+	status := "ready"
+	if s.controlErr != nil || s.workspaceErr != nil || s.sessions == nil {
+		status = "degraded"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":       status,
+		"read_only":    true,
+		"generated_at": time.Now().UTC().Format(time.RFC3339Nano),
+		"components":   components,
+		"counts": map[string]any{
+			"sessions":    sessionCount,
+			"collections": collections,
+		},
+	})
+}
+
 func (s *Server) handleKanban(w http.ResponseWriter, _ *http.Request) {
 	store, ok := s.controlReady(w)
 	if !ok {

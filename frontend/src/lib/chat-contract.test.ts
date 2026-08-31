@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { filterSessions, groupSessionsByDate, initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent } from './chat-contract'
+import { localSlashCommand, slashCommandSuggestions } from './slash-commands'
 
 describe('chat event reducer', () => {
   it('builds an answer from token frames and settles on done', () => {
@@ -63,5 +64,19 @@ describe('chat event reducer', () => {
     state = reduceChatEvent(state, { type: 'approval', data: { run_id: 'run-1', name: 'terminal' } })
     expect(state.usage).toEqual({ input: 12, output: 8, total: 20, contextLimit: 100 })
     expect(state.approvals[0].id).toBe('run-1')
+  })
+})
+
+describe('slash command registry', () => {
+  it('suggests registered commands by prefix and resolves complete local commands', () => {
+    expect(slashCommandSuggestions('/')).toHaveLength(2)
+    expect(slashCommandSuggestions('/he')[0].name).toBe('/help')
+    expect(localSlashCommand('/CLEAR')?.name).toBe('/clear')
+    expect(localSlashCommand('/help now')).toBeNull()
+  })
+
+  it('does not claim unknown commands as local commands', () => {
+    expect(slashCommandSuggestions('/unknown')).toEqual([])
+    expect(localSlashCommand('/unknown')).toBeNull()
   })
 })

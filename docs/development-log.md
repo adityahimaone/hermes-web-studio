@@ -417,3 +417,23 @@ The acceptance script verifies it is visible only on Chat.
 - Existing ContextRail work is documented as partial: Chat, Skills, Memory,
   and Settings use the shared shell, while Profiles and the full reference
   visual matrix remain open.
+
+## 2026-08-31 — M7-M12 bounded implementation wave
+
+- Added a typed local slash-command registry for `/help` and `/clear`, keyboard
+  autocomplete, and transparent pass-through for unknown slash commands.
+- Added a sanitized read-only `/api/operator/diagnostics` route for component
+  availability and collection/session counts without credentials or filesystem
+  paths.
+- Hardened profile/provider contracts: unavailable providers cannot be
+  activated, the Gateway provider and active-profile dependencies cannot be
+  deleted, and preference filtering rejects secret-shaped keys.
+- Added the M11/M12 shell geometry runner for rail bounds, mobile nav
+  visibility, shared utility rails, collapse/expand, and filtered capability
+  status behavior.
+- Evidence: frontend tests (31) and production build pass; backend validation
+  is rerun from the backend module. The full local acceptance runner reaches
+  the visual phase but Chromium is blocked by the parent macOS sandbox, so no
+  full visual/live/hosted/beta/cutover gate was marked complete.
+- Checklist impact: P024, P038, P041, P042, P057, P067, P069, and P071 have
+  stronger bounded evidence but remain `[~]`; P068 and P072 remain open.
