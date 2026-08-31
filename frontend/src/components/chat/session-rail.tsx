@@ -1,4 +1,4 @@
-import { Archive, ArchiveX, Check, ChevronLeft, CirclePlus, Copy, Download, Pencil, Pin, Search, Trash2 } from 'lucide-react'
+import { Archive, ArchiveX, Check, CirclePlus, Copy, Download, Pencil, Pin, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -8,6 +8,7 @@ import { filterSessions, groupSessionsByDate, type SessionSummary } from '../../
 import { projectSessions } from '../../lib/conversation-runtime'
 import { sessionExportUrl } from '../../lib/api-client'
 import { DropdownMenu } from '../ui/dropdown-menu'
+import { ContextRail } from '../layout/context-rail'
 
 type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
 type SourceFilter = 'all' | 'webui' | 'cli'
@@ -27,8 +28,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
   const clearBatch = () => { setSelected([]); setBatchMode(false) }
 
   return <>
-    <aside className="hidden w-[280px] shrink-0 flex-col border-r bg-card/25 p-3 lg:flex" aria-label="Recent sessions">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b pb-3"><div className="min-w-0"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground">Chat</p><p className="mt-0.5 truncate text-[11px] text-muted-foreground">Recent sessions</p></div><Button type="button" size="sm" className="h-11 shrink-0 px-3 text-xs" onClick={onNewChat}><CirclePlus size={15} />New</Button><Button variant="ghost" size="icon" className="size-11 shrink-0" onClick={onToggle} aria-label="Collapse session sidebar"><ChevronLeft size={18} /></Button></div>
+    <ContextRail title="Chat" subtitle="Recent sessions" open onToggle={onToggle} action={<Button type="button" size="sm" className="h-11 shrink-0 px-3 text-xs" onClick={onNewChat}><CirclePlus size={15} />New</Button>}>
       <div className="relative mt-3"><Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input id="session-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search titles and content" className="h-9 bg-background/50 pl-9 text-xs" aria-label="Search sessions" /></div>
       <div className="mt-2 flex gap-1" role="group" aria-label="Session source filter">{(['all', 'webui', 'cli'] as const).map(filter => <Button key={filter} size="sm" variant={sourceFilter === filter ? 'default' : 'outline'} className="min-h-11 flex-1 px-1 text-[10px]" onClick={() => setSourceFilter(filter)}>{filter === 'all' ? 'All' : filter === 'webui' ? 'WebUI' : 'CLI'}</Button>)}</div>
       <div className="mt-2 flex gap-1 overflow-x-auto pb-1" role="group" aria-label="Session project filter"><Button size="sm" variant={projectFilter === 'all' ? 'default' : 'outline'} className="min-h-11 shrink-0 px-2 text-[10px]" onClick={() => setProjectFilter('all')}>All projects</Button>{projects.map(project => <Button key={project} size="sm" variant={projectFilter === project ? 'default' : 'outline'} className="min-h-11 max-w-28 shrink-0 truncate px-2 text-[10px]" onClick={() => setProjectFilter(project)}>{project}</Button>)}</div>
@@ -43,7 +43,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         </div> })}</div>)}
         {!loading && !error && sessions.length > 0 && groups.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">No sessions match these filters.</p>}
       </div>
-    </aside>
+    </ContextRail>
     <Dialog open={Boolean(renameTarget)} title="Rename session" onClose={() => setRenameTarget(null)}><form className="grid gap-3" onSubmit={event => { event.preventDefault(); if (renameTarget && renameValue.trim()) { void onRename(renameTarget.session_id, renameValue.trim()); setRenameTarget(null) } }}><Input autoFocus value={renameValue} onChange={event => setRenameValue(event.target.value)} placeholder="Session name" aria-label="Session name" /><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setRenameTarget(null)}>Cancel</Button><Button type="submit" disabled={!renameValue.trim()}>Rename</Button></div></form></Dialog>
     <Dialog open={Boolean(deleteTarget)} title="Delete session?" onClose={() => setDeleteTarget(null)}><p className="text-sm text-muted-foreground">This removes the saved session and its transcript.</p><div className="mt-4 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button><Button type="button" onClick={() => { if (deleteTarget) void onDelete(deleteTarget.session_id); setDeleteTarget(null) }}>Delete session</Button></div></Dialog>
   </>

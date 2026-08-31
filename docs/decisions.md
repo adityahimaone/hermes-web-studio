@@ -383,3 +383,19 @@ recorded decision and explicit approval before MVP certification.
   chat canvas and session list recover the intended visual balance. Small
   session filters and titlebar metadata stay compact; action labels remain
   readable through the shared control sizes.
+
+## ADR-041: Share the collapsible context rail across utility views
+
+- **Status:** Accepted
+- **Date:** 2026-08-31
+- **Decision:** Reuse one `ContextRail` shell for Chat sessions, Skills, and
+  Settings categories. Each view owns its data and selection behavior, while
+  the shell owns width, header action placement, collapse affordance, density,
+  and the desktop-only expand control.
+- **Reason:** Skills and Settings were consuming content width with bespoke
+  list columns and larger rows. The Chat session rail already established the
+  intended utility-panel rhythm and interaction pattern.
+- **Consequence:** Utility panes now gain the same predictable collapse/expand
+  behavior and row scale. Mobile keeps the existing bottom navigation and
+  inline list fallback because the desktop rail is intentionally hidden below
+  the large breakpoint.

@@ -132,6 +132,8 @@ button, textarea { font: inherit; }
 .composer-toolbar { display: flex; min-width: 0; align-items: center; gap: 0.25rem; }
 .composer-toolbar__controls { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
 .composer-toolbar__actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.25rem; }
+.control-center-settings > div > section > div.grid { display: block; }
+.control-center-settings [aria-label="Settings navigation"] { display: none; }
 @media (min-width: 1024px) { .mobile-bottom-nav { display: none; } }
 @media (max-width: 640px) { .approval-card { flex-wrap: wrap; } .approval-card > div:last-child { width: 100%; margin-left: 1.6rem; } }
 @media (max-width: 767px) { .workspace-panel { position: fixed; inset: 0 0 0 auto; z-index: 40; width: min(92vw, 420px); box-shadow: -16px 0 40px rgb(0 0 0 / 0.35); transition: transform 180ms ease-out; } .mobile-composer { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom)); } }
