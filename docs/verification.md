@@ -94,3 +94,18 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 
 | Performance budget script | Pass against the existing frontend/dist artifact |
 | M5 browser acceptance | Ready: `node frontend/e2e/m5-browser-check.mjs`; requires Vite on port 5173 and is pending hosted/manual execution |
+
+## 2026-08-31 - M7-M12 bounded local/live follow-up
+
+| Check | Result |
+|---|---|
+| Local Hermes CLI | Pass: Hermes Agent v0.19.0 returned `HERMES_LOCAL_ACCEPTANCE` for a harmless query |
+| `scripts/local-hermes-acceptance.sh` | Pass: BFF readiness, health, operator, settings, discovery, profile/provider, session, Spaces, Kanban, terminal, plugin, extension, and MCP metadata routes returned JSON |
+| Diagnostics sanitization | Pass: component/count snapshots were present and credential-shaped fields were rejected |
+| `scripts/smoke-hermes.sh` | Pass: local BFF/Gateway returned a completed chat with the expected marker |
+| `scripts/m1-live-parity.sh` | Pass: isolated live session actions, chat, persistence, truncation, and cleanup |
+| Remaining M7-M12 live gates | Not claimed: structured tool/subagent/approval events, external channels, scheduled work, hosted matrices, beta, cutover, and reference visual comparison |
+
+The local CLI result proves provider/runtime access; the smoke and session
+results prove the Studio BFF path. `hermes serve` is a separate headless
+JSON-RPC backend and is not substituted for the BFF Gateway contract.
