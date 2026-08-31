@@ -8,6 +8,8 @@ echo 'P056 contract/state effects'
 sh "$root/scripts/check-contract-matrix.sh"
 echo 'P057 visual matrix'
 (cd "$root/frontend" && node e2e/p057-visual-matrix.mjs)
+echo 'M11/M12 bounded shell geometry'
+(cd "$root/frontend" && node e2e/m11-m12-shell-geometry.mjs)
 echo 'P058 accessibility matrix'
 (cd "$root/frontend" && node e2e/p058-accessibility-check.mjs)
 echo 'P060 performance evidence'
