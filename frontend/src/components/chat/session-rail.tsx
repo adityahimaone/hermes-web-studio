@@ -10,7 +10,7 @@ import { sessionExportUrl } from '../../lib/api-client'
 import { DropdownMenu } from '../ui/dropdown-menu'
 import { ContextRail } from '../layout/context-rail'
 
-type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
+type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => Promise<void> | void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
 type SourceFilter = 'all' | 'webui' | 'cli'
 
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
@@ -18,7 +18,7 @@ function sourceOf(session: SessionSummary): SourceFilter { const source = field(
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 export function filterAriaPressed(selected: string, value: string) { return selected === value }
 export function sessionRowAriaCurrent(sessionId: string, activeSessionId: string) { return sessionId === activeSessionId ? 'page' : undefined }
-export async function runBatchSessionAction(ids: string[], action: (id: string) => Promise<unknown>) {
+export async function runBatchSessionAction(ids: string[], action: (id: string) => Promise<unknown> | void) {
   const failed: string[] = []
   for (const id of ids) {
     try { await action(id) } catch { failed.push(id) }
@@ -213,7 +213,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
                       { label: item.pinned ? 'Unpin conversation' : 'Pin conversation', icon: Pin, onSelect: () => onPin(item.session_id, !item.pinned) },
                       { label: item.archived ? 'Unarchive conversation' : 'Archive conversation', icon: item.archived ? Archive : ArchiveX, onSelect: () => onArchive(item.session_id, !item.archived) },
                       { label: 'Delete conversation', icon: Trash2, onSelect: () => setDeleteTarget(item), destructive: true }
-                    ]} />
+                    ]} disabled={batchInFlight} />
                   </div>
                 </div>
               )

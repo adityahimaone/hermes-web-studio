@@ -75,6 +75,17 @@ describe('batch session actions', () => {
     expect(failed).toEqual(['two'])
   })
 
+  it('awaits async callbacks that reject after a delay', async () => {
+    const acted: string[] = []
+    const failed = await runBatchSessionAction(['one', 'two', 'three'], id => {
+      acted.push(id)
+      return id === 'two' ? Promise.reject(new Error('temporary failure')) : Promise.resolve()
+    })
+
+    expect(acted).toEqual(['one', 'two', 'three'])
+    expect(failed).toEqual(['two'])
+  })
+
   it('formats failed ids for an accessible batch result', () => {
     expect(formatBatchFailureMessage('archive', ['two', 'three'])).toBe('Could not archive 2 sessions: two, three.')
   })
@@ -200,6 +211,28 @@ describe('batch session actions', () => {
     expect(archiveButton?.disabled).toBe(true)
     expect(deleteButton?.disabled).toBe(true)
     await act(async () => { resolveArchive(); await Promise.resolve() })
+    reactRoot.unmount()
+    root.remove()
+  })
+
+  it('disables each session overflow trigger while batch action is in flight', async () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const reactRoot = createRoot(root)
+    let resolveArchive!: () => void
+    const archive = () => new Promise<void>(resolve => { resolveArchive = resolve })
+    const sessions = [{ session_id: 'one', title: 'One', updated_at: '2026-09-01T00:00:00Z' }]
+
+    await act(async () => {
+      reactRoot.render(createElement(SessionRail, { sessions, activeSessionId: 'one', onSelectSession: () => {}, onRename: async () => {}, onPin: () => {}, onArchive: archive, onDelete: async () => {}, onNewChat: () => {}, loading: false, onToggle: () => {} }))
+    })
+    await act(async () => { Array.from(root.querySelectorAll('button')).find(button => button.textContent === 'Select')?.click(); await Promise.resolve() })
+    await act(async () => { root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')?.click(); await Promise.resolve() })
+    await act(async () => { Array.from(root.querySelectorAll('button')).find(button => button.textContent === 'Archive')?.click(); await Promise.resolve() })
+
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Actions for One"]')?.disabled).toBe(true)
+    await act(async () => { resolveArchive(); await Promise.resolve() })
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Actions for One"]')?.disabled).toBe(false)
     reactRoot.unmount()
     root.remove()
   })
