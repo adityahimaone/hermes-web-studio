@@ -742,15 +742,13 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 	})
 	if err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
+			if rollbackErr := s.rollbackOwnedTurn(input.SessionID, originalMessageCount, createdSession); rollbackErr != nil {
+				s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_rollback_failed", "message": "The turn was cancelled, but its session state could not be rolled back."}})
+			}
 			s.publish(item, gateway.Event{Name: "cancel", Data: map[string]any{"message": "Cancelled by user"}})
 			return
 		}
-		rollbackErr := error(nil)
-		if createdSession {
-			rollbackErr = s.sessions.Delete(input.SessionID)
-		} else {
-			rollbackErr = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
-		}
+		rollbackErr := s.rollbackOwnedTurn(input.SessionID, originalMessageCount, createdSession)
 		code := "gateway_unavailable"
 		if rollbackErr != nil {
 			code = "session_rollback_failed"
@@ -781,6 +779,13 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		return
 	}
 	s.publish(item, gateway.Event{Name: "done", Data: map[string]any{"answer": answer, "session_id": item.sessionID}})
+}
+
+func (s *Server) rollbackOwnedTurn(sessionID string, originalMessageCount int, createdSession bool) error {
+	if createdSession {
+		return s.sessions.Delete(sessionID)
+	}
+	return s.sessions.TruncateMessages(sessionID, originalMessageCount)
 }
 
 func (s *Server) publish(item *turn, event gateway.Event) {

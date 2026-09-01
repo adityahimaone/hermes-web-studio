@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -73,5 +74,55 @@ func TestRunTurnStopsOnNonNotFoundInitialLoadError(t *testing.T) {
 	}
 	if item.events[0].Event.Data["code"] != "session_unavailable" {
 		t.Fatalf("event=%#v", item.events[0].Event)
+	}
+}
+
+func TestRunTurnCancellationRollsBackOwnedUserMessage(t *testing.T) {
+	gatewayStarted := make(chan struct{})
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(gatewayStarted)
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer gw.Close()
+	stateDir := t.TempDir()
+	s := NewWithGateway(config.Config{StateDir: stateDir}, gateway.New(gateway.Config{BaseURL: gw.URL, ReadTimeout: time.Second}))
+	if _, err := s.sessions.Create("cancelled", "Existing", []json.RawMessage{mustMessage("user", "before")}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	item := &turn{streamID: "stream", sessionID: "cancelled", cancel: cancel, subs: make(map[chan replayEvent]struct{})}
+	done := make(chan struct{})
+	go func() {
+		s.runTurn(ctx, item, gateway.ChatRequest{SessionID: "cancelled", Message: "cancel me"})
+		close(done)
+	}()
+	select {
+	case <-gatewayStarted:
+		cancel()
+	case <-time.After(time.Second):
+		t.Fatal("gateway request not observed")
+	}
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("cancelled turn did not finish")
+	}
+	loaded, err := s.sessions.Load("cancelled")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.Messages) != 1 {
+		t.Fatalf("messages=%d, want original message only", len(loaded.Messages))
+	}
+	if item.events == nil || item.events[len(item.events)-1].Event.Name != "cancel" {
+		t.Fatalf("events=%#v", item.events)
+	}
+	for _, event := range item.events {
+		if event.Event.Name == "apperror" {
+			t.Fatalf("unexpected error event=%#v", event.Event)
+		}
 	}
 }

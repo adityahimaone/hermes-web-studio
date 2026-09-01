@@ -159,16 +159,16 @@ The frozen upstream session store is file-based and remains the compatibility so
 
 The Go implementation uses the same JSON files as its durable session store. Writes are atomic, use `0600` files, preserve unknown top-level fields, and rebuild `_index.json` without transcript messages. SQLite or CLI session data is not treated as compatible until those formats receive their own inventory and tests.
 
-Per-session reads and mutations are serialized by the BFF's per-session lock,
+Per-session mutations are serialized by the BFF's per-session lock,
 including transcript append, truncate, metadata updates, duplicate, and delete.
-Session-list reads (`GET /api/sessions`) read `_index.json` and may fall back to
-a directory scan; they do not hold a per-session lock. Index rebuilds are
-serialized store-wide and replace `_index.json` atomically, so one process does
-not publish an older concurrent rebuild after a newer one. The consistency
-boundary is therefore per-process: a list read can observe the prior index
-until a rebuild completes, and separate processes still require filesystem
-locking or CAS to provide cross-process coordination. A session detail read is
-not an index read and loads its session file directly.
+Session-list/search reads (`GET /api/sessions`) read `_index.json` and may fall
+back to a directory scan; scans may load session files without a per-session
+read lock. Index rebuilds are serialized by a store-wide process-local mutex
+and replace `_index.json` atomically, which serializes rebuild writers only.
+Index and fallback reads do not provide a cross-file snapshot and may observe
+mixed filesystem state. Separate processes still require filesystem locking or
+CAS to provide cross-process coordination. A session detail read loads its
+session file directly.
 
 The current resolved state directory was inventoried on 2026-08-30: chat data is present as `sessions/*.json` plus `_index.json`; the separate `kanban.db` is not a chat session source and is not read by this service.
 
