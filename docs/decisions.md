@@ -600,3 +600,6 @@ upstream response body; over-limit or malformed input fails closed as explicit
 `unavailable` state with an empty model list. The composer preserves an active
 profile's stale model/provider instead of silently replacing it, shows the
 unavailable state, and prevents send until valid model selection or `default`.
+## P023 catalog fail-closed boundary
+
+Catalog identity uses normalized provider+model ID, so provider collisions remain distinct. Browser catalog responses accept only known statuses and validated model shapes; unavailable models cannot resolve as valid selections.

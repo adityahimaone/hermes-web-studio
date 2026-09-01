@@ -76,14 +76,15 @@ func (c *Client) Models(ctx context.Context) ([]Model, error) {
 		if id == "" {
 			continue
 		}
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
 		provider := cleanCatalogText(item.Provider, 128)
 		if provider == "" {
 			provider = cleanCatalogText(item.OwnedBy, 128)
 		}
+		key := provider + ":" + id
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		aliases := make([]string, 0, len(item.Aliases))
 		aliasSeen := map[string]bool{}
 		for _, alias := range item.Aliases {

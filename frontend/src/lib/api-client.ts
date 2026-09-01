@@ -52,7 +52,22 @@ export type ModelCatalogItem = { id: string; name: string; provider?: string; al
 export type ModelCatalogStatus = 'loading' | 'ready' | 'unavailable' | 'error'
 export type ModelCatalogResponse = { status: ModelCatalogStatus; models: ModelCatalogItem[]; message?: string }
 export async function getModelCatalog(signal?: AbortSignal) {
-  return readJson<ModelCatalogResponse>(await fetch('/api/models/catalog', { signal }))
+  const data = await readJson<unknown>(await fetch('/api/models/catalog', { signal }))
+  if (!isModelCatalogResponse(data)) throw new Error('Invalid model catalog response.')
+  return data
+}
+
+function isModelCatalogResponse(value: unknown): value is ModelCatalogResponse {
+  if (!value || typeof value !== 'object') return false
+  const data = value as Record<string, unknown>
+  if (!['loading', 'ready', 'unavailable', 'error'].includes(data.status as string) || !Array.isArray(data.models)) return false
+  return data.models.every(item => isModelCatalogItem(item))
+}
+
+function isModelCatalogItem(value: unknown): value is ModelCatalogItem {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Record<string, unknown>
+  return typeof item.id === 'string' && typeof item.name === 'string' && (item.provider === undefined || typeof item.provider === 'string') && (item.aliases === undefined || Array.isArray(item.aliases) && item.aliases.every(alias => typeof alias === 'string')) && (item.available === undefined || typeof item.available === 'boolean')
 }
 
 export async function startChat(input: StartChatInput, signal?: AbortSignal) {

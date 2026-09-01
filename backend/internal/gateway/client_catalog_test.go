@@ -33,6 +33,23 @@ func TestModelsReturnsSanitizedCatalog(t *testing.T) {
 	}
 }
 
+func TestModelsPreservesSameIDAcrossProviders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{
+			map[string]any{"id": "same", "provider": "openai"},
+			map[string]any{"id": "same", "provider": "anthropic"},
+		}})
+	}))
+	defer server.Close()
+	models, err := New(Config{BaseURL: server.URL}).Models(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 || models[0].Provider != "openai" || models[1].Provider != "anthropic" {
+		t.Fatalf("models=%+v", models)
+	}
+}
+
 func TestModelsRejectsUnavailableGateway(t *testing.T) {
 	server := httptest.NewServer(http.NotFoundHandler())
 	defer server.Close()

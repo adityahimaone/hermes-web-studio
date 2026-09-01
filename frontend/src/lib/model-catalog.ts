@@ -4,10 +4,10 @@ export type ModelCatalogGroup = { provider: string; models: ModelCatalogItem[] }
 export function normalizeModelCatalog(models: ModelCatalogItem[]): ModelCatalogItem[] {
   const seen = new Set<string>()
   return models.flatMap(model => {
-    const id = clean(model.id, 256); if (!id || seen.has(id)) return []
-    seen.add(id)
+    const id = clean(model.id, 256); const provider = clean(model.provider, 128); const key = modelKey(id, provider); if (!id || seen.has(key)) return []
+    seen.add(key)
     const aliases = [...new Set(model.aliases.map(alias => clean(alias, 128)).filter(Boolean))]
-    return [{ ...model, id, label: clean(model.label, 256), provider: clean(model.provider, 128), aliases }]
+    return [{ ...model, id, label: clean(model.label, 256), provider, aliases }]
   })
 }
 
@@ -32,7 +32,7 @@ export function modelKey(id: string, provider = '') {
 export function findCatalogModel(models: ModelCatalogItem[], id: string, provider = '') {
   const normalizedId = clean(id, 256)
   const normalizedProvider = clean(provider, 128)
-  return normalizeModelCatalog(models).find(model => model.id === normalizedId && (!normalizedProvider || model.provider === normalizedProvider))
+  return normalizeModelCatalog(models).find(model => model.available && model.id === normalizedId && (!normalizedProvider || model.provider === normalizedProvider))
 }
 
 export function validModelSelection(models: ModelCatalogItem[], id: string, provider = '') {

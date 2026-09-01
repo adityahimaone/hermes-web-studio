@@ -40,6 +40,12 @@ describe('model catalog', () => {
     expect(validModelSelection(models, 'gpt-test', 'openai')).toBe(true)
   })
 
+  it('does not resolve or accept unavailable catalog models', () => {
+    const unavailable = [{ id: 'offline', label: 'Offline', provider: 'openai', aliases: [], capabilities: [], available: false }]
+    expect(findCatalogModel(unavailable, 'offline', 'openai')).toBeUndefined()
+    expect(validModelSelection(unavailable, 'offline', 'openai')).toBe(false)
+  })
+
   it('resolves raw catalog entries through normalized model/provider mapping', () => {
     expect(findCatalogModel([{ id: ' gpt-test ', label: 'GPT', provider: ' openai ', aliases: [], capabilities: [], available: true }], 'gpt-test', 'openai')).toMatchObject({ id: 'gpt-test', provider: 'openai' })
   })
