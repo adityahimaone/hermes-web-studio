@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 var ErrInvalidSessionID = errors.New("invalid session id")
@@ -18,6 +19,9 @@ type LegacySessionReader struct {
 
 type Store struct {
 	*LegacySessionReader
+	// indexMu serializes rebuilds across sessions. Session route locks remain
+	// outside this store lock; no code acquires them while holding indexMu.
+	indexMu sync.Mutex
 }
 
 type Summary struct {

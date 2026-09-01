@@ -188,6 +188,12 @@ func (s *Store) writeFields(id string, fields map[string]json.RawMessage) error 
 }
 
 func (s *Store) rebuildIndex() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	return s.rebuildIndexLocked()
+}
+
+func (s *Store) rebuildIndexLocked() error {
 	list, err := s.scanSummaries()
 	if err != nil {
 		return err

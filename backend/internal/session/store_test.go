@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -41,6 +42,46 @@ func TestStoreCRUDPreservesUnknownFields(t *testing.T) {
 	}
 	if _, err := store.Create("../unsafe", "bad", nil); !errors.Is(err, ErrInvalidSessionID) {
 		t.Fatalf("unsafe create = %v", err)
+	}
+}
+
+func TestStoreConcurrentDifferentSessionWritesKeepIndexCurrent(t *testing.T) {
+	store := NewStore(t.TempDir())
+	for _, id := range []string{"session-a", "session-b"} {
+		if _, err := store.Create(id, id, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for attempt := 0; attempt < 100; attempt++ {
+		var wg sync.WaitGroup
+		for _, id := range []string{"session-a", "session-b"} {
+			wg.Add(1)
+			go func(id string) {
+				defer wg.Done()
+				if _, err := store.Update(id, map[string]json.RawMessage{"title": raw(`"updated"`)}); err != nil {
+					t.Errorf("update %s: %v", id, err)
+				}
+			}(id)
+		}
+		wg.Wait()
+
+		index, err := os.ReadFile(filepath.Join(store.stateDir, "sessions", "_index.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rows []struct {
+			ID string `json:"session_id"`
+		}
+		if err := json.Unmarshal(index, &rows); err != nil {
+			t.Fatalf("index is invalid JSON after attempt %d: %v", attempt, err)
+		}
+		seen := map[string]bool{}
+		for _, row := range rows {
+			seen[row.ID] = true
+		}
+		if !seen["session-a"] || !seen["session-b"] {
+			t.Fatalf("index after attempt %d omitted session: %s", attempt, index)
+		}
 	}
 }
 

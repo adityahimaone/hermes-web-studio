@@ -312,12 +312,19 @@ recorded decision and explicit approval before MVP certification.
 - **Date:** 2026-08-30
 - **Decision:** Persist only the active stream and session identifiers in local
   storage, restore the server transcript on reload, and reconnect with the SSE
-  cursor when available.
+  cursor when available. Within one BFF process, concurrent inflight turns for
+  the same session serialize through the per-session lock; different sessions
+  may proceed concurrently, while their shared session index rebuilds serialize
+  through the store-wide index lock.
 - **Reason:** Hard reload and session switching must not silently discard an
   active turn, while transcript contents remain server-owned and credentials
   never enter browser storage.
-- **Consequence:** Concurrent inflight turns and expired-stream full-session
-  polling remain explicit follow-up work.
+- **Consequence:** Per-session turn serialization and same-process shared-index
+  consistency are implemented. Per-session locks and index serialization are
+  process-local; multiple BFF processes can still race on session files or
+  `_index.json`, and index/list reads have a short consistency window while a
+  rebuild completes. Expired-stream full-session polling remains explicit
+  follow-up work.
 
 ## ADR-032: Keep parity evidence artifacts outside the repository
 
