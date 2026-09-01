@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, undoToTurn } from './conversation-runtime'
+import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -63,6 +63,17 @@ describe('conversation runtime contracts', () => {
     const getSession = vi.fn().mockResolvedValue({ messages })
     await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toBeNull()
     expect(getSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('guards conversation callbacks by epoch, stream, and session identity', () => {
+    expect(isCurrentConversation('stream-1', 'session-1', 2, { streamId: 'stream-1', sessionId: 'session-1', epoch: 2 })).toBe(true)
+    expect(isCurrentConversation('stream-1', 'session-1', 1, { streamId: 'stream-1', sessionId: 'session-1', epoch: 2 })).toBe(false)
+    expect(isCurrentConversation('stream-1', 'session-1', 2, { streamId: 'stream-1', sessionId: 'session-2', epoch: 2 })).toBe(false)
+  })
+
+  it('computes queued turn baseline from completed transcript', () => {
+    expect(queuedTurnBaseline(messages)).toBe(3)
+    expect(queuedTurnBaseline([...messages, { id: 'a2', role: 'assistant', content: 'next', status: 'complete' }])).toBe(4)
   })
 
   it('keeps identical assistant replies distinct across turns', async () => {

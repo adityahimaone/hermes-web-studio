@@ -32,6 +32,14 @@ export function repairPartialTranscript(messages: ChatMessage[], auditId: string
   return { messages: valid.map((message) => ({ ...message, status: message.status === 'streaming' ? 'cancelled' : message.status })), removed, reason: removed.length ? 'Removed empty or unfinished transcript entries.' : 'Transcript is already valid.', auditId }
 }
 
+export function isCurrentConversation(streamId: string, sessionId: string, epoch: number, current: { streamId: string | null; sessionId: string; epoch: number }): boolean {
+  return current.streamId === streamId && current.sessionId === sessionId && current.epoch === epoch
+}
+
+export function queuedTurnBaseline(messages: ChatMessage[]): number {
+  return messages.length + 1
+}
+
 export function dedupeRestoredAssistant(messages: ChatMessage[], assistant: ChatMessage): ChatMessage[] {
   const index = messages.findIndex((message) => message.id === assistant.id)
   return index < 0 ? [...messages, assistant] : messages.map((message, itemIndex) => itemIndex === index ? assistant : message)

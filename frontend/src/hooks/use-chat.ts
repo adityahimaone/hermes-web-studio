@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { dedupeRestoredAssistant, pollSessionUntilSettled } from '../lib/conversation-runtime'
+import { dedupeRestoredAssistant, isCurrentConversation, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -32,6 +32,7 @@ export function useChat() {
   const pumpControllerRef = useRef<AbortController | null>(null)
   const sessionEpochRef = useRef(0)
   const chatStateRef = useRef<ChatState>(initialChatState)
+  const messagesRef = useRef<ChatMessage[]>([])
   const pumpRef = useRef<(content: string, files?: File[], baseMessages?: ChatMessage[], options?: TurnOptions) => void>(() => undefined)
 
   const closeSource = useCallback(() => { sourceRef.current?.close(); sourceRef.current = null }, [])
@@ -46,6 +47,7 @@ export function useChat() {
     return result.sessions || []
   }, [])
   useEffect(() => { activeSessionRef.current = activeSessionId }, [activeSessionId])
+  useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => {
     const controller = new AbortController()
     refreshSessions(controller.signal).then(() => setSessionLoading(false)).catch((error) => {
@@ -56,26 +58,29 @@ export function useChat() {
   }, [refreshSessions])
   useEffect(() => () => { closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort() }, [closeSource])
 
-  const finish = useCallback((streamId: string, sessionId: string, state: ChatState, status: ChatMessage['status'] = 'complete') => {
+  const finish = useCallback((streamId: string, sessionId: string, epoch: number, state: ChatState, status: ChatMessage['status'] = 'complete') => {
     if (terminalRef.current === streamId) return
-    if (streamIdRef.current !== streamId) return
+    if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })) return
     terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
-    if (activeSessionRef.current === sessionId && state.answer.trim()) setMessages((current) => [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
+    const completedMessages = activeSessionRef.current === sessionId && state.answer.trim()
+      ? [...messagesRef.current, { id: newId(), role: 'assistant' as const, content: state.answer, status }]
+      : messagesRef.current
+    if (completedMessages.length !== messagesRef.current.length) setMessages(completedMessages)
     chatStateRef.current = initialChatState
     setStreamState(status === 'error' ? { ...initialChatState, status: 'error', error: state.error } : initialChatState)
     void refreshSessions().catch(() => undefined)
     const next = queueRef.current.shift()
     setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
-    if (next) pumpRef.current(next.content, next.files, undefined, next.options)
+    if (next) pumpRef.current(next.content, next.files, completedMessages, next.options)
   }, [closeSource])
 
-  const connectStream = useCallback((streamId: string, sessionId: string) => {
+  const connectStream = useCallback((streamId: string, sessionId: string, epoch = sessionEpochRef.current) => {
     const source = new EventSource(streamUrl(streamId, lastEventIdRef.current ? String(lastEventIdRef.current) : undefined))
     sourceRef.current = source
     supportedEvents.forEach((type) => source.addEventListener(type, (raw) => {
       const event = raw as MessageEvent<string>
-      if (sourceRef.current !== source || streamIdRef.current !== streamId || terminalRef.current === streamId) return
+      if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) || sourceRef.current !== source || terminalRef.current === streamId) return
       const eventID = Number(event.lastEventId)
       if (Number.isFinite(eventID) && eventID > 0) {
         if (eventID <= lastEventIdRef.current) return
@@ -85,23 +90,22 @@ export function useChat() {
       }
       let data: Record<string, unknown>
       try { data = JSON.parse(event.data) as Record<string, unknown> } catch { data = { message: event.data } }
-      if (sourceRef.current !== source || streamIdRef.current !== streamId || terminalRef.current === streamId) return
+      if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) || sourceRef.current !== source || terminalRef.current === streamId) return
       const next = reduceChatEvent(chatStateRef.current, { type, data } as ChatEvent)
       chatStateRef.current = next
       if (type === 'token' && typeof data.text === 'string') answerRef.current += data.text
-      if (type === 'done') { finish(streamId, sessionId, { ...next, answer: answerRef.current || next.answer }); return }
-      if (type === 'cancel') { finish(streamId, sessionId, next, 'cancelled'); return }
-      if (type === 'apperror') { finish(streamId, sessionId, next, 'error'); return }
+      if (type === 'done') { finish(streamId, sessionId, epoch, { ...next, answer: answerRef.current || next.answer }); return }
+      if (type === 'cancel') { finish(streamId, sessionId, epoch, next, 'cancelled'); return }
+      if (type === 'apperror') { finish(streamId, sessionId, epoch, next, 'error'); return }
       if (activeSessionRef.current === sessionId) setStreamState(next)
     }))
     source.onerror = () => {
-      if (sourceRef.current !== source || (source.readyState !== EventSource.CLOSED && source.readyState !== EventSource.CONNECTING) || terminalRef.current === streamId || activeSessionRef.current !== sessionId || fallbackStreamRef.current === streamId) return
+      if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) || sourceRef.current !== source || (source.readyState !== EventSource.CLOSED && source.readyState !== EventSource.CONNECTING) || terminalRef.current === streamId || fallbackStreamRef.current === streamId) return
       source.close()
       fallbackStreamRef.current = streamId
       pollControllerRef.current?.abort()
       const controller = new AbortController()
       pollControllerRef.current = controller
-      const epoch = sessionEpochRef.current
       setStreamState((state) => ({ ...state, status: 'error', error: 'The Hermes stream closed unexpectedly. Reconnecting…' }))
       void pollSessionUntilSettled(
         async (signal) => getSession(sessionId, signal),
@@ -110,11 +114,11 @@ export function useChat() {
         1000,
         controller.signal,
       ).then((assistant) => {
-        if (streamIdRef.current !== streamId || activeSessionRef.current !== sessionId || sessionEpochRef.current !== epoch || terminalRef.current === streamId) return
+        if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) || terminalRef.current === streamId) return
         if (assistant) {
           setMessages((current) => dedupeRestoredAssistant(current, assistant))
-          finish(streamId, sessionId, { ...initialChatState, answer: '' })
-        } else finish(streamId, sessionId, { ...initialChatState, error: 'Hermes stream did not settle before polling timed out.' }, 'error')
+          finish(streamId, sessionId, epoch, { ...initialChatState, answer: '' })
+        } else finish(streamId, sessionId, epoch, { ...initialChatState, error: 'Hermes stream did not settle before polling timed out.' }, 'error')
       }).catch(() => undefined).finally(() => {
         if (fallbackStreamRef.current === streamId) fallbackStreamRef.current = null
         if (pollControllerRef.current === controller) pollControllerRef.current = null
@@ -130,7 +134,7 @@ export function useChat() {
     const controller = new AbortController()
     pumpControllerRef.current = controller
     closeSource(); pollControllerRef.current?.abort(); answerRef.current = ''; terminalRef.current = null; fallbackStreamRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
-    turnBaselineRef.current = (baseMessages || messages).length + 1
+    turnBaselineRef.current = queuedTurnBaseline(baseMessages || messagesRef.current)
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
@@ -141,7 +145,7 @@ export function useChat() {
       streamIdRef.current = started.stream_id
       setActiveSessionId(started.session_id || sessionId)
       window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: started.session_id || sessionId, last_event_id: 0 }))
-      connectStream(started.stream_id, started.session_id || sessionId)
+      connectStream(started.stream_id, started.session_id || sessionId, epoch)
     } catch (error) { if (!controller.signal.aborted && sessionEpochRef.current === epoch && activeSessionRef.current === sessionId) setStreamState((state) => ({ ...state, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })) }
     finally { if (pumpControllerRef.current === controller) pumpControllerRef.current = null }
   }, [closeSource, connectStream, messages, refreshSessions])
@@ -153,9 +157,11 @@ export function useChat() {
       if (window.localStorage.getItem(inflightTurnKey)) window.localStorage.removeItem(inflightTurnKey)
       return
     }
-    let cancelled = false
-    void getSession(journal.session_id).then((detail) => {
-      if (cancelled) return
+    const epoch = sessionEpochRef.current
+    activeSessionRef.current = journal.session_id
+    const controller = new AbortController()
+    void getSession(journal.session_id, controller.signal).then((detail) => {
+      if (!isCurrentConversation(journal.stream_id, journal.session_id, epoch, { streamId: journal.stream_id, sessionId: activeSessionRef.current, epoch }) || activeSessionRef.current !== journal.session_id) return
       setActiveSessionId(journal.session_id)
       const restored = normalizeSessionMessages(detail.messages)
       setMessages(restored)
@@ -164,10 +170,10 @@ export function useChat() {
       streamIdRef.current = journal.stream_id
       terminalRef.current = null
       lastEventIdRef.current = journal.last_event_id || 0
-      connectStream(journal.stream_id, journal.session_id)
+      connectStream(journal.stream_id, journal.session_id, epoch)
     }).catch(() => undefined)
-    return () => { cancelled = true }
-  }, [connectStream])
+    return () => { controller.abort(); sessionEpochRef.current += 1; closeSource(); pumpControllerRef.current?.abort(); pollControllerRef.current?.abort() }
+  }, [closeSource, connectStream])
 
   const send = useCallback((content: string, files: File[] = [], options?: TurnOptions, mode: TurnMode = 'queue') => {
     const clean = content.trim(); if (!clean) return
@@ -181,7 +187,7 @@ export function useChat() {
         const streamId = streamIdRef.current
         if (streamId) {
           void cancelChat(streamId).catch(() => undefined)
-          finish(streamId, activeSessionRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
+          finish(streamId, activeSessionRef.current, sessionEpochRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
         }
       }
     } else pump(clean, files, undefined, options)
@@ -212,8 +218,9 @@ export function useChat() {
     setStreamState((state) => ({ ...state, approvals: state.approvals.map((item) => item.id === id ? { ...item, status: choice === 'deny' ? 'denied' : 'approved' } : item) }))
   }, [])
   const cancel = useCallback(async () => {
+    pumpControllerRef.current?.abort()
     const streamId = streamIdRef.current; if (!streamId) return
-    await cancelChat(streamId).catch(() => undefined); finish(streamId, activeSessionRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
+    await cancelChat(streamId).catch(() => undefined); finish(streamId, activeSessionRef.current, sessionEpochRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
   }, [finish])
   const removeQueued = useCallback((index: number) => {
     queueRef.current = queueRef.current.filter((_, itemIndex) => itemIndex !== index)
@@ -223,7 +230,9 @@ export function useChat() {
     const epoch = sessionEpochRef.current + 1
     sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort(); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try {
-      const detail = await getSession(sessionId)
+      const controller = new AbortController()
+      pollControllerRef.current?.abort(); pollControllerRef.current = controller
+      const detail = await getSession(sessionId, controller.signal)
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
       const restored = normalizeSessionMessages(detail.messages)
       setMessages(restored)
@@ -232,7 +241,7 @@ export function useChat() {
       if (journal?.session_id === sessionId) {
         streamIdRef.current = journal.stream_id
         setStreamState({ ...initialChatState, status: 'streaming' })
-        connectStream(journal.stream_id, sessionId)
+        connectStream(journal.stream_id, sessionId, epoch)
       }
     } catch (error) {
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
