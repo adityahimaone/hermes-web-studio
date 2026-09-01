@@ -344,10 +344,76 @@ func sanitizeKanbanItem(item map[string]any) map[string]any {
 	out := map[string]any{}
 	for _, key := range []string{"id", "title", "body", "status", "assignee", "tenant", "priority", "comment_count", "created_at", "updated_at", "slug", "name", "task_count", "archived", "parents", "children", "skills"} {
 		if value, ok := item[key]; ok {
-			out[key] = value
+			out[key] = boundedKanbanValue(value)
 		}
 	}
+	if workspace, ok := item["workspace"].(string); ok && safeKanbanWorkspace(workspace) {
+		out["workspace"] = workspace
+	}
+	for _, key := range []string{"comments", "events", "runs"} {
+		if values, ok := item[key].([]any); ok {
+			out[key] = sanitizeKanbanActivity(values, key)
+		}
+	}
+	if result, ok := item["result"].(string); ok {
+		out["result"] = boundedText(result, 2048)
+	}
 	return out
+}
+
+func sanitizeKanbanActivity(values []any, kind string) []map[string]any {
+	out := make([]map[string]any, 0, min(len(values), 100))
+	for _, raw := range values[:min(len(values), 100)] {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		row := map[string]any{}
+		keys := []string{"id", "type", "status", "name", "created_at", "updated_at", "author", "assignee"}
+		if kind == "comments" {
+			keys = []string{"id", "body", "created_at", "author"}
+		}
+		if kind == "runs" {
+			keys = []string{"id", "status", "created_at", "updated_at", "result"}
+		}
+		for _, key := range keys {
+			if value, ok := item[key]; ok {
+				row[key] = boundedKanbanValue(value)
+			}
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+func boundedKanbanValue(value any) any {
+	switch v := value.(type) {
+	case string:
+		return boundedText(v, 512)
+	case []any:
+		out := make([]any, 0, min(len(v), 100))
+		for _, item := range v[:min(len(v), 100)] {
+			out = append(out, boundedKanbanValue(item))
+		}
+		return out
+	default:
+		return value
+	}
+}
+func boundedText(value string, limit int) string {
+	if len(value) > limit {
+		return value[:limit]
+	}
+	return value
+}
+func safeKanbanWorkspace(value string) bool {
+	return value == "scratch" || (strings.HasPrefix(value, "dir:") || strings.HasPrefix(value, "worktree:")) && !strings.ContainsAny(value, "/\\") && len(value) <= 256
+}
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // extractJSON accepts the machine-readable document while tolerating harmless

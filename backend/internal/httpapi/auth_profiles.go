@@ -136,8 +136,8 @@ func (s *Server) handleAuthMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"authenticated": authenticated, "user": "local"})
 }
 func (s *Server) handleProfiles(w http.ResponseWriter, _ *http.Request) {
-	s.profileMu.RLock()
-	defer s.profileMu.RUnlock()
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	writeJSON(w, 200, map[string]any{"profiles": s.profiles, "active": s.activeProfile})
 }
 
@@ -147,8 +147,8 @@ func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "profile_invalid", "Profile id and name are required.")
 		return
 	}
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	for _, item := range s.profiles {
 		if item.ID == input.ID {
 			writeError(w, http.StatusConflict, "profile_exists", "The profile already exists.")
@@ -165,9 +165,18 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	if !decodeBody(w, r, &patch) {
 		return
 	}
-	providerAvailable := patch.ProviderID == "" || s.providerExists(patch.ProviderID)
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	providerAvailable := true
+	if patch.ProviderID != "" {
+		providerAvailable = false
+		for _, item := range s.providers {
+			if item.ID == patch.ProviderID {
+				providerAvailable = true
+				break
+			}
+		}
+	}
 	for i := range s.profiles {
 		if s.profiles[i].ID == patch.ID {
 			if patch.ProviderID != "" && s.profiles[i].ID == s.activeProfile && !providerAvailable {
@@ -195,8 +204,8 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	if id == "" || id == s.activeProfile || len(s.profiles) == 1 {
 		writeError(w, http.StatusBadRequest, "profile_delete_rejected", "The active or last profile cannot be deleted.")
 		return
@@ -212,8 +221,8 @@ func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleProviders(w http.ResponseWriter, _ *http.Request) {
-	s.providerMu.RLock()
-	defer s.providerMu.RUnlock()
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	writeJSON(w, http.StatusOK, map[string]any{"providers": s.providers})
 }
 
@@ -242,8 +251,8 @@ func (s *Server) handleProviderCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "provider_invalid", "Provider id, name, and base URL are required.")
 		return
 	}
-	s.providerMu.Lock()
-	defer s.providerMu.Unlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	for _, item := range s.providers {
 		if item.ID == input.ID {
 			writeError(w, http.StatusConflict, "provider_exists", "The provider already exists.")
@@ -261,17 +270,14 @@ func (s *Server) handleProviderDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "provider_delete_rejected", "The gateway provider cannot be deleted.")
 		return
 	}
-	s.profileMu.RLock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	for _, profile := range s.profiles {
 		if profile.ID == s.activeProfile && (profile.ProviderID == id || profile.Provider == id) {
-			s.profileMu.RUnlock()
 			writeError(w, http.StatusConflict, "provider_in_use", "The active profile is using this provider.")
 			return
 		}
 	}
-	s.profileMu.RUnlock()
-	s.providerMu.Lock()
-	defer s.providerMu.Unlock()
 	for i, item := range s.providers {
 		if item.ID == id {
 			s.providers = append(s.providers[:i], s.providers[i+1:]...)
@@ -293,8 +299,8 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	providers := s.providerIDs()
-	s.profileMu.Lock()
-	defer s.profileMu.Unlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	for _, p := range s.profiles {
 		if p.ID == input.ID {
 			if p.ProviderID != "" && !providers[p.ProviderID] {
@@ -310,8 +316,8 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) providerExists(id string) bool {
-	s.providerMu.RLock()
-	defer s.providerMu.RUnlock()
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	for _, item := range s.providers {
 		if item.ID == id {
 			return true
@@ -320,8 +326,8 @@ func (s *Server) providerExists(id string) bool {
 	return false
 }
 func (s *Server) providerIDs() map[string]bool {
-	s.providerMu.RLock()
-	defer s.providerMu.RUnlock()
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	ids := make(map[string]bool, len(s.providers))
 	for _, item := range s.providers {
 		ids[item.ID] = true

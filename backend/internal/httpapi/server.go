@@ -37,11 +37,10 @@ type Server struct {
 	control       *control.Store
 	controlErr    error
 	mu            sync.Mutex
-	profileMu     sync.RWMutex
+	stateMu       sync.RWMutex
 	profiles      []profile
 	activeProfile string
 	providers     []provider
-	providerMu    sync.RWMutex
 }
 
 type profile struct {
@@ -608,14 +607,14 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if input.Model == "" {
-		s.profileMu.RLock()
+		s.stateMu.RLock()
 		for _, candidate := range s.profiles {
 			if candidate.ID == s.activeProfile {
 				input.Model, input.Provider = candidate.Model, candidate.Provider
 				break
 			}
 		}
-		s.profileMu.RUnlock()
+		s.stateMu.RUnlock()
 		if input.Model == "" {
 			input.Model = s.config.DefaultModel
 		}

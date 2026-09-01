@@ -166,3 +166,31 @@ func TestKanbanWorkspaceValueRejectsRemoteAndUnsafeReferences(t *testing.T) {
 		}
 	}
 }
+
+func TestSanitizeKanbanDetailProjectsSafeActivityFields(t *testing.T) {
+	got := sanitizeKanbanProjection(map[string]any{
+		"id": "t_1", "workspace": "dir:project", "comments": []any{map[string]any{"id": "c1", "body": "safe", "secret": "no"}},
+		"events": []any{map[string]any{"type": "status", "status": "done", "private_path": "/x"}},
+		"runs":   []any{map[string]any{"id": "r1", "status": "done", "result": "ok", "subprocess": "bad"}}, "result": "done",
+	})
+	body, _ := json.Marshal(got)
+	text := string(body)
+	for _, want := range []string{`"workspace":"dir:project"`, `"comments"`, `"events"`, `"runs"`, `"result":"done"`} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %s: %s", want, text)
+		}
+	}
+	for _, bad := range []string{"secret", "private_path", "subprocess", "/x"} {
+		if strings.Contains(text, bad) {
+			t.Fatalf("sensitive field leaked: %s", text)
+		}
+	}
+}
+
+func TestSanitizeKanbanDetailRejectsUnsafeActivityValues(t *testing.T) {
+	got := sanitizeKanbanProjection(map[string]any{"workspace": "/srv/private", "result": strings.Repeat("x", 5000), "comments": []any{map[string]any{"body": strings.Repeat("x", 5000)}}})
+	body, _ := json.Marshal(got)
+	if strings.Contains(string(body), "/srv/private") || len(body) > 4096 {
+		t.Fatalf("unsafe or unbounded detail: %d %s", len(body), body)
+	}
+}

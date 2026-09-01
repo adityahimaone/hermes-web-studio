@@ -169,9 +169,9 @@ func (s *Server) handleSpaces(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "spaces_unavailable", "Spaces are unavailable.")
 		return
 	}
-	s.profileMu.RLock()
+	s.stateMu.RLock()
 	profileID := s.activeProfile
-	s.profileMu.RUnlock()
+	s.stateMu.RUnlock()
 	visible := items[:0]
 	for _, item := range items {
 		if item.Metadata["profile_id"] == "" || item.Metadata["profile_id"] == profileID {
@@ -227,9 +227,9 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	s.profileMu.RLock()
+	s.stateMu.RLock()
 	activeProfile := s.activeProfile
-	s.profileMu.RUnlock()
+	s.stateMu.RUnlock()
 	var input struct {
 		Name         string `json:"name"`
 		Title        string `json:"title"`
@@ -406,8 +406,8 @@ func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) capturedActiveProfile() string {
-	s.profileMu.RLock()
-	defer s.profileMu.RUnlock()
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	return s.activeProfile
 }
 

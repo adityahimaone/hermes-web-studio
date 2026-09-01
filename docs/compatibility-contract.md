@@ -187,7 +187,7 @@ The workspace surface is backed by one server-owned root. Set
 `HERMES_WEBUI_DEFAULT_WORKSPACE` to choose it; when unset, the backend creates
 `~/.hermes/webui/workspace` with private permissions. Browser paths are always
 relative to that root. Absolute paths, traversal, backslash-separated paths,
-and symlinks resolving outside the root are rejected.
+and symlinks resolving outside the root are rejected. This is a pre-operation containment check; residual symlink replacement TOCTOU remains possible between validation and filesystem use, so the contract does not claim absolute elimination.
 
 The BFF exposes `GET /api/workspace/tree?path=.`,
 `GET /api/workspace/preview?path=...`, `GET /api/workspace/download?path=...`,
