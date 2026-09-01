@@ -361,7 +361,7 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if format == "json" {
-		payload := map[string]any{"session_id": item.ID, "title": item.Title, "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": make([]any, 0, len(item.Messages))}
+		payload := map[string]any{"session_id": item.ID, "title": safeExportValue(item.Title), "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": make([]any, 0, len(item.Messages))}
 		messages := payload["messages"].([]any)
 		for _, raw := range item.Messages {
 			var message any
@@ -407,7 +407,8 @@ func safeExportValue(value any) any {
 		out := make(map[string]any, len(item))
 		for key, value := range item {
 			lower := strings.ToLower(key)
-			if strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || lower == "authorization" || strings.Contains(lower, "path") || strings.Contains(lower, "directory") || strings.Contains(lower, "dir") {
+			normalized := strings.NewReplacer("_", "", "-", "").Replace(lower)
+			if strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(normalized, "apikey") || strings.Contains(normalized, "credential") || strings.Contains(normalized, "accesskey") || strings.Contains(normalized, "privatekey") || lower == "authorization" || strings.Contains(lower, "path") || strings.Contains(lower, "directory") || strings.Contains(lower, "dir") {
 				continue
 			}
 			out[key] = safeExportValue(value)

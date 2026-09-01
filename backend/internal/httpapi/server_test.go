@@ -456,6 +456,49 @@ func TestSessionDuplicateAndMarkdownExport(t *testing.T) {
 	}
 }
 
+func TestSessionJSONExportRedactsTitleAndSecretKeyVariants(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"session-json-secrets","title":"/home/private/workspace/session","messages":[{"role":"user","content":"hello","metadata":{"apiKey":"camel-secret","private_key":"underscore-secret","credential":"credential-secret","accessKey":"access-secret","nested":{"APIKEY":"upper-secret","privateKey":"camel-private-secret"},"safe":"kept"}}]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "session-json-secrets.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+
+	response, err := http.Get(api.URL + "/api/sessions/session-json-secrets/export?format=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("export status=%d body=%s", response.StatusCode, body)
+	}
+	var exported map[string]any
+	if err := json.Unmarshal(body, &exported); err != nil {
+		t.Fatalf("invalid JSON export: %v", err)
+	}
+	if exported["title"] != "[redacted]" {
+		t.Fatalf("title leaked: %#v", exported["title"])
+	}
+	text := string(body)
+	for _, secret := range []string{"camel-secret", "underscore-secret", "credential-secret", "access-secret", "upper-secret", "camel-private-secret", "/home/private/workspace/session"} {
+		if strings.Contains(text, secret) {
+			t.Fatalf("unsafe JSON export contains %q: %s", secret, body)
+		}
+	}
+	if !strings.Contains(text, `"safe": "kept"`) {
+		t.Fatalf("safe metadata missing: %s", body)
+	}
+}
+
 func TestSessionJSONExportIsSafeAttachment(t *testing.T) {
 	stateDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
