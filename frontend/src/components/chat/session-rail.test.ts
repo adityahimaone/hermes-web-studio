@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -13,6 +13,14 @@ describe('session filter accessibility', () => {
     ['dynamic tag unselected', 'all', 'work', false],
   ])('%s', (_label, selected, value, expected) => {
     expect(filterAriaPressed(selected, value)).toBe(expected)
+  })
+})
+
+describe('session keyboard navigation', () => {
+  it('wraps ArrowDown and ArrowUp selection across visible session ids', () => {
+    expect(nextSessionId(['one', 'two', 'three'], 'one', 'next')).toBe('two')
+    expect(nextSessionId(['one', 'two', 'three'], 'one', 'previous')).toBe('three')
+    expect(nextSessionId(['one', 'two', 'three'], 'three', 'next')).toBe('one')
   })
 })
 
