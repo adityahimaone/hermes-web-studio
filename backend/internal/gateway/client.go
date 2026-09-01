@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Config struct {
@@ -113,7 +114,11 @@ func (c *Client) ResolveApproval(ctx context.Context, runID, choice string) erro
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.config.BaseURL+"/v1/runs/"+url.PathEscape(runID)+"/approval", bytes.NewReader(body))
+	baseURL, err := safeBaseURL(c.config.BaseURL)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/v1/runs/"+url.PathEscape(runID)+"/approval", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -170,13 +175,17 @@ func safeBaseURL(raw string) (string, error) {
 
 func cleanCatalogText(value string, limit int) string {
 	value = strings.Map(func(r rune) rune {
-		if r < 0x20 || r == 0x7f {
+		if r < 0x20 || (r >= 0x7f && r <= 0x9f) {
 			return -1
 		}
 		return r
 	}, strings.TrimSpace(value))
+	value = strings.ToValidUTF8(value, "")
 	if len(value) > limit {
-		return value[:limit]
+		value = value[:limit]
+		for !utf8.ValidString(value) {
+			value = value[:len(value)-1]
+		}
 	}
 	return value
 }
@@ -185,13 +194,17 @@ func (c *Client) BaseURL() string  { return c.config.BaseURL }
 func (c *Client) Configured() bool { return strings.TrimSpace(c.config.BaseURL) != "" }
 
 func (c *Client) Health(ctx context.Context) error {
+	baseURL, err := safeBaseURL(c.config.BaseURL)
+	if err != nil {
+		return err
+	}
 	paths := []string{"/health", "/v1/models"}
 	if c.config.APIKey != "" {
 		paths = []string{"/v1/models", "/health"}
 	}
 	var last error
 	for _, path := range paths {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.config.BaseURL+path, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
 		if err != nil {
 			return err
 		}
@@ -215,6 +228,10 @@ func (c *Client) Health(ctx context.Context) error {
 }
 
 func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)) (string, error) {
+	baseURL, err := safeBaseURL(c.config.BaseURL)
+	if err != nil {
+		return "", err
+	}
 	content := any(input.Message)
 	if len(input.Attachments) > 0 {
 		parts := []map[string]any{{"type": "text", "text": input.Message}}
@@ -246,7 +263,7 @@ func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)
 
 	streamCtx, cancel := context.WithTimeout(ctx, c.config.ReadTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(streamCtx, http.MethodPost, c.config.BaseURL+"/v1/chat/completions", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(streamCtx, http.MethodPost, baseURL+"/v1/chat/completions", bytes.NewReader(payload))
 	if err != nil {
 		return "", err
 	}
@@ -271,13 +288,17 @@ func (c *Client) Stream(ctx context.Context, input ChatRequest, emit func(Event)
 }
 
 func (c *Client) RunStream(ctx context.Context, input ChatRequest, emit func(Event)) (string, error) {
+	baseURL, err := safeBaseURL(c.config.BaseURL)
+	if err != nil {
+		return "", err
+	}
 	body, err := json.Marshal(map[string]any{"input": input.Message, "session_id": input.SessionID, "model": input.Model, "provider": input.Provider})
 	if err != nil {
 		return "", err
 	}
 	requestContext, cancel := context.WithTimeout(ctx, c.config.ReadTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(requestContext, http.MethodPost, c.config.BaseURL+"/v1/runs", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(requestContext, http.MethodPost, baseURL+"/v1/runs", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -297,7 +318,7 @@ func (c *Client) RunStream(ctx context.Context, input ChatRequest, emit func(Eve
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&started); err != nil || strings.TrimSpace(started.RunID) == "" {
 		return "", errors.New("Hermes Gateway returned no run ID")
 	}
-	eventsURL := c.config.BaseURL + "/v1/runs/" + url.PathEscape(started.RunID) + "/events"
+	eventsURL := baseURL + "/v1/runs/" + url.PathEscape(started.RunID) + "/events"
 	eventRequest, err := http.NewRequestWithContext(requestContext, http.MethodGet, eventsURL, nil)
 	if err != nil {
 		return "", err

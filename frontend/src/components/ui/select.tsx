@@ -1,21 +1,36 @@
-import { Children, useEffect, useId, useRef, useState, type ChangeEventHandler, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { Children, Fragment, useEffect, useId, useRef, useState, type ChangeEventHandler, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
-type Option = { value: string; label: ReactNode; disabled: boolean }
+type Option = { value: string; label: ReactNode; disabled: boolean; group?: string }
 type OptionElement = React.ReactElement<{ value?: string | number; disabled?: boolean; children?: ReactNode }>
+type GroupElement = React.ReactElement<{ label?: string; disabled?: boolean; children?: ReactNode }>
 
-function isOption(child: ReactNode): child is OptionElement {
+export function isOption(child: ReactNode): child is OptionElement {
   return typeof child === 'object' && child !== null && 'type' in child && child.type === 'option'
 }
 
-function readOptions(children: ReactNode): Option[] {
+function isGroup(child: ReactNode): child is GroupElement {
+  return typeof child === 'object' && child !== null && 'type' in child && child.type === 'optgroup'
+}
+
+function readOption(child: OptionElement, group?: string): Option {
+  const value = child.props.value === undefined ? String(child.props.children ?? '') : String(child.props.value)
+  return { value, label: child.props.children, disabled: Boolean(child.props.disabled), ...(group ? { group } : {}) }
+}
+
+export function readOptions(children: ReactNode): Option[] {
   return Children.toArray(children).flatMap(child => {
-    if (!isOption(child)) return []
-    const value = child.props.value === undefined ? String(child.props.children ?? '') : String(child.props.value)
-    return [{ value, label: child.props.children, disabled: Boolean(child.props.disabled) }]
+    if (isOption(child)) return [readOption(child)]
+    if (isGroup(child)) return Children.toArray(child.props.children).flatMap(option => isOption(option) ? [readOption(option, String(child.props.label ?? ''))] : [])
+    return []
   })
 }
+
+function readGroupLabel(options: Option[], index: number) {
+  return index === 0 || options[index - 1]?.group !== options[index]?.group ? options[index]?.group : undefined
+}
+
 
 export type SelectSize = 'default' | 'compact'
 
@@ -92,10 +107,13 @@ export function Select({ className, children, value, defaultValue, onChange, dis
       <ChevronDown size={13} className={cn('shrink-0 text-muted-foreground transition-transform duration-200', open && 'rotate-180 text-primary')} aria-hidden="true" />
     </button>
     {open && options.length > 0 && <div id={listboxId} role="listbox" aria-label={ariaLabel} className={cn('absolute left-0 z-[200] max-h-60 w-max min-w-full overflow-auto rounded-xl border border-border/80 bg-popover/95 p-1 text-popover-foreground shadow-2xl shadow-black/50 backdrop-blur-xl animate-in fade-in-0 zoom-in-95', openUp ? 'bottom-[calc(100%+0.4rem)]' : 'top-[calc(100%+0.4rem)]')}>
-      {options.map((option, index) => <button key={`${option.value}-${index}`} id={`${listboxId}-${index}`} type="button" role="option" aria-selected={index === selectedIndex} disabled={option.disabled} className={cn('flex min-h-7 w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[11px] font-medium outline-none transition-colors', index === activeIndex ? 'bg-primary/20 text-primary' : 'text-foreground/90 hover:bg-accent hover:text-foreground', option.disabled && 'cursor-not-allowed opacity-45')} onMouseEnter={() => setActiveIndex(index)} onClick={() => commit(index)}>
-        <span>{option.label}</span>
-        {index === selectedIndex && <span className="size-1.5 rounded-full bg-primary" />}
-      </button>)}
+      {options.map((option, index) => <Fragment key={`${option.value}-${index}`}>
+        {readGroupLabel(options, index) && <div role="presentation" className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{option.group}</div>}
+        <button id={`${listboxId}-${index}`} type="button" role="option" aria-selected={index === selectedIndex} disabled={option.disabled} className={cn('flex min-h-7 w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[11px] font-medium outline-none transition-colors', index === activeIndex ? 'bg-primary/20 text-primary' : 'text-foreground/90 hover:bg-accent hover:text-foreground', option.disabled && 'cursor-not-allowed opacity-45')} onMouseEnter={() => setActiveIndex(index)} onClick={() => commit(index)}>
+          <span>{option.label}</span>
+          {index === selectedIndex && <span className="size-1.5 rounded-full bg-primary" />}
+        </button>
+      </Fragment>)}
     </div>}
   </div>
 }

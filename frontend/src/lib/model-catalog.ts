@@ -12,8 +12,33 @@ export function normalizeModelCatalog(models: ModelCatalogItem[]): ModelCatalogI
 }
 
 function clean(value: string, limit: number) {
-  return value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, limit)
+  const sanitized = value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim()
+  let result = ''
+  for (const character of sanitized) {
+    if (new TextEncoder().encode(result + character).length > limit) break
+    result += character
+  }
+  return result
 }
+
+export function utf8Length(value: string, limit: number) {
+  return clean(value, limit)
+}
+
+export function modelKey(id: string, provider = '') {
+  return `${clean(provider, 128)}:${clean(id, 256)}`
+}
+
+export function findCatalogModel(models: ModelCatalogItem[], id: string, provider = '') {
+  const normalizedId = clean(id, 256)
+  const normalizedProvider = clean(provider, 128)
+  return models.find(model => model.id === normalizedId && (!normalizedProvider || model.provider === normalizedProvider))
+}
+
+export function validModelSelection(models: ModelCatalogItem[], id: string, provider = '') {
+  return id === 'default' || Boolean(findCatalogModel(models, id, provider))
+}
+
 
 export function searchModelCatalog(models: ModelCatalogItem[], query: string) {
   const needle = query.trim().toLowerCase()

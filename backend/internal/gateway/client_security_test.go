@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 )
 
 func TestModelsRejectsUnsafeBaseURLBeforeRequest(t *testing.T) {
@@ -14,6 +16,33 @@ func TestModelsRejectsUnsafeBaseURLBeforeRequest(t *testing.T) {
 		if _, err := New(Config{BaseURL: baseURL}).Models(context.Background()); err == nil {
 			t.Fatalf("expected rejection for %q", baseURL)
 		}
+	}
+}
+
+func TestAllGatewayRequestPathsRejectUnsafeBaseURL(t *testing.T) {
+	client := New(Config{BaseURL: "http://10.0.0.1:8642", ReadTimeout: time.Millisecond})
+	if err := client.Health(context.Background()); err == nil {
+		t.Fatal("Health accepted unsafe base URL")
+	}
+	if _, err := client.Stream(context.Background(), ChatRequest{Message: "hello"}, func(Event) {}); err == nil {
+		t.Fatal("Stream accepted unsafe base URL")
+	}
+	if _, err := client.RunStream(context.Background(), ChatRequest{Message: "hello"}, func(Event) {}); err == nil {
+		t.Fatal("RunStream accepted unsafe base URL")
+	}
+	if err := client.ResolveApproval(context.Background(), "run-1", "deny"); err == nil {
+		t.Fatal("ResolveApproval accepted unsafe base URL")
+	}
+}
+
+func TestCleanCatalogTextRemovesC1ControlsAndPreservesUTF8(t *testing.T) {
+	value := cleanCatalogText(" model-\u0085\u009f-🙂 ", 256)
+	if value != "model--🙂" || !utf8.ValidString(value) {
+		t.Fatalf("cleaned=%q valid=%v", value, utf8.ValidString(value))
+	}
+	truncated := cleanCatalogText("🙂🙂🙂", 8)
+	if truncated != "🙂🙂" || !utf8.ValidString(truncated) {
+		t.Fatalf("truncated=%q valid=%v", truncated, utf8.ValidString(truncated))
 	}
 }
 
@@ -26,7 +55,9 @@ func TestModelsDoesNotFollowUnsafeRedirect(t *testing.T) {
 	}))
 	defer redirect.Close()
 	_, _ = New(Config{BaseURL: redirect.URL}).Models(context.Background())
-	if internalHit { t.Fatal("model request followed redirect") }
+	if internalHit {
+		t.Fatal("model request followed redirect")
+	}
 }
 
 func TestModelsNormalizesAndDeduplicatesCatalog(t *testing.T) {

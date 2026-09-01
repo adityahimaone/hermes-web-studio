@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { selectTriggerClassName } from './select'
+import { createElement } from 'react'
+import { readOptions, selectTriggerClassName } from './select'
 
 describe('select primitive', () => {
   it('keeps default fields consistent with reference controls', () => {
@@ -26,5 +27,10 @@ describe('select primitive', () => {
 
     expect(classes).not.toContain('min-h-9')
     expect(classes).toContain('h-7')
+  })
+
+  it('flattens optgroup options with provider labels', () => {
+    const children = createElement('optgroup', { label: 'OpenAI' }, createElement('option', { value: 'gpt-5' }, 'GPT-5'))
+    expect(readOptions(children)).toEqual([{ value: 'gpt-5', label: 'GPT-5', disabled: false, group: 'OpenAI' }])
   })
 })

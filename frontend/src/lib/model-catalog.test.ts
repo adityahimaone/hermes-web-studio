@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from './model-catalog'
+import { utf8Length } from './model-catalog'
+import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from './model-catalog'
 
 describe('model catalog', () => {
   const models = [
@@ -27,5 +28,15 @@ describe('model catalog', () => {
 
   it('reports no visible results after filtering', () => {
     expect(searchModelCatalog(models, 'missing')).toHaveLength(0)
+  })
+
+  it('truncates by UTF-8 bytes without splitting characters', () => {
+    expect(utf8Length('🙂🙂🙂', 8)).toBe('🙂🙂')
+  })
+
+  it('rejects unavailable model/provider selections', () => {
+    expect(validModelSelection(models, 'missing', 'openai')).toBe(false)
+    expect(validModelSelection(models, 'gpt-test', 'anthropic')).toBe(false)
+    expect(validModelSelection(models, 'gpt-test', 'openai')).toBe(true)
   })
 })

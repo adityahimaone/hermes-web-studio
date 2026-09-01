@@ -7,7 +7,7 @@ import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/tu
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
 import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
-import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
+import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from '../../lib/model-catalog'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -53,8 +53,16 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
     return () => controller.abort()
   }, [])
 
-  const visibleModels = searchModelCatalog(normalizeModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false }))), modelSearch)
+  const normalizedCatalog = normalizeModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false })))
+  const visibleModels = searchModelCatalog(normalizedCatalog, modelSearch)
   const modelGroups = groupModelCatalog(visibleModels)
+
+  useEffect(() => {
+    if (!validModelSelection(normalizedCatalog, model, provider)) {
+      setModel('default')
+      setProvider('')
+    }
+  }, [catalog, model, provider])
 
   useEffect(() => {
     const input = ref.current
