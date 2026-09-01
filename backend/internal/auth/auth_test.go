@@ -1,6 +1,11 @@
 package auth
 
-import "testing"
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestPasswordSetupLoginAndSignedCookie(t *testing.T) {
 	s, err := New(t.TempDir())
@@ -22,6 +27,20 @@ func TestPasswordSetupLoginAndSignedCookie(t *testing.T) {
 	}
 	if _, err := s.Login("127.0.0.1", "wrong"); err == nil {
 		t.Fatal("wrong password accepted")
+	}
+}
+
+func TestPersistDoesNotUseSharedTempName(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Setup("correct horse battery"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "auth.json.tmp")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("shared temp exists: %v", err)
 	}
 }
 

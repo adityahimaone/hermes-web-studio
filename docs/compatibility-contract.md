@@ -8,7 +8,7 @@ Kanban uses native Hermes state through a server-side transport adapter. The
 CLI is the default transport; an authenticated Hermes Dashboard may be used
 when configured and healthy. The browser never receives the CLI path, Dashboard
 session token, provider key, subprocess details, or native action output. Native
-task action success responses contain only stable action status fields.
+Native board, task, create, dispatch, and action responses use stable allowlisted projections; arbitrary CLI fields (including workspace paths, secrets, and subprocess details) never reach browser. Action success responses contain only stable action status fields.
 
 The canonical statuses are `triage`, `todo`, `scheduled`, `ready`, `running`,
 `blocked`, `review`, `done`, and `archived`. Studio stores the selected board

@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -130,12 +131,41 @@ func (s *Service) signature(value string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 func (s *Service) persist() error {
-	data, _ := json.Marshal(s.data)
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0600); err != nil {
+	data, err := json.Marshal(s.data)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.path)
+	lock, err := os.OpenFile(s.path+".lock", os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
+		return err
+	}
+	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+	tmp, err := os.CreateTemp(filepath.Dir(s.path), ".auth-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, s.path)
 }
 func hash(password, secret string) string {
 	sum := sha256.Sum256([]byte(secret + "\x00" + password))

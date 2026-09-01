@@ -65,7 +65,7 @@ func (s *Server) handleKanbanBoards(w http.ResponseWriter, r *http.Request) {
 		writeKanbanError(w, err)
 		return
 	}
-	writeRawJSON(w, out)
+	writeKanbanProjection(w, http.StatusOK, out)
 }
 
 func (s *Server) handleKanbanBoardNative(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func (s *Server) handleKanbanBoardNative(w http.ResponseWriter, r *http.Request)
 		writeKanbanError(w, err)
 		return
 	}
-	writeRawJSON(w, out)
+	writeKanbanProjection(w, http.StatusOK, out)
 }
 
 func (s *Server) handleKanbanTaskNative(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ func (s *Server) handleKanbanTaskNative(w http.ResponseWriter, r *http.Request) 
 		writeKanbanError(w, err)
 		return
 	}
-	writeRawJSON(w, out)
+	writeKanbanProjection(w, http.StatusOK, out)
 }
 
 type nativeKanbanCreate struct {
@@ -192,7 +192,7 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 		writeKanbanError(w, err)
 		return
 	}
-	writeRawJSONStatus(w, http.StatusCreated, out)
+	writeKanbanProjection(w, http.StatusCreated, out)
 }
 
 func (s *Server) canonicalKanbanWorkspace(value string) (string, bool) {
@@ -258,7 +258,7 @@ func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Reque
 		writeKanbanError(w, err)
 		return
 	}
-	writeRawJSON(w, out)
+	writeKanbanProjection(w, http.StatusOK, out)
 }
 
 func (s *Server) handleKanbanEventsNative(w http.ResponseWriter, r *http.Request) {
@@ -283,22 +283,71 @@ func writeKanbanError(w http.ResponseWriter, err error) {
 	writeError(w, http.StatusBadGateway, "kanban_unavailable", message)
 }
 
-func writeRawJSON(w http.ResponseWriter, data []byte) {
+func writeKanbanProjection(w http.ResponseWriter, status int, data []byte) {
 	value, err := extractJSON(data)
 	if err != nil {
-		writeError(w, 502, "kanban_invalid_response", "Hermes returned an invalid Kanban response.")
+		writeError(w, http.StatusBadGateway, "kanban_invalid_response", "Hermes returned an invalid Kanban response.")
 		return
 	}
-	writeJSON(w, http.StatusOK, value)
+	writeJSON(w, status, sanitizeKanbanProjection(value))
 }
 
-func writeRawJSONStatus(w http.ResponseWriter, status int, data []byte) {
-	value, err := extractJSON(data)
-	if err != nil {
-		writeError(w, 502, "kanban_invalid_response", "Hermes returned an invalid Kanban response.")
-		return
+func sanitizeKanbanProjection(value any) any {
+	// Keep browser output limited to fields consumed by kanban-client. In
+	// particular, never project arbitrary CLI JSON, workspace paths, or runs.
+	switch rows := value.(type) {
+	case []any:
+		out := make([]map[string]any, 0, len(rows))
+		for _, row := range rows {
+			if item, ok := row.(map[string]any); ok {
+				out = append(out, sanitizeKanbanItem(item))
+			}
+		}
+		return out
+	case map[string]any:
+		out := map[string]any{}
+		for _, key := range []string{"tasks", "boards"} {
+			if rows[key] != nil {
+				out[key] = sanitizeKanbanProjection(rows[key])
+			}
+		}
+		for _, key := range []string{"tenants", "assignees"} {
+			if values, ok := rows[key].([]any); ok {
+				items := make([]string, 0, len(values))
+				for _, value := range values {
+					if text, ok := value.(string); ok && len(text) <= 256 {
+						items = append(items, text)
+					}
+				}
+				out[key] = items
+			}
+		}
+		if stats, ok := rows["stats"].(map[string]any); ok {
+			safeStats := map[string]any{}
+			for key, value := range stats {
+				if number, ok := value.(float64); ok && len(key) <= 64 {
+					safeStats[key] = number
+				}
+			}
+			out["stats"] = safeStats
+		}
+		if len(out) == 0 {
+			return sanitizeKanbanItem(rows)
+		}
+		return out
+	default:
+		return map[string]any{}
 	}
-	writeJSON(w, status, value)
+}
+
+func sanitizeKanbanItem(item map[string]any) map[string]any {
+	out := map[string]any{}
+	for _, key := range []string{"id", "title", "body", "status", "assignee", "tenant", "priority", "comment_count", "created_at", "updated_at", "slug", "name", "task_count", "archived", "parents", "children", "skills"} {
+		if value, ok := item[key]; ok {
+			out[key] = value
+		}
+	}
+	return out
 }
 
 // extractJSON accepts the machine-readable document while tolerating harmless

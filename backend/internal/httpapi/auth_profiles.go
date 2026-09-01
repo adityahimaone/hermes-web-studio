@@ -165,11 +165,12 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	if !decodeBody(w, r, &patch) {
 		return
 	}
+	providerAvailable := patch.ProviderID == "" || s.providerExists(patch.ProviderID)
 	s.profileMu.Lock()
 	defer s.profileMu.Unlock()
 	for i := range s.profiles {
 		if s.profiles[i].ID == patch.ID {
-			if patch.ProviderID != "" && s.profiles[i].ID == s.activeProfile && !s.providerExists(patch.ProviderID) {
+			if patch.ProviderID != "" && s.profiles[i].ID == s.activeProfile && !providerAvailable {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The active profile cannot reference an unavailable provider.")
 				return
 			}
@@ -291,11 +292,12 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 	if !decodeBody(w, r, &input) {
 		return
 	}
+	providers := s.providerIDs()
 	s.profileMu.Lock()
 	defer s.profileMu.Unlock()
 	for _, p := range s.profiles {
 		if p.ID == input.ID {
-			if p.ProviderID != "" && !s.providerExists(p.ProviderID) {
+			if p.ProviderID != "" && !providers[p.ProviderID] {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The profile references an unavailable provider.")
 				return
 			}
@@ -317,6 +319,16 @@ func (s *Server) providerExists(id string) bool {
 	}
 	return false
 }
+func (s *Server) providerIDs() map[string]bool {
+	s.providerMu.RLock()
+	defer s.providerMu.RUnlock()
+	ids := make(map[string]bool, len(s.providers))
+	for _, item := range s.providers {
+		ids[item.ID] = true
+	}
+	return ids
+}
+
 func (s *Server) handleAuthProviders(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"password": true, "trusted_header": s.config.AuthTrustedHeader != "", "oidc": s.config.OIDCIssuer != "", "passkey": false, "oidc_issuer": s.config.OIDCIssuer})
 }

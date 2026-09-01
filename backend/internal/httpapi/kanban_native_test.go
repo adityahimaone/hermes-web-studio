@@ -53,7 +53,7 @@ func nativeCLITestServer(t *testing.T) *httptest.Server {
 case "$*" in
   *"stats --json"*) printf '%s' '{"ready":1,"done":2}' ;;
   *"boards list"*) printf '%s' '[{"slug":"default","name":"Default","task_count":3}]' ;;
-  *"list --json"*) printf '%s' '[{"id":"t_1","title":"Ship board","status":"ready","priority":2,"comment_count":1,"parents":[],"children":[]}]' ;;
+  *"list --json"*) printf '%s' '[{"id":"t_1","title":"Ship board","status":"ready","priority":2,"comment_count":1,"parents":[],"children":[],"workspace":"/srv/private/task","secret":"secret-token","subprocess":"/usr/bin/hermes"}]' ;;
   *"create"*) printf '%s' '{"id":"t_new","title":"Created","status":"ready"}' ;;
   *"complete"*) printf '%s' 'completed /srv/private/task\nsubprocess: /usr/bin/hermes --api-key secret-token\n{"ok":true}' ;;
   *) printf '%s' '{"ok":true}' ;;
@@ -80,6 +80,25 @@ func TestNativeKanbanBoardUsesCLIJSON(t *testing.T) {
 	body, _ := io.ReadAll(response.Body)
 	if !strings.Contains(string(body), "t_1") {
 		t.Fatalf("body=%s", body)
+	}
+}
+
+func TestNativeKanbanBoardSanitizesCLIFields(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	response, err := http.Get(server.URL + "/api/kanban/board?board=default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	body, _ := io.ReadAll(response.Body)
+	for _, secret := range []string{"/srv/private/task", "secret-token", "subprocess", "environment"} {
+		if strings.Contains(string(body), secret) {
+			t.Fatalf("private CLI field leaked: %q in %s", secret, body)
+		}
+	}
+	if !strings.Contains(string(body), "t_1") {
+		t.Fatalf("safe task missing: %s", body)
 	}
 }
 
