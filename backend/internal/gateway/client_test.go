@@ -41,6 +41,31 @@ func TestParseSSESurfacesRunFailure(t *testing.T) {
 	}
 }
 
+func TestParseSSERejectsFailureInAnyChoice(t *testing.T) {
+	input := "data: {\"choices\":[{\"delta\":{\"content\":\"safe\"}},{\"finish_reason\":\"error\",\"message\":{\"content\":\"secret provider detail\"}}]}\n\n"
+	var events []Event
+	_, err := parseSSE(strings.NewReader(input), func(event Event) { events = append(events, event) })
+	if err == nil || !strings.Contains(err.Error(), "Hermes completion failed") || strings.Contains(err.Error(), "secret provider detail") {
+		t.Fatalf("err=%v events=%#v", err, events)
+	}
+	if len(events) != 0 {
+		t.Fatalf("events=%#v", events)
+	}
+}
+
+func TestParseSSERejectsHermesFailedPayloadShapes(t *testing.T) {
+	for _, payload := range []string{
+		`{"hermes":{"failed":true}}`,
+		`{"hermes.failed":true}`,
+		`{"hermes_failed":true}`,
+	} {
+		_, err := parseSSE(strings.NewReader("data: "+payload+"\n\n"), func(Event) {})
+		if err == nil || !strings.Contains(err.Error(), "Hermes completion failed") {
+			t.Fatalf("payload=%s err=%v", payload, err)
+		}
+	}
+}
+
 func TestParseSSERunCompletedDoesNotRepeatStreamedAnswer(t *testing.T) {
 	input := strings.Join([]string{
 		"data: {\"choices\":[{\"delta\":{\"content\":\"Hello Hermes\"}}]}", "",

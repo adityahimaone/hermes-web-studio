@@ -8,6 +8,19 @@ The Go service connects to the Hermes Gateway/API Server instead of importing th
 
 The adapter uses `POST /v1/chat/completions` with streaming enabled. Approval decisions use the Gateway Runs API at `POST /v1/runs/{run_id}/approval`; run creation remains owned by Hermes and is not duplicated in the BFF.
 
+## ADR-058 - Keep live chat claims closed when provider credits are unavailable
+
+**Status:** accepted
+
+The current live Hermes probe is blocked by provider HTTP 402 insufficient
+credits. Keep live smoke and live chat proof unclaimed until a real provider
+completion is observed. Gateway failure payloads emit only the generic
+controlled error `Hermes completion failed.` and are never persisted as
+assistant content.
+
+**Reason:** Automated and local evidence cannot replace provider-backed live
+proof, and upstream failure details must not leak to the browser or transcript.
+
 ## ADR-002 — Compatibility BFF
 
 The browser uses the original two-step shape: start a turn, then subscribe to a stream. The BFF normalizes Gateway-specific frames to `token`, `reasoning`, `tool`, `tool_complete`, `done`, `cancel`, and `apperror` events.

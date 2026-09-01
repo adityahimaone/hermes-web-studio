@@ -469,6 +469,20 @@ func missingSuffix(current, completed string) string {
 }
 
 func translate(sseName string, payload map[string]any) ([]Event, string, error) {
+	hermes, _ := payload["hermes"].(map[string]any)
+	failedFinish := false
+	if choices, ok := payload["choices"].([]any); ok {
+		for _, rawChoice := range choices {
+			choice, ok := rawChoice.(map[string]any)
+			if ok && stringValue(choice["finish_reason"]) == "error" {
+				failedFinish = true
+				break
+			}
+		}
+	}
+	if boolValue(payload["hermes.failed"]) || boolValue(payload["hermes_failed"]) || boolValue(hermes["failed"]) || failedFinish {
+		return nil, "", errors.New("Hermes completion failed.")
+	}
 	name := stringValue(payload["event"])
 	if name == "" {
 		name = stringValue(payload["type"])

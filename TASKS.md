@@ -16,8 +16,8 @@ Status legend: `[x]` implemented and verified with automated tests, `[~]` implem
 - [x] Verify production frontend build (114.27 KiB gzip JS at M0)
 - [x] Suppress duplicate completion output when Gateway sends deltas and `run.completed.output`
 - [x] Add graceful shutdown, server timeouts, and a production container/reverse proxy baseline
-- [x] Run live Hermes smoke test using operator credentials
-- [x] Record live proof: date, Hermes version, model/provider, first-token latency, final response
+- [~] Run live Hermes smoke test using operator credentials (current probe blocked by provider HTTP 402 insufficient credits)
+- [~] Record live proof: date, Hermes version, model/provider, first-token latency, final response (current probe blocked by provider HTTP 402 insufficient credits; live chat remains unclaimed)
 
 Production baseline is available with `docker build -t hermes-web-studio:local .`. Configure the Gateway URL and key as container environment variables. The image serves the built frontend through Nginx and keeps the Go BFF and Gateway credentials server-side.
 
