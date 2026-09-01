@@ -49,6 +49,14 @@ func TestKanbanCLIRejectsOversizedOutputBeforeJSONParse(t *testing.T) {
 	}
 }
 
+func TestKanbanArgumentListsRejectWhitespaceThatWouldBeNormalized(t *testing.T) {
+	for _, values := range [][]string{{" parent"}, {"skill "}} {
+		if err := validateKanbanArgumentList(values); err == nil {
+			t.Fatalf("whitespace-padded argument accepted: %#v", values)
+		}
+	}
+}
+
 func TestNativeKanbanRoutesRejectHostileBoundaryValues(t *testing.T) {
 	server := nativeCLITestServer(t)
 	defer server.Close()

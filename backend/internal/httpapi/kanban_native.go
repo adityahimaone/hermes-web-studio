@@ -67,7 +67,7 @@ func validateKanbanArgumentList(values []string) error {
 		return errors.New("too many kanban arguments")
 	}
 	for _, value := range values {
-		if err := validateKanbanArgument(strings.TrimSpace(value), false); err != nil {
+		if err := validateKanbanArgument(value, false); err != nil {
 			return err
 		}
 	}
