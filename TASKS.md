@@ -163,7 +163,7 @@ personal source as the new acceptance baseline.
 
 ## M9 — Workbench and operator parity
 
-- [~] P027 Replace the single-root workspace abstraction with reference-compatible registered Spaces, active inheritance, ordering, health, suggestions, and profile-local state (server-owned registration, activation, and health added; inheritance/order/suggestions/profile-local state remain)
+- [~] P027 Replace the single-root workspace abstraction with reference-compatible registered Spaces, active inheritance, ordering, health, suggestions, and profile-local state (server-owned stable registry with local/remote metadata, ordering, health, create/list/activate/delete validation, active deletion protection, remote-unavailable preservation, and Spaces UI contract tests added; inheritance, suggestions, profile-local activation, update UI, and browser evidence remain)
 - [~] P028 Complete lazy tree/breadcrumb/filemap, hidden-file rules, broad preview matrix, copy paths, open/reveal, create/edit/move/rename/delete, upload/paste/extract, and size limits (tree/preview/edit/basic CRUD/upload/download/copy/open and safe containment added; paste/extract/lazy filemap/reveal and broader preview matrix remain)
 - [~] P029 Complete workspace Artifacts and optional Todos projections with independent panel state and stream-safe persistence (server-owned Todos projection and explicit Artifacts empty state retained; Artifacts contract remains)
 - [~] P030 Add contained terminal start/input/output/resize/close and prove process ownership/cleanup on success, error, cancel, replacement, and disconnect (explicit unavailable capability and safe UI state added; contained process lifecycle remains)

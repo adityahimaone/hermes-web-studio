@@ -3,9 +3,11 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -174,7 +176,100 @@ func (s *Server) handleSpaces(w http.ResponseWriter, r *http.Request) {
 			items[i].Metadata["active"] = "true"
 		}
 	}
-	writeJSON(w, 200, map[string]any{"spaces": items, "active": active})
+	writeJSON(w, 200, map[string]any{"spaces": spacePayloads(items, active), "active": active})
+}
+
+func spacePayloads(items []control.Item, active string) []map[string]any {
+	sort.SliceStable(items, func(i, j int) bool { return items[i].Metadata["order"] < items[j].Metadata["order"] })
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		metadata := item.Metadata
+		if metadata == nil {
+			metadata = map[string]string{}
+		}
+		row := map[string]any{"id": item.ID, "name": item.Title, "title": item.Title, "location_kind": metadata["location_kind"], "workspace_ref": metadata["workspace_ref"], "order": metadata["order"], "health": metadata["health"], "profile_id": metadata["profile_id"], "active": item.ID == active}
+		if row["location_kind"] == "" {
+			row["location_kind"] = "local"
+		}
+		if row["health"] == "" {
+			row["health"] = item.Status
+		}
+		result = append(result, row)
+	}
+	return result
+}
+
+func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	var input struct {
+		Name         string `json:"name"`
+		Title        string `json:"title"`
+		LocationKind string `json:"location_kind"`
+		WorkspaceRef string `json:"workspace_ref"`
+		Order        int    `json:"order"`
+		ProfileID    string `json:"profile_id"`
+	}
+	if !decodeBody(w, r, &input) {
+		return
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		name = strings.TrimSpace(input.Title)
+	}
+	kind := strings.TrimSpace(input.LocationKind)
+	if kind == "" {
+		kind = "local"
+	}
+	if name == "" || (kind != "local" && kind != "remote") || strings.TrimSpace(input.WorkspaceRef) == "" {
+		writeError(w, http.StatusBadRequest, "space_invalid", "Space name, location kind, and workspace reference are required.")
+		return
+	}
+	if input.ProfileID == "" {
+		input.ProfileID = s.activeProfile
+	}
+	metadata := map[string]string{"location_kind": kind, "workspace_ref": strings.TrimSpace(input.WorkspaceRef), "order": fmt.Sprint(input.Order), "profile_id": input.ProfileID}
+	if kind == "remote" {
+		metadata["health"] = "unavailable"
+		metadata["transport"] = "configured-remote"
+	} else {
+		metadata["health"] = "ready"
+	}
+	created, err := store.Create("spaces", control.Item{Title: name, Status: metadata["health"], Metadata: metadata})
+	if err != nil {
+		writeError(w, 400, "space_invalid", "The space could not be registered.")
+		return
+	}
+	if store.Preferences()["active_space"] == "" {
+		_ = store.SetPreferences(map[string]string{"active_space": created.ID})
+	}
+	writeJSON(w, http.StatusCreated, spacePayloads([]control.Item{created}, store.Preferences()["active_space"])[0])
+}
+
+func (s *Server) handleSpaceDelete(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.controlReady(w)
+	if !ok {
+		return
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		writeError(w, 400, "space_invalid", "The space ID is required.")
+		return
+	}
+	if store.Preferences()["active_space"] == id {
+		writeError(w, http.StatusConflict, "active_space_protected", "The active space cannot be deleted.")
+		return
+	}
+	if err := store.Delete("spaces", id); errors.Is(err, control.ErrNotFound) {
+		writeError(w, 404, "space_not_found", "The space was not found.")
+		return
+	} else if err != nil {
+		writeError(w, 500, "space_delete_failed", "The space could not be deleted.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
 func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
