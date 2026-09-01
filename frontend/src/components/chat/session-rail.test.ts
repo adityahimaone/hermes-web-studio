@@ -1,5 +1,9 @@
+import { act, createElement } from 'react'
+import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, formatBatchFailureMessage, nextSessionId, runBatchSessionAction, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, formatBatchFailureMessage, nextSessionId, runBatchSessionAction, sessionActionVisibilityClass, sessionRowAriaCurrent, SessionRail } from './session-rail'
+
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('session filter accessibility', () => {
   it.each([
@@ -73,6 +77,50 @@ describe('batch session actions', () => {
 
   it('formats failed ids for an accessible batch result', () => {
     expect(formatBatchFailureMessage('archive', ['two', 'three'])).toBe('Could not archive 2 sessions: two, three.')
+  })
+
+  it.each(['archive', 'delete'] as const)('renders failed %s ids in visible alert after partial batch failure', async action => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const reactRoot = createRoot(root)
+    const sessions = [
+      { session_id: 'one', title: 'One', updated_at: '2026-09-01T00:00:00Z' },
+      { session_id: 'two', title: 'Two', updated_at: '2026-09-01T00:00:00Z' },
+      { session_id: 'three', title: 'Three', updated_at: '2026-09-01T00:00:00Z' },
+    ]
+    const fail = async (id: string) => { if (id === 'two' || id === 'three') throw new Error('temporary failure') }
+
+    await act(async () => {
+      reactRoot.render(createElement(SessionRail, { sessions, activeSessionId: 'one', onSelectSession: () => {}, onRename: async () => {}, onPin: () => {}, onArchive: fail, onDelete: fail, onNewChat: () => {}, loading: false, onToggle: () => {} }))
+    })
+    await act(async () => {
+      Array.from(root.querySelectorAll('button')).find(button => button.textContent === 'Select')?.click()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')?.click()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      root.querySelector<HTMLButtonElement>('button[aria-label="Select Two"]')?.click()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      root.querySelector<HTMLButtonElement>('button[aria-label="Select Three"]')?.click()
+      await Promise.resolve()
+    })
+    expect(root.textContent).toContain('3 selected')
+    await act(async () => {
+      Array.from(root.querySelectorAll('button')).find(button => button.textContent === (action === 'archive' ? 'Archive' : 'Delete'))?.click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const alert = root.querySelector<HTMLElement>('[role="alert"]')
+    expect(alert?.textContent).toContain('two')
+    expect(alert?.textContent).toContain('three')
+    reactRoot.unmount()
+    root.remove()
   })
 })
 
