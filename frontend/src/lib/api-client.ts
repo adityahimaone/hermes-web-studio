@@ -49,7 +49,8 @@ export async function getHermesHealth(signal?: AbortSignal) {
 }
 
 export type ModelCatalogItem = { id: string; name: string; provider?: string; aliases?: string[]; available?: boolean }
-export type ModelCatalogResponse = { status: 'ready' | 'unavailable'; models: ModelCatalogItem[]; message?: string }
+export type ModelCatalogStatus = 'loading' | 'ready' | 'unavailable' | 'error'
+export type ModelCatalogResponse = { status: ModelCatalogStatus; models: ModelCatalogItem[]; message?: string }
 export async function getModelCatalog(signal?: AbortSignal) {
   return readJson<ModelCatalogResponse>(await fetch('/api/models/catalog', { signal }))
 }

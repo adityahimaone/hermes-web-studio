@@ -124,7 +124,10 @@ an ID, display name, provider, aliases, and `available: true`. Gateway HTTP
 errors, invalid JSON, oversized responses, and catalogs over the explicit
 1,000-model item limit return HTTP `200` with
 `{ "status": "unavailable", "models": [], "message": "..." }`; the browser
-must not invent fallback or fake models. Upstream response bodies are bounded
+must not invent fallback or fake models. Browser state distinguishes `loading`
+(request pending), `error` (request failed), `unavailable` (server returned no
+usable catalog), and `ready`, including an explicit empty model list. Upstream
+response bodies are bounded
 to 1 MiB before parsing. IDs, providers, aliases, and other catalog text are
 trimmed, control-character stripped, byte-bounded, and deduplicated by the
 server.
@@ -132,7 +135,10 @@ server.
 If an active profile's model/provider is absent or unavailable in a normalized
 ready catalog, the composer preserves that profile selection, visibly marks it
 unavailable, and blocks submission until a valid catalog model or `default` is
-selected. A valid profile keeps normal default selection behavior.
+selected. While catalog status is `loading`, `unavailable`, or `error`, any
+non-`default` profile model is treated as stale and cannot be submitted. A
+ready empty catalog is shown as an explicit empty state; it does not create
+fake models. A valid profile keeps normal default selection behavior.
 
 Production credentials, session names, model inventories, workspace paths, and
 other private runtime data are never fixtures. Deterministic tests use sanitized

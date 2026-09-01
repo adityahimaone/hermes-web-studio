@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea'
 import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/turn-control'
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
-import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
+import { getModelCatalog, type ModelCatalogItem, type ModelCatalogStatus } from '../../lib/api-client'
 import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
 import { resolveComposerModel } from '../../lib/composer-state'
 
@@ -34,7 +34,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   const [provider, setProvider] = useState('')
   const [turnMode, setTurnMode] = useState<TurnMode>('queue')
   const [catalog, setCatalog] = useState<ModelCatalogItem[]>([])
-  const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading')
+  const [catalogStatus, setCatalogStatus] = useState<ModelCatalogStatus>('loading')
   const [modelSearch, setModelSearch] = useState('')
   const [contextOpen, setContextOpen] = useState(false)
   const activeProfile = profiles.find(profile => profile.id === profileId)
