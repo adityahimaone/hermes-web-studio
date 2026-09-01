@@ -126,7 +126,62 @@ describe('batch session actions', () => {
     root.remove()
   })
 
-  it('disables both batch actions while archive is in flight', async () => {
+  it.each(['archive', 'delete'] as const)('disables Done and session selection controls while %s is in flight, then restores controls after resolve', async action => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const reactRoot = createRoot(root)
+    let resolveAction!: () => void
+    const pending = () => new Promise<void>(resolve => { resolveAction = resolve })
+    const sessions = [
+      { session_id: 'one', title: 'One', updated_at: '2026-09-01T00:00:00Z' },
+      { session_id: 'two', title: 'Two', updated_at: '2026-09-01T00:00:00Z' },
+    ]
+
+    await act(async () => {
+      reactRoot.render(createElement(SessionRail, { sessions, activeSessionId: 'one', onSelectSession: () => {}, onRename: async () => {}, onPin: () => {}, onArchive: action === 'archive' ? pending : async () => {}, onDelete: action === 'delete' ? pending : async () => {}, onNewChat: () => {}, loading: false, onToggle: () => {} }))
+    })
+    await act(async () => { Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Select')?.click(); await Promise.resolve() })
+    await act(async () => { root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')?.click(); await Promise.resolve() })
+    const doneButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Done')
+    const selectionButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('button[aria-label^="Select"], button[aria-label^="Deselect"]'))
+    const actionButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === (action === 'archive' ? 'Archive' : 'Delete'))
+
+    await act(async () => { actionButton?.click(); await Promise.resolve() })
+    expect(doneButton?.disabled).toBe(true)
+    expect(selectionButtons.every(button => button.disabled)).toBe(true)
+
+    await act(async () => { resolveAction(); await Promise.resolve() })
+    expect(Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Select')?.disabled).toBe(false)
+    expect(Array.from(root.querySelectorAll<HTMLButtonElement>('button[aria-label^="Select"], button[aria-label^="Deselect"]')).every(button => !button.disabled)).toBe(true)
+    reactRoot.unmount()
+    root.remove()
+  })
+
+  it('re-enables controls and reports failed id when batch action rejects', async () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const reactRoot = createRoot(root)
+    let rejectAction!: (error: Error) => void
+    const reject = () => new Promise<void>((_resolve, rejectPromise) => { rejectAction = rejectPromise })
+    const sessions = [{ session_id: 'one', title: 'One', updated_at: '2026-09-01T00:00:00Z' }]
+
+    await act(async () => {
+      reactRoot.render(createElement(SessionRail, { sessions, activeSessionId: 'one', onSelectSession: () => {}, onRename: async () => {}, onPin: () => {}, onArchive: reject, onDelete: async () => {}, onNewChat: () => {}, loading: false, onToggle: () => {} }))
+    })
+    await act(async () => { Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Select')?.click(); await Promise.resolve() })
+    await act(async () => { root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')?.click(); await Promise.resolve() })
+    const archiveButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Archive')
+    await act(async () => { archiveButton?.click(); await Promise.resolve() })
+    expect(Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Done')?.disabled).toBe(true)
+    await act(async () => { rejectAction(new Error('temporary failure')); await Promise.resolve() })
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('one')
+    expect(Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Done')?.disabled).toBe(false)
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Deselect One"]')?.disabled).toBe(false)
+    reactRoot.unmount()
+    root.remove()
+  })
+
+  it.each(['archive', 'delete'] as const)('disables both batch actions while %s is in flight', async action => {
     const root = document.createElement('div')
     document.body.append(root)
     const reactRoot = createRoot(root)
