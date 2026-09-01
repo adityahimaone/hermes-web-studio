@@ -76,10 +76,11 @@ browser receives only authentication state, never password hashes, cookie
 signing material, Gateway keys, provider credentials, or raw profile config.
 Inflight pump and fallback work is bound to session epoch and AbortSignal. Journal restore claims session and epoch before assigning stream ownership, so hard reload can reconnect while stale restore cannot overwrite active state. Journal stores last received SSE ID, restored assistant messages retain persisted identity, and stale stream callbacks cannot mutate current state or start competing fallback lifecycles. Timeout reports error without adding empty assistant content. Pump catch cleanup also requires controller ownership, preventing cancelled turns from resetting queued replacements. Reload restore failures clear matching journal/stream state and expose generic retry-safe errors without private details.
 
-Remote binding is refused until authentication is configured. Trusted-header
-identity is opt-in for an already authenticated reverse proxy, while OIDC and
-WebAuthn remain explicit capability states until provider registration is
-configured.
+Remote binding is refused until authentication is configured. Client-supplied
+trusted-header authentication is disabled; the signed HttpOnly session cookie is
+authoritative. SSO remains capability-only until server-side proxy identity and
+boundary validation exists. OIDC and WebAuthn remain explicit capability states
+until provider registration is configured.
 
 Normal live-stream completion has no persisted assistant ID in browser SSE
 events, so it creates a local transcript ID. Poll fallback uses persisted IDs

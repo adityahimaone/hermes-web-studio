@@ -244,9 +244,10 @@ rate limited per client address. `POST /api/auth/logout` clears the cookie and
 When password auth is enabled, protected requests require the signed cookie.
 Mutating requests with an `Origin` header must match the request host. A
 non-loopback server refuses protected traffic until authentication is set up.
-`HERMES_WEBUI_TRUSTED_USER_HEADER` enables an explicitly configured trusted
-header for deployments behind an authenticated reverse proxy. It must not be
-used on an untrusted network.
+`HERMES_WEBUI_TRUSTED_USER_HEADER` does not enable client-supplied trusted-header
+authentication. The signed HttpOnly session cookie remains authoritative. SSO
+remains capability-only until server-side proxy identity and boundary validation
+exists.
 
 `GET /api/profiles` returns only safe profile IDs, names, models, providers,
 and health labels. `POST /api/profiles/active` switches the active profile.
