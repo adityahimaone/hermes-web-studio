@@ -28,6 +28,8 @@ type Client struct {
 	http   *http.Client
 }
 
+const maxCatalogModels = 1000
+
 type Model struct {
 	ID       string   `json:"id"`
 	Provider string   `json:"provider,omitempty"`
@@ -60,8 +62,12 @@ func (c *Client) Models(ctx context.Context) ([]Model, error) {
 			Aliases  []string `json:"aliases"`
 		} `json:"data"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload); err != nil {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
+	if err != nil || len(body) > 1<<20 || json.NewDecoder(bytes.NewReader(body)).Decode(&payload) != nil {
 		return nil, errors.New("Hermes Gateway returned an invalid model catalog")
+	}
+	if len(payload.Data) > maxCatalogModels {
+		return nil, errors.New("Hermes Gateway returned too many models")
 	}
 	models := make([]Model, 0, len(payload.Data))
 	seen := make(map[string]bool)

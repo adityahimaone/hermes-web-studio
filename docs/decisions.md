@@ -595,3 +595,8 @@ P023 model discovery uses Gateway `/v1/models` through BFF `/api/models/catalog`
 ## P023 model catalog boundary
 
 Catalog discovery accepts only local `http`/`https` Gateway URLs without userinfo, path, query, or fragment; loopback IPs and `localhost` remain valid for local Hermes. Redirects are disabled. Catalog IDs/providers/aliases are trimmed, control-character stripped, bounded, and deduplicated. Browser receives sanitized catalog state only.
+The server accepts at most 1,000 catalog items and reads at most 1 MiB of
+upstream response body; over-limit or malformed input fails closed as explicit
+`unavailable` state with an empty model list. The composer preserves an active
+profile's stale model/provider instead of silently replacing it, shows the
+unavailable state, and prevents send until valid model selection or `default`.

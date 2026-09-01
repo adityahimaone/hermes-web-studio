@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -37,5 +38,30 @@ func TestModelsRejectsUnavailableGateway(t *testing.T) {
 	defer server.Close()
 	if _, err := New(Config{BaseURL: server.URL}).Models(context.Background()); err == nil {
 		t.Fatal("expected unavailable gateway error")
+	}
+}
+
+func TestModelsRejectsCatalogOverMaximumItemCount(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		items := make([]map[string]string, maxCatalogModels+1)
+		for i := range items {
+			items[i] = map[string]string{"id": "model-" + string(rune('a'+i%26)) + strings.Repeat("x", i/26)}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": items})
+	}))
+	defer server.Close()
+	if _, err := New(Config{BaseURL: server.URL}).Models(context.Background()); err == nil {
+		t.Fatal("expected catalog item limit error")
+	}
+}
+
+func TestModelsRejectsResponseBodyOverOneMiB(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data":[]}` + strings.Repeat(" ", (1<<20))))
+	}))
+	defer server.Close()
+	if _, err := New(Config{BaseURL: server.URL}).Models(context.Background()); err == nil {
+		t.Fatal("expected oversized catalog body error")
 	}
 }

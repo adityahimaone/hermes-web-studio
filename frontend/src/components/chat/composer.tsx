@@ -7,7 +7,8 @@ import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/tu
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
 import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
-import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from '../../lib/model-catalog'
+import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
+import { resolveComposerModel } from '../../lib/composer-state'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -56,13 +57,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   const normalizedCatalog = normalizeModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false })))
   const visibleModels = searchModelCatalog(normalizedCatalog, modelSearch)
   const modelGroups = groupModelCatalog(visibleModels)
-
-  useEffect(() => {
-    if (!validModelSelection(normalizedCatalog, model, provider)) {
-      setModel('default')
-      setProvider('')
-    }
-  }, [catalog, model, provider])
+  const staleProfileModel = resolveComposerModel({ model, provider }, normalizedCatalog, catalogStatus).stale
 
   useEffect(() => {
     const input = ref.current
@@ -73,6 +68,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
 
   function submit() {
     if (!value.trim()) return
+    if (staleProfileModel) return
     if (value.trim().startsWith('/') && onCommand && localSlashCommand(value.trim())) {
       onCommand(value.trim())
       setValue('')
@@ -228,6 +224,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
             {catalogStatus === 'ready' && catalog.length === 0 && <span className="text-[10px] text-muted-foreground">No models available</span>}
             {catalogStatus === 'unavailable' && <span className="text-[10px] text-muted-foreground">Gateway catalog unavailable</span>}
             {catalogStatus === 'error' && <span role="status" className="text-[10px] text-destructive">Unable to load model catalog</span>}
+            {staleProfileModel && <span role="alert" className="text-[10px] text-destructive">Selected profile model unavailable; choose a valid model</span>}
 
             {/* Reasoning Effort / Turn Mode Pill */}
             <div className="relative inline-flex items-center">
@@ -271,7 +268,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
               type="button"
               size="icon"
               onClick={submit}
-              disabled={!value.trim()}
+              disabled={!value.trim() || staleProfileModel}
               aria-label={isStreaming ? 'Queue message' : 'Send message'}
               className="size-8 rounded-full bg-primary/90 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
             >
