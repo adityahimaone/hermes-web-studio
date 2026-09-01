@@ -125,7 +125,12 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 		return
 	}
 	board := strings.TrimSpace(r.URL.Query().Get("board"))
-	args := []string{"create", input.Title, "--json", "--workspace", workspaceValue(input.Workspace)}
+	workspace, ok := s.canonicalKanbanWorkspace(input.Workspace)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "workspace_invalid", "The task workspace reference is invalid or unavailable.")
+		return
+	}
+	args := []string{"create", input.Title, "--json", "--workspace", workspace}
 	if input.Body != "" {
 		args = append(args, "--body", input.Body)
 	}
@@ -176,12 +181,16 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 	writeRawJSONStatus(w, http.StatusCreated, out)
 }
 
-func workspaceValue(value string) string {
+func (s *Server) canonicalKanbanWorkspace(value string) (string, bool) {
 	value = strings.TrimSpace(value)
-	if value == "" {
-		return "scratch"
+	if value == "" || value == "scratch" {
+		return "scratch", true
 	}
-	return value
+	prefix, ref, ok := strings.Cut(value, ":")
+	if !ok || (prefix != "dir" && prefix != "worktree") || ref == "Remote workspace unavailable" || !safeSpaceRef(s, "local", ref) {
+		return "", false
+	}
+	return prefix + ":" + ref, true
 }
 
 func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Request) {

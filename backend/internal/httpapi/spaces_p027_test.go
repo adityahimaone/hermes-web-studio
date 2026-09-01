@@ -129,6 +129,19 @@ func TestSpacesP027ResolvesSymlinkBeforeContainment(t *testing.T) {
 	}
 }
 
+func TestSpacesP027RejectsMissingDescendantBehindSymlink(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: root}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+	if safeSpaceRef(server, "local", "link/missing/nested") {
+		t.Fatal("missing descendant behind escaping symlink accepted")
+	}
+}
+
 func TestSpacesP027SanitizesLegacyReferences(t *testing.T) {
 	item := control.Item{ID: "space-1", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "file:///secret"}}
 	if got := sanitizeSpaceRef(item); got == "file:///secret" || got == "" {

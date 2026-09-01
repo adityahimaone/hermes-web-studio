@@ -169,7 +169,20 @@ func (s *Server) handleSpaces(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "spaces_unavailable", "Spaces are unavailable.")
 		return
 	}
-	active := store.Preferences()["active_space"]
+	s.profileMu.RLock()
+	profileID := s.activeProfile
+	s.profileMu.RUnlock()
+	visible := items[:0]
+	for _, item := range items {
+		if item.Metadata["profile_id"] == "" || item.Metadata["profile_id"] == profileID {
+			visible = append(visible, item)
+		}
+	}
+	items = visible
+	active := store.Preferences()["active_space:"+profileID]
+	if active == "" {
+		active = store.Preferences()["active_space"]
+	}
 	for i := range items {
 		if items[i].ID == active {
 			if items[i].Metadata == nil {
@@ -261,8 +274,9 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		metadata["health"] = "ready"
 	}
-	active := store.Preferences()["active_space"]
-	created, err := store.CreateSpace(control.Item{Title: name, Status: metadata["health"], Metadata: metadata}, "active_space", active == "")
+	activeKey := "active_space:" + s.activeProfile
+	active := store.Preferences()[activeKey]
+	created, err := store.CreateSpace(control.Item{Title: name, Status: metadata["health"], Metadata: metadata}, activeKey, active == "")
 	if err != nil {
 		writeError(w, 500, "space_persist_failed", "The space could not be registered.")
 		return
@@ -307,12 +321,23 @@ func safeSpaceRef(s *Server, kind, ref string) bool {
 	realCandidate, err := filepath.EvalSymlinks(candidate)
 	if err == nil {
 		rel, relErr := filepath.Rel(realRoot, realCandidate)
-		return relErr == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+		return relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 	}
 	if !os.IsNotExist(err) {
 		return false
 	}
-	return candidate != root && strings.HasPrefix(candidate, root+string(filepath.Separator))
+	nearest := filepath.Dir(candidate)
+	for {
+		realNearest, resolveErr := filepath.EvalSymlinks(nearest)
+		if resolveErr == nil {
+			rel, relErr := filepath.Rel(realRoot, realNearest)
+			return relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+		}
+		if !os.IsNotExist(resolveErr) || nearest == root {
+			return false
+		}
+		nearest = filepath.Dir(nearest)
+	}
 }
 
 func sanitizeSpaceRef(item control.Item) string {
@@ -336,7 +361,11 @@ func (s *Server) handleSpaceDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "space_invalid", "The space ID is required.")
 		return
 	}
-	if err := store.SpaceMutation("spaces", id, "active_space", true); errors.Is(err, control.ErrNotFound) {
+	if !s.spaceOwnedByActiveProfile(store, id) {
+		writeError(w, http.StatusNotFound, "space_not_found", "The space was not found.")
+		return
+	}
+	if err := store.SpaceMutation("spaces", id, "active_space:"+s.activeProfile, true); errors.Is(err, control.ErrNotFound) {
 		writeError(w, 404, "space_not_found", "The space was not found.")
 		return
 	} else if err != nil {
@@ -365,7 +394,11 @@ func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "space_invalid", "The space ID is required.")
 		return
 	}
-	if err := store.SpaceMutation("spaces", input.ID, "active_space", false); err != nil {
+	if !s.spaceOwnedByActiveProfile(store, input.ID) {
+		writeError(w, http.StatusNotFound, "space_not_found", "The space was not found.")
+		return
+	}
+	if err := store.SpaceMutation("spaces", input.ID, "active_space:"+s.activeProfile, false); err != nil {
 		if errors.Is(err, control.ErrNotFound) {
 			writeError(w, 404, "space_not_found", "The space was not found.")
 		} else {
@@ -374,6 +407,22 @@ func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true, "active": input.ID})
+}
+
+func (s *Server) spaceOwnedByActiveProfile(store *control.Store, id string) bool {
+	items, err := store.List("spaces")
+	if err != nil {
+		return false
+	}
+	s.profileMu.RLock()
+	profileID := s.activeProfile
+	s.profileMu.RUnlock()
+	for _, item := range items {
+		if item.ID == id {
+			return item.Metadata["profile_id"] == "" || item.Metadata["profile_id"] == profileID
+		}
+	}
+	return false
 }
 
 func (s *Server) handleOperatorHealth(w http.ResponseWriter, _ *http.Request) {

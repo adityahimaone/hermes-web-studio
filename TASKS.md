@@ -62,7 +62,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [x] Skills (safe local discovery surface)
 - [~] Memory and external notes (safe local discovery surface; external source adapters remain)
 - [x] Todos and goals
-- [x] Spaces/projects
+- [x] Spaces/projects (profile-scoped active/list/use state; remote spaces remain unavailable to local Kanban execution)
 - [~] Slash commands and voice input (local /help and /clear commands plus browser speech input are implemented; provider transcription remains)
 - [~] Preferences, skins, locale, update status (theme/locale persistence and `/api/settings` compatibility aliases are implemented; skins/update registry remains)
 - [~] Background tasks and wakeups (capability reported unavailable until a durable scheduler contract exists)

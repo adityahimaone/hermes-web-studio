@@ -97,3 +97,13 @@ func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 		t.Fatalf("capabilities=%s", body)
 	}
 }
+
+func TestKanbanWorkspaceValueRejectsRemoteAndUnsafeReferences(t *testing.T) {
+	for _, value := range []string{"dir:Remote workspace unavailable", "dir:../secret", "dir:/tmp/private", "dir:ssh://host/path", "dir:~/.ssh"} {
+		cfg := config.Config{WorkspaceRoot: t.TempDir()}
+		server := NewWithGateway(cfg, nil)
+		if _, ok := server.canonicalKanbanWorkspace(value); ok {
+			t.Fatalf("unsafe workspace accepted: %q", value)
+		}
+	}
+}
