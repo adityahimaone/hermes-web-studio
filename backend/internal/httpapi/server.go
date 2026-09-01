@@ -418,7 +418,7 @@ func exportMessages(rawMessages []json.RawMessage) ([]map[string]any, error) {
 	return messages, nil
 }
 
-var privateExportPathToken = regexp.MustCompile(`(?i)(^|[\s"'(])(?:file://[^\s,;]+|[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|/(?:home|users|tmp|var|etc|root)/[^\s,;]+|~[/\\][^\s,;]+|(?:[A-Za-z0-9_.-]+[/\\])+(?:\.env|secrets?|private|credentials?)(?:[/\\][^\s,;]*)?|(?:secrets?|private|credentials?)[/\\][^\s,;]*)`)
+var privateExportPathToken = regexp.MustCompile(`(?i)(^|[\s"'(])(?:file://[^\s,;]+|[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|~[/\\][^\s,;]+|(?:\.\.?[/\\])+[^\s,;]+|/(?:[A-Za-z0-9_.~-]+[/\\]){1,}[A-Za-z0-9_.~-]+|(?:[A-Za-z0-9_.-]+[/\\])+(?:\.env|secrets?|private|credentials?)(?:[/\\][^\s,;]*)?|(?:secrets?|private|credentials?)[/\\][^\s,;]*)`)
 
 func safeExportValue(value any) any {
 	switch item := value.(type) {

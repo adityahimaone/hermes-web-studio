@@ -117,7 +117,7 @@ func TestSensitiveExportKeyDoesNotRedactUnrelatedKeyNames(t *testing.T) {
 }
 
 func TestSafeExportValueRedactsURIAndRelativePrivatePaths(t *testing.T) {
-	for _, path := range []string{"file:///home/user/.env", "file://C:/Users/name/key", "./.env", "../secrets/key", "../../private/file", "workspace/.env", "secrets/key", `workspace\\secrets/key`} {
+	for _, path := range []string{"file:///home/user/.env", "file://C:/Users/name/key", "./.env", "../secrets/key", "../../private/file", "workspace/.env", "secrets/key", `workspace\\secrets/key`, "/srv/private/file", "/opt/project/.env", "/var/lib/app/credentials.json", `C:\\Users\\name\\key.txt`, `\\\\server\\share\\secret.txt`} {
 		if got := safeExportValue(path); got != "[redacted]" {
 			t.Fatalf("path %q got %#v", path, got)
 		}
@@ -192,6 +192,9 @@ func TestSafeExportValueRedactsEmbeddedPrivatePathsWithoutBreakingURLs(t *testin
 		{"see file:///home/user/.env, then https://example.com/docs", "see [redacted], then https://example.com/docs"},
 		{`open C:\\Users\\name\\key.txt; \\server\\share\\secret.txt`, "open [redacted]; [redacted]"},
 		{"load workspace/.env and secrets/key", "load [redacted] and [redacted]"},
+		{"read /srv/private/file, then /opt/project/.env", "read [redacted], then [redacted]"},
+		{"open ./secret.txt and ../../private/file", "open [redacted] and [redacted]"},
+		{"open file://C:/Users/name/key.txt", "open [redacted]"},
 	} {
 		if got := safeExportValue(tc.in); got != tc.want {
 			t.Fatalf("input %q got %q want %q", tc.in, got, tc.want)
