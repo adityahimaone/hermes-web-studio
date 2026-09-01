@@ -117,12 +117,12 @@ func TestSensitiveExportKeyDoesNotRedactUnrelatedKeyNames(t *testing.T) {
 }
 
 func TestSafeExportValueRedactsURIAndRelativePrivatePaths(t *testing.T) {
-	for _, path := range []string{"file:///home/user/.env", "file://C:/Users/name/key", "./.env", "../secrets/key", "../../private/file"} {
+	for _, path := range []string{"file:///home/user/.env", "file://C:/Users/name/key", "./.env", "../secrets/key", "../../private/file", "workspace/.env", "secrets/key", `workspace\\secrets/key`} {
 		if got := safeExportValue(path); got != "[redacted]" {
 			t.Fatalf("path %q got %#v", path, got)
 		}
 	}
-	for _, text := range []string{"normal ./ prose", "normal ../ prose"} {
+	for _, text := range []string{"normal ./ prose", "normal ../ prose", "normal / slash", "https://example.com/docs"} {
 		if got := safeExportValue(text); got != text {
 			t.Fatalf("free-form text changed: %#v", got)
 		}
@@ -134,7 +134,7 @@ func TestMarkdownExportRedactsTitleAndMessagePaths(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	data := `{"session_id":"safe","title":"file:///home/user/private.md","messages":[{"role":"user","content":"../secrets/key"},{"role":"assistant","content":"ordinary **Markdown**"}]}`
+	data := `{"session_id":"safe","title":"workspace/.env","messages":[{"role":"user","content":"secrets/key"},{"role":"assistant","content":"ordinary **Markdown**"}]}`
 	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "safe.json"), []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestMarkdownExportRedactsTitleAndMessagePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(body)
-	for _, secret := range []string{"file:///home/user/private.md", "../secrets/key"} {
+	for _, secret := range []string{"workspace/.env", "secrets/key"} {
 		if strings.Contains(text, secret) {
 			t.Fatalf("markdown leaked %q: %s", secret, text)
 		}

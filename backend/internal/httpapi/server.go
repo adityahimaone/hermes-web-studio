@@ -468,6 +468,12 @@ func privateExportPath(value string) bool {
 	if strings.HasPrefix(value, "file://") || strings.HasPrefix(value, "./") || strings.HasPrefix(value, "../") || strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `\\`) {
 		return true
 	}
+	if strings.Contains(value, "://") {
+		return false
+	}
+	if strings.ContainsAny(value, "/\\") && !strings.ContainsAny(value, " 	\r\n") {
+		return true
+	}
 	return len(value) >= 3 && ((value[0] >= 'a' && value[0] <= 'z') || (value[0] >= 'A' && value[0] <= 'Z')) && value[1] == ':' && (value[2] == '/' || value[2] == '\\')
 }
 
