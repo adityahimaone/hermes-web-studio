@@ -12,6 +12,10 @@ The adapter uses `POST /v1/chat/completions` with streaming enabled. Approval de
 
 The browser uses the original two-step shape: start a turn, then subscribe to a stream. The BFF normalizes Gateway-specific frames to `token`, `reasoning`, `tool`, `tool_complete`, `done`, `cancel`, and `apperror` events.
 
+## ADR-057 - Keyboard-safe Kanban and mutation failures
+
+Kanban cards expose a visible native select for lane transitions, preserving drag-and-drop while providing keyboard and touch access with 44px targets. Space mutations and task-detail actions catch network failures and render sanitized messages in alert regions; no local fallback is introduced.
+
 ## ADR-054 - Partial batch session actions
 
 Batch archive and delete continue independent session actions after an individual
