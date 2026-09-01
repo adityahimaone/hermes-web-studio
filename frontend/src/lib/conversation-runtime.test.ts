@@ -49,10 +49,25 @@ describe('conversation runtime contracts', () => {
     expect(getSession).toHaveBeenCalledTimes(2)
   })
 
+  it('aborts polling and ignores pending completion', async () => {
+    const controller = new AbortController()
+    let resolve!: (value: { messages: ChatMessage[] }) => void
+    const getSession = vi.fn(() => new Promise<{ messages: ChatMessage[] }>((r) => { resolve = r }))
+    const pending = pollSessionUntilSettled(getSession, 0, 2, 0, controller.signal)
+    controller.abort()
+    resolve({ messages: [...messages, { id: 'same', role: 'assistant', content: 'done', status: 'complete' }] })
+    await expect(pending).resolves.toBeNull()
+  })
+
   it('times out expired stream polling without inventing transcript content', async () => {
     const getSession = vi.fn().mockResolvedValue({ messages })
     await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toBeNull()
     expect(getSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps identical assistant replies distinct across turns', async () => {
+    const getSession = vi.fn().mockResolvedValue({ messages: [...messages, { id: 'a2', role: 'assistant', content: 'hi', status: 'complete' }] })
+    await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toMatchObject({ id: 'a2', content: 'hi' })
   })
 
   it('keeps the lifecycle matrix explicit', () => { expect(lifecycleRows.map((row) => row.kind)).toEqual(['normal', 'error', 'cancel', 'switch', 'reload', 'reconnect', 'compression', 'recovery']) })

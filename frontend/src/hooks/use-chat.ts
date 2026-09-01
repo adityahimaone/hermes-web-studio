@@ -28,6 +28,8 @@ export function useChat() {
   const lastEventIdRef = useRef(0)
   const turnBaselineRef = useRef(0)
   const fallbackStreamRef = useRef<string | null>(null)
+  const pollControllerRef = useRef<AbortController | null>(null)
+  const sessionEpochRef = useRef(0)
   const chatStateRef = useRef<ChatState>(initialChatState)
   const pumpRef = useRef<(content: string, files?: File[], baseMessages?: ChatMessage[], options?: TurnOptions) => void>(() => undefined)
 
@@ -51,16 +53,16 @@ export function useChat() {
     })
     return () => controller.abort()
   }, [refreshSessions])
-  useEffect(() => closeSource, [closeSource])
+  useEffect(() => () => { closeSource(); pollControllerRef.current?.abort() }, [closeSource])
 
   const finish = useCallback((streamId: string, sessionId: string, state: ChatState, status: ChatMessage['status'] = 'complete') => {
     if (terminalRef.current === streamId) return
     if (streamIdRef.current !== streamId) return
-    terminalRef.current = streamId; closeSource(); streamIdRef.current = null
+    terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
-    if (activeSessionRef.current === sessionId && (state.answer || status !== 'complete')) setMessages((current) => current.some((message) => message.role === 'assistant' && message.content === state.answer) ? current : [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
+    if (activeSessionRef.current === sessionId && (state.answer || status !== 'complete')) setMessages((current) => [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
     chatStateRef.current = initialChatState
-    setStreamState(initialChatState)
+    setStreamState(status === 'error' ? { ...initialChatState, status: 'error', error: state.error } : initialChatState)
     void refreshSessions().catch(() => undefined)
     const next = queueRef.current.shift()
     setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
@@ -89,28 +91,34 @@ export function useChat() {
       if (activeSessionRef.current === sessionId) setStreamState(next)
     }))
     source.onerror = () => {
-      if (source.readyState !== EventSource.CLOSED || terminalRef.current === streamId || activeSessionRef.current !== sessionId || fallbackStreamRef.current === streamId) return
+      if ((source.readyState !== EventSource.CLOSED && source.readyState !== EventSource.CONNECTING) || terminalRef.current === streamId || activeSessionRef.current !== sessionId || fallbackStreamRef.current === streamId) return
       source.close()
       fallbackStreamRef.current = streamId
+      pollControllerRef.current?.abort()
+      const controller = new AbortController()
+      pollControllerRef.current = controller
+      const epoch = sessionEpochRef.current
       setStreamState((state) => ({ ...state, status: 'error', error: 'The Hermes stream closed unexpectedly. Reconnecting…' }))
       void pollSessionUntilSettled(
-        async () => getSession(sessionId),
+        async (signal) => getSession(sessionId, signal),
         turnBaselineRef.current,
         6,
         1000,
+        controller.signal,
       ).then((assistant) => {
-        if (!assistant || streamIdRef.current !== streamId || terminalRef.current === streamId) return
-        setMessages((current) => current.some((message) => message.role === 'assistant' && message.content === assistant.content) ? current : [...current, assistant])
-        finish(streamId, sessionId, { ...initialChatState, answer: assistant.content })
+        if (streamIdRef.current !== streamId || activeSessionRef.current !== sessionId || sessionEpochRef.current !== epoch || terminalRef.current === streamId) return
+        if (assistant) finish(streamId, sessionId, { ...initialChatState, answer: assistant.content })
+        else finish(streamId, sessionId, { ...initialChatState, error: 'Hermes stream did not settle before polling timed out.' }, 'error')
       }).catch(() => undefined).finally(() => {
         if (fallbackStreamRef.current === streamId) fallbackStreamRef.current = null
+        if (pollControllerRef.current === controller) pollControllerRef.current = null
       })
     }
   }, [finish])
 
   const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[], options?: TurnOptions) => {
     const clean = content.trim(); if (!clean) return
-    closeSource(); answerRef.current = ''; terminalRef.current = null; fallbackStreamRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
+    closeSource(); pollControllerRef.current?.abort(); answerRef.current = ''; terminalRef.current = null; fallbackStreamRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
     turnBaselineRef.current = (baseMessages || messages).length + 1
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
@@ -198,9 +206,11 @@ export function useChat() {
     setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
   }, [])
   const selectSession = useCallback(async (sessionId: string) => {
-    closeSource(); setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
+    const epoch = sessionEpochRef.current + 1
+    sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try {
       const detail = await getSession(sessionId)
+      if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
       const restored = normalizeSessionMessages(detail.messages)
       setMessages(restored)
       turnBaselineRef.current = restored.length
@@ -210,7 +220,12 @@ export function useChat() {
         setStreamState({ ...initialChatState, status: 'streaming' })
         connectStream(journal.stream_id, sessionId)
       }
-    } catch (error) { setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.') } finally { setSessionLoading(false) }
+    } catch (error) {
+      if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
+      setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.')
+    } finally {
+      if (sessionEpochRef.current === epoch) setSessionLoading(false)
+    }
   }, [closeSource, connectStream])
   const rename = useCallback(async (sessionId: string, title: string) => {
     if (!title.trim()) return
@@ -234,7 +249,7 @@ export function useChat() {
     const created = await duplicateSession(sessionId)
     setSessions((items) => [created, ...items])
   }, [])
-  const reset = useCallback(() => { closeSource(); window.localStorage.removeItem(inflightTurnKey); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(newId()) }, [closeSource])
+  const reset = useCallback(() => { sessionEpochRef.current += 1; const nextSessionId = newId(); activeSessionRef.current = nextSessionId; closeSource(); pollControllerRef.current?.abort(); pollControllerRef.current = null; streamIdRef.current = null; fallbackStreamRef.current = null; window.localStorage.removeItem(inflightTurnKey); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(nextSessionId) }, [closeSource])
 
   return { messages, streamState, send, cancel, removeQueued, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, duplicate, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

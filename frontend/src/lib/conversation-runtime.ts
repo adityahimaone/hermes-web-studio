@@ -32,10 +32,18 @@ export function repairPartialTranscript(messages: ChatMessage[], auditId: string
   return { messages: valid.map((message) => ({ ...message, status: message.status === 'streaming' ? 'cancelled' : message.status })), removed, reason: removed.length ? 'Removed empty or unfinished transcript entries.' : 'Transcript is already valid.', auditId }
 }
 
-export async function pollSessionUntilSettled<T extends { messages?: unknown[] }>(getSession: () => Promise<T>, baselineMessageCount: number, maxPolls: number, intervalMs = 0): Promise<ChatMessage | null> {
+export async function pollSessionUntilSettled<T extends { messages?: unknown[] }>(getSession: (signal?: AbortSignal) => Promise<T>, baselineMessageCount: number, maxPolls: number, intervalMs = 0, signal?: AbortSignal): Promise<ChatMessage | null> {
   for (let poll = 0; poll < maxPolls; poll += 1) {
-    if (poll > 0 && intervalMs > 0) await new Promise((resolve) => setTimeout(resolve, intervalMs))
-    const detail = await getSession()
+    if (signal?.aborted) return null
+    if (poll > 0 && intervalMs > 0) {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, intervalMs)
+        signal?.addEventListener('abort', () => { clearTimeout(timer); resolve() }, { once: true })
+      })
+      if (signal?.aborted) return null
+    }
+    const detail = await getSession(signal)
+    if (signal?.aborted) return null
     const messages = normalizeSessionMessages(detail.messages)
     const assistant = messages.slice(baselineMessageCount).filter((message) => message.role === 'assistant' && message.content.trim()).at(-1)
     if (assistant) return assistant
