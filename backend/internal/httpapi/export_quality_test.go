@@ -14,22 +14,31 @@ import (
 
 func TestSafeExportValueRedactsCredentialVariantsButPreservesFreeFormData(t *testing.T) {
 	value := map[string]any{
+		"apiKey":               "key-secret",
+		"private_key":          "private-secret",
+		"credential":           "credential-secret",
+		"accessKey":            "access-secret",
+		"APIKEY":               "key-secret",
+		"privateKey":           "private-secret",
 		"authorization_header": "Bearer secret",
 		"auth_token_value":     "token-secret",
-		"api_key":              "key-secret",
+		"secret_value":         "secret-secret",
 		"password_hint":        "password-secret",
-		"credential_id":        "credential-secret",
+		"author":               "keep author",
+		"tokenizer":            "keep tokenizer",
 		"directory_name":       "keep this free-form value",
 		"message":              "auth token key secret password credential in prose",
 	}
 	out := safeExportValue(value).(map[string]any)
-	for _, key := range []string{"authorization_header", "auth_token_value", "api_key", "password_hint", "credential_id"} {
+	for _, key := range []string{"apiKey", "private_key", "credential", "accessKey", "APIKEY", "privateKey", "authorization_header", "auth_token_value", "secret_value", "password_hint"} {
 		if _, ok := out[key]; ok {
 			t.Fatalf("sensitive key preserved: %q", key)
 		}
 	}
-	if out["directory_name"] != "keep this free-form value" || out["message"] != value["message"] {
-		t.Fatalf("free-form data changed: %#v", out)
+	for _, key := range []string{"author", "tokenizer", "directory_name", "message"} {
+		if out[key] != value[key] {
+			t.Fatalf("free-form data changed for %q: %#v", key, out[key])
+		}
 	}
 }
 

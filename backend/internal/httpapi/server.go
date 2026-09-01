@@ -430,22 +430,31 @@ func safeExportValue(value any) any {
 }
 
 func sensitiveExportKey(key string) bool {
-	normalized := strings.Map(func(r rune) rune {
+	var normalized strings.Builder
+	for i, r := range key {
 		if r >= 'A' && r <= 'Z' {
-			return r + ('a' - 'A')
+			if i > 0 {
+				normalized.WriteByte(' ')
+			}
+			normalized.WriteByte(byte(r + ('a' - 'A')))
+			continue
 		}
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			return r
+			normalized.WriteRune(r)
+			continue
 		}
-		return -1
-	}, key)
-	for _, word := range []string{"auth", "token", "secret", "password", "credential"} {
-		if strings.Contains(normalized, word) {
+		normalized.WriteByte(' ')
+	}
+	words := strings.Fields(normalized.String())
+	compact := strings.Join(words, "")
+	for _, variant := range []string{"apikey", "accesskey", "privatekey"} {
+		if compact == variant {
 			return true
 		}
 	}
-	for _, variant := range []string{"key", "apikey", "accesskey", "privatekey", "publickey", "clientkey", "serverkey", "encryptionkey", "signingkey", "authkey", "secretkey"} {
-		if normalized == variant {
+	for _, word := range words {
+		switch word {
+		case "auth", "authorization", "token", "secret", "password", "credential", "key":
 			return true
 		}
 	}
