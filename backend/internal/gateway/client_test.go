@@ -34,9 +34,9 @@ func TestParseSSETranslatesOpenAIAndHermesFrames(t *testing.T) {
 }
 
 func TestParseSSESurfacesRunFailure(t *testing.T) {
-	input := "event: run.failed\ndata: {\"error\":\"provider failed\"}\n\n"
+	input := "event: run.failed\ndata: {\"error\":\"provider secret detail\"}\n\n"
 	_, err := parseSSE(strings.NewReader(input), func(Event) {})
-	if err == nil || !strings.Contains(err.Error(), "provider failed") {
+	if err == nil || err.Error() != "Hermes completion failed." || strings.Contains(err.Error(), "provider secret detail") {
 		t.Fatalf("err = %v", err)
 	}
 }

@@ -21,6 +21,11 @@ assistant content.
 **Reason:** Automated and local evidence cannot replace provider-backed live
 proof, and upstream failure details must not leak to the browser or transcript.
 
+Failed turns are fail-closed: newly created sessions are deleted, while failed
+turns in existing sessions truncate back to their original message count. User
+cancellation keeps its existing cancellation event and does not roll back the
+turn journal.
+
 ## ADR-002 — Compatibility BFF
 
 The browser uses the original two-step shape: start a turn, then subscribe to a stream. The BFF normalizes Gateway-specific frames to `token`, `reasoning`, `tool`, `tool_complete`, `done`, `cancel`, and `apperror` events.

@@ -114,6 +114,41 @@ func TestGatewayAuthErrorIsRedacted(t *testing.T) {
 	}
 }
 
+func TestFailedGatewayTurnDoesNotPersistNewSessionOrEmitDone(t *testing.T) {
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "event: run.failed\ndata: {\"error\":\"provider secret detail\"}\n\n")
+	}))
+	defer gw.Close()
+	api := newTestServer(t, gw.URL, "")
+	defer api.Close()
+	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"session_id": "failed-new", "message": "will fail"})
+	var started map[string]string
+	decode(t, start.Body, &started)
+	_ = start.Body.Close()
+	response, err := http.Get(api.URL + "/api/chat/stream?stream_id=" + started["stream_id"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	text := string(body)
+	if strings.Contains(text, "event: done") || !strings.Contains(text, "event: apperror") || strings.Contains(text, "provider secret detail") {
+		t.Fatalf("stream=%s", text)
+	}
+	response, err = api.Client().Get(api.URL + "/api/sessions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listed map[string]any
+	decode(t, response.Body, &listed)
+	_ = response.Body.Close()
+	listedBody, _ := json.Marshal(listed)
+	if strings.Contains(string(listedBody), "failed-new") {
+		t.Fatalf("failed turn persisted: %s", listedBody)
+	}
+}
+
 func TestReadyReportsLocalDependenciesWithoutContactingGateway(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())

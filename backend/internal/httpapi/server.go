@@ -648,11 +648,28 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequest) {
 	defer s.finishTurn(item)
-	if _, err := s.sessions.Load(input.SessionID); errors.Is(err, os.ErrNotExist) {
-		_, _ = s.sessions.Create(input.SessionID, input.Message, nil)
+	_, loadErr := s.sessions.Load(input.SessionID)
+	createdSession := errors.Is(loadErr, os.ErrNotExist)
+	originalMessageCount := 0
+	if loadErr == nil {
+		loaded, err := s.sessions.Load(input.SessionID)
+		if err != nil {
+			s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be loaded."}})
+			return
+		}
+		originalMessageCount = len(loaded.Messages)
+	}
+	if createdSession {
+		if _, err := s.sessions.Create(input.SessionID, input.Message, nil); err != nil && !errors.Is(err, session.ErrSessionExists) {
+			s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be created."}})
+			return
+		}
 	}
 	userMessage := mustMessage("user", input.Message)
-	_ = s.sessions.AppendMessages(input.SessionID, userMessage)
+	if err := s.sessions.AppendMessages(input.SessionID, userMessage); err != nil {
+		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be updated."}})
+		return
+	}
 	stream := s.gateway.Stream
 	// The Runs API request shape currently accepts text input only in this
 	// adapter. Preserve multimodal compatibility instead of silently dropping
@@ -667,6 +684,11 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		if errors.Is(ctx.Err(), context.Canceled) {
 			s.publish(item, gateway.Event{Name: "cancel", Data: map[string]any{"message": "Cancelled by user"}})
 			return
+		}
+		if createdSession {
+			_ = s.sessions.Delete(input.SessionID)
+		} else {
+			_ = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
 		}
 		code := "gateway_unavailable"
 		message := "Hermes Gateway is unavailable. Check that it is running and reachable."

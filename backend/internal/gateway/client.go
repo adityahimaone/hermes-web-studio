@@ -546,14 +546,7 @@ func translate(sseName string, payload map[string]any) ([]Event, string, error) 
 		}
 		return nil, "", nil
 	case "run.failed", "error":
-		message := stringValue(payload["error"])
-		if message == "" {
-			message = stringValue(payload["message"])
-		}
-		if message == "" {
-			message = "Hermes run failed."
-		}
-		return nil, "", errors.New(message)
+		return nil, "", errors.New("Hermes completion failed.")
 	}
 	return nil, "", nil
 }
