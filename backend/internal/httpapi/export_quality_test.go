@@ -24,13 +24,28 @@ func TestSafeExportValueRedactsCredentialVariantsButPreservesFreeFormData(t *tes
 		"auth_token_value":     "token-secret",
 		"secret_value":         "secret-secret",
 		"password_hint":        "password-secret",
+		"publicKey":            "public-camel-secret",
+		"public_key":           "public-underscore-secret",
+		"publicKEY":            "public-acronym-secret",
+		"clientKey":            "client-camel-secret",
+		"client_key":           "client-underscore-secret",
+		"serverKey":            "server-camel-secret",
+		"server_key":           "server-underscore-secret",
+		"encryptionKey":        "encryption-camel-secret",
+		"encryption_key":       "encryption-underscore-secret",
+		"signingKey":           "signing-camel-secret",
+		"signing_key":          "signing-underscore-secret",
+		"authKey":              "auth-camel-secret",
+		"auth_key":             "auth-underscore-secret",
+		"secretKey":            "secret-camel-secret",
+		"secret_key":           "secret-underscore-secret",
 		"author":               "keep author",
 		"tokenizer":            "keep tokenizer",
 		"directory_name":       "keep this free-form value",
 		"message":              "auth token key secret password credential in prose",
 	}
 	out := safeExportValue(value).(map[string]any)
-	for _, key := range []string{"apiKey", "private_key", "credential", "accessKey", "APIKEY", "privateKey", "authorization_header", "auth_token_value", "secret_value", "password_hint"} {
+	for _, key := range []string{"apiKey", "private_key", "credential", "accessKey", "APIKEY", "privateKey", "authorization_header", "auth_token_value", "secret_value", "password_hint", "publicKey", "public_key", "clientKey", "client_key", "serverKey", "server_key", "encryptionKey", "encryption_key", "signingKey", "signing_key", "authKey", "auth_key", "secretKey", "secret_key"} {
 		if _, ok := out[key]; ok {
 			t.Fatalf("sensitive key preserved: %q", key)
 		}
@@ -80,6 +95,14 @@ func TestJSONExportRejectsMalformedPersistedMessage(t *testing.T) {
 	}
 	if body["code"] != "export_failed" {
 		t.Fatalf("body=%#v", body)
+	}
+}
+
+func TestSensitiveExportKeyMatchesNormalizedKeyVariants(t *testing.T) {
+	for _, key := range []string{"publickey", "publicKEY", "clientkey", "serverkey", "encryptionkey", "signingkey", "authkey", "secretkey"} {
+		if !sensitiveExportKey(key) {
+			t.Fatalf("sensitive normalized key not redacted: %q", key)
+		}
 	}
 }
 

@@ -447,7 +447,7 @@ func sensitiveExportKey(key string) bool {
 	}
 	words := strings.Fields(normalized.String())
 	compact := strings.Join(words, "")
-	for _, variant := range []string{"apikey", "accesskey", "privatekey"} {
+	for _, variant := range []string{"apikey", "accesskey", "privatekey", "publickey", "clientkey", "serverkey", "encryptionkey", "signingkey", "authkey", "secretkey"} {
 		if compact == variant {
 			return true
 		}
