@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -359,18 +360,13 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
+	messages, err := exportMessages(item.Messages)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+		return
+	}
 	if format == "json" {
-		payload := map[string]any{"session_id": item.ID, "title": safeExportValue(item.Title), "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": make([]any, 0, len(item.Messages))}
-		messages := payload["messages"].([]any)
-		for _, raw := range item.Messages {
-			var message map[string]any
-			if err := json.Unmarshal(raw, &message); err != nil || message == nil {
-				writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
-				return
-			}
-			messages = append(messages, safeExportValue(message))
-		}
-		payload["messages"] = messages
+		payload := map[string]any{"session_id": item.ID, "title": safeExportValue(item.Title), "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": safeExportValue(messages)}
 		body, marshalErr := json.MarshalIndent(payload, "", "  ")
 		if marshalErr != nil {
 			writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
@@ -383,14 +379,9 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 	}
 	var body strings.Builder
 	body.WriteString("# " + safeExportValue(item.Title).(string) + "\n\n")
-	for _, raw := range item.Messages {
-		var message map[string]any
-		if err := json.Unmarshal(raw, &message); err != nil || message == nil {
-			writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
-			return
-		}
-		role, _ := message["role"].(string)
-		content, _ := message["content"].(string)
+	for _, message := range messages {
+		role := message["role"].(string)
+		content := message["content"].(string)
 		if content == "" {
 			continue
 		}
@@ -404,6 +395,30 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.md"`)
 	_, _ = io.WriteString(w, body.String())
 }
+
+func exportMessages(rawMessages []json.RawMessage) ([]map[string]any, error) {
+	messages := make([]map[string]any, 0, len(rawMessages))
+	for _, raw := range rawMessages {
+		var message any
+		if err := json.Unmarshal(raw, &message); err != nil {
+			return nil, err
+		}
+		object, ok := message.(map[string]any)
+		if !ok || object == nil {
+			return nil, errors.New("message must be object")
+		}
+		if _, ok := object["role"].(string); !ok {
+			return nil, errors.New("message role must be string")
+		}
+		if _, ok := object["content"].(string); !ok {
+			return nil, errors.New("message content must be string")
+		}
+		messages = append(messages, object)
+	}
+	return messages, nil
+}
+
+var privateExportPathToken = regexp.MustCompile(`(?i)(^|[\s"'(])(?:file://[^\s,;]+|[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|/(?:home|users|tmp|var|etc|root)/[^\s,;]+|~[/\\][^\s,;]+|(?:[A-Za-z0-9_.-]+[/\\])+(?:\.env|secrets?|private|credentials?)(?:[/\\][^\s,;]*)?|(?:secrets?|private|credentials?)[/\\][^\s,;]*)`)
 
 func safeExportValue(value any) any {
 	switch item := value.(type) {
@@ -422,11 +437,17 @@ func safeExportValue(value any) any {
 			out[i] = safeExportValue(value)
 		}
 		return out
+	case []map[string]any:
+		out := make([]any, len(item))
+		for i, value := range item {
+			out[i] = safeExportValue(value)
+		}
+		return out
 	case string:
 		if privateExportPath(item) {
 			return "[redacted]"
 		}
-		return item
+		return privateExportPathToken.ReplaceAllString(item, "$1[redacted]")
 	default:
 		return value
 	}
