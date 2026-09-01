@@ -106,8 +106,8 @@ reachable=$(printf '%s' "$health" | node -e '
 ')
 
 if [ "$reachable" = true ]; then
-  sh "$(dirname "$0")/smoke-hermes.sh"
-  sh "$(dirname "$0")/m1-live-parity.sh"
+  bash "$(dirname "$0")/smoke-hermes.sh"
+  bash "$(dirname "$0")/m1-live-parity.sh"
   echo 'LIVE PASS local Hermes smoke and session parity'
 else
   echo 'LIVE SKIP Hermes Gateway is offline; P059 live chat/tool/subagent/approval rows remain unclaimed.'
