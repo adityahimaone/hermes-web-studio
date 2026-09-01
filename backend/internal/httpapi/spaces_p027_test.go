@@ -166,6 +166,31 @@ func TestSpacesP027SanitizesLegacyReferences(t *testing.T) {
 	}
 }
 
+func TestSpacesGETDoesNotPersistActiveMetadata(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir()}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+	item, err := server.control.Create("spaces", control.Item{Title: "space", Metadata: map[string]string{"profile_id": "default"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.control.SetPreferences(map[string]string{"active_space:default": item.ID}); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/spaces", nil)
+	rec := httptest.NewRecorder()
+	server.handleSpaces(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d", rec.Code)
+	}
+	items, err := server.control.List("spaces")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := items[0].Metadata["active"]; ok {
+		t.Fatal("GET persisted active metadata")
+	}
+}
+
 func TestSpacesP027UsesNumericStableOrder(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir()}
 	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))

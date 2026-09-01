@@ -19,7 +19,30 @@ const (
 	maxKanbanProjectionItems    = 100
 	maxKanbanCLIOutput          = 1 << 20
 	maxKanbanIdentifierLength   = 128
+	maxKanbanPriority           = 100
+	maxKanbanRuntimeSeconds     = 86400
+	maxKanbanRetries            = 10
+	maxKanbanGoalTurns          = 1000
 )
+
+func validateKanbanCreateNumber(name string, value *int) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 {
+		return errors.New("invalid kanban numeric field")
+	}
+	max := map[string]int{"priority": maxKanbanPriority, "max_runtime_seconds": maxKanbanRuntimeSeconds, "max_retries": maxKanbanRetries, "goal_max_turns": maxKanbanGoalTurns}[name]
+	if name == "max_runtime_seconds" || name == "goal_max_turns" {
+		if *value == 0 {
+			return errors.New("invalid kanban numeric field")
+		}
+	}
+	if *value > max {
+		return errors.New("invalid kanban numeric field")
+	}
+	return nil
+}
 
 func validateKanbanIdentifier(value string, allowEmpty bool) (string, error) {
 	if allowEmpty && value == "" {
@@ -214,6 +237,12 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 	if err := validateKanbanArgumentList(input.Skills); err != nil {
 		writeError(w, http.StatusBadRequest, "task_field_invalid", "A Kanban task field is invalid.")
 		return
+	}
+	for name, value := range map[string]*int{"priority": input.Priority, "max_runtime_seconds": input.MaxRuntimeSeconds, "max_retries": input.MaxRetries, "goal_max_turns": input.GoalMaxTurns} {
+		if err := validateKanbanCreateNumber(name, value); err != nil {
+			writeError(w, http.StatusBadRequest, "task_field_invalid", "A Kanban numeric field is invalid.")
+			return
+		}
 	}
 	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
 	if err != nil {
@@ -443,8 +472,8 @@ func sanitizeKanbanProjection(value any) any {
 		}
 		if stats, ok := rows["stats"].(map[string]any); ok {
 			safeStats := map[string]any{}
-			for key, value := range stats {
-				if number, ok := value.(float64); ok && len(key) <= 64 {
+			for _, key := range []string{"triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done", "archived"} {
+				if number, ok := stats[key].(float64); ok && number >= 0 && number <= maxKanbanProjectionItems*1000 && number == float64(int64(number)) {
 					safeStats[key] = number
 				}
 			}

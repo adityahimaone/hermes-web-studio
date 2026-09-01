@@ -207,3 +207,26 @@ func TestSanitizeKanbanDetailRejectsUnsafeActivityValues(t *testing.T) {
 		t.Fatalf("unsafe or unbounded detail: %d %s", len(body), body)
 	}
 }
+
+func TestSanitizeKanbanStatsAllowlistAndBounds(t *testing.T) {
+	got := sanitizeKanbanProjection(map[string]any{"stats": map[string]any{
+		"ready": 2.0, "done": 3.0, "unknown": 4.0, "negative": -1.0, "fraction": 1.5,
+	}})
+	stats := got.(map[string]any)["stats"].(map[string]any)
+	if len(stats) != 2 || stats["ready"] != 2.0 || stats["done"] != 3.0 {
+		t.Fatalf("stats=%#v", stats)
+	}
+}
+
+func TestKanbanCreateNumericFieldsRejectInvalidValues(t *testing.T) {
+	for name, value := range map[string]int{"priority": -1, "max_runtime_seconds": 0, "max_retries": -1, "goal_max_turns": 0} {
+		if err := validateKanbanCreateNumber(name, &value); err == nil {
+			t.Fatalf("accepted invalid %s=%d", name, value)
+		}
+	}
+	for name, value := range map[string]int{"priority": 1000001, "max_runtime_seconds": 1000001, "max_retries": 101, "goal_max_turns": 100001} {
+		if err := validateKanbanCreateNumber(name, &value); err == nil {
+			t.Fatalf("accepted extreme %s=%d", name, value)
+		}
+	}
+}

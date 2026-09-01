@@ -74,8 +74,13 @@ func (s *Service) Setup(password string) error {
 	if s.data.PasswordHash != "" {
 		return errors.New("password already configured")
 	}
+	previous := s.data
 	s.data.PasswordHash = hash(password, s.data.Secret)
-	return s.persist()
+	if err := s.persist(); err != nil {
+		s.data = previous
+		return err
+	}
+	return nil
 }
 func (s *Service) Login(ip, password string) (string, error) {
 	s.mu.Lock()

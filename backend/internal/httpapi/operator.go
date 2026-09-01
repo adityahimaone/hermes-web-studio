@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -175,6 +176,9 @@ func (s *Server) handleSpaces(w http.ResponseWriter, r *http.Request) {
 	visible := items[:0]
 	for _, item := range items {
 		if item.Metadata["profile_id"] == "" || item.Metadata["profile_id"] == profileID {
+			if item.Metadata != nil {
+				item.Metadata = maps.Clone(item.Metadata)
+			}
 			visible = append(visible, item)
 		}
 	}

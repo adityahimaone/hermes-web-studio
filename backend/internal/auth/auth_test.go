@@ -44,6 +44,21 @@ func TestPersistDoesNotUseSharedTempName(t *testing.T) {
 	}
 }
 
+func TestSetupDoesNotEnableAuthWhenPersistenceFails(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.path = filepath.Join(dir, "missing", "auth.json")
+	if err := s.Setup("correct horse battery"); err == nil {
+		t.Fatal("expected persistence failure")
+	}
+	if s.Enabled() {
+		t.Fatal("failed setup must not mutate in-memory auth state")
+	}
+}
+
 func TestLoginRateLimit(t *testing.T) {
 	s, err := New(t.TempDir())
 	if err != nil {
