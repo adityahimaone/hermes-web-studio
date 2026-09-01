@@ -216,6 +216,19 @@ func (s *Server) handleProviders(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"providers": s.providers})
 }
 
+func (s *Server) handleModelCatalog(w http.ResponseWriter, r *http.Request) {
+	models, err := s.gateway.Models(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "unavailable", "models": []any{}, "message": "Hermes Gateway model catalog is unavailable."})
+		return
+	}
+	rows := make([]map[string]any, 0, len(models))
+	for _, model := range models {
+		rows = append(rows, map[string]any{"id": model.ID, "name": model.ID, "provider": model.Provider, "aliases": model.Aliases, "available": true})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ready", "models": rows})
+}
+
 func (s *Server) handleProviderCreate(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID      string `json:"id"`

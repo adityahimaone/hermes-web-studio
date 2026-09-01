@@ -26,6 +26,52 @@ type Client struct {
 	http   *http.Client
 }
 
+type Model struct {
+	ID       string   `json:"id"`
+	Provider string   `json:"provider,omitempty"`
+	Aliases  []string `json:"aliases,omitempty"`
+}
+
+func (c *Client) Models(ctx context.Context) ([]Model, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.config.BaseURL+"/v1/models", nil)
+	if err != nil {
+		return nil, err
+	}
+	c.addHeaders(req, "")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, &HTTPError{StatusCode: resp.StatusCode, Code: "models_unavailable", Message: "Hermes Gateway model catalog is unavailable."}
+	}
+	var payload struct {
+		Data []struct {
+			ID       string   `json:"id"`
+			Provider string   `json:"provider"`
+			OwnedBy  string   `json:"owned_by"`
+			Aliases  []string `json:"aliases"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload); err != nil {
+		return nil, errors.New("Hermes Gateway returned an invalid model catalog")
+	}
+	models := make([]Model, 0, len(payload.Data))
+	for _, item := range payload.Data {
+		id := strings.TrimSpace(item.ID)
+		if id == "" {
+			continue
+		}
+		provider := strings.TrimSpace(item.Provider)
+		if provider == "" {
+			provider = strings.TrimSpace(item.OwnedBy)
+		}
+		models = append(models, Model{ID: id, Provider: provider, Aliases: item.Aliases})
+	}
+	return models, nil
+}
+
 type ChatRequest struct {
 	SessionID   string
 	Message     string

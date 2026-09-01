@@ -48,6 +48,12 @@ export async function getHermesHealth(signal?: AbortSignal) {
   return readJson<HermesHealth>(await fetch('/api/health/hermes', { signal }))
 }
 
+export type ModelCatalogItem = { id: string; name: string; provider?: string; aliases?: string[]; available?: boolean }
+export type ModelCatalogResponse = { status: 'ready' | 'unavailable'; models: ModelCatalogItem[]; message?: string }
+export async function getModelCatalog(signal?: AbortSignal) {
+  return readJson<ModelCatalogResponse>(await fetch('/api/models/catalog', { signal }))
+}
+
 export async function startChat(input: StartChatInput, signal?: AbortSignal) {
   return readJson<StartChatResponse>(
     await fetch('/api/chat/start', {

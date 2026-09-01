@@ -6,6 +6,8 @@ import { Textarea } from '../ui/textarea'
 import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/turn-control'
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
+import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
+import { groupModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -28,20 +30,31 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [profileId, setProfileId] = useState('default')
   const [model, setModel] = useState('default')
+  const [provider, setProvider] = useState('')
   const [turnMode, setTurnMode] = useState<TurnMode>('queue')
+  const [catalog, setCatalog] = useState<ModelCatalogItem[]>([])
+  const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading')
+  const [modelSearch, setModelSearch] = useState('')
   const [contextOpen, setContextOpen] = useState(false)
   const activeProfile = profiles.find(profile => profile.id === profileId)
   const commandSuggestions = slashCommandSuggestions(value)
 
   useEffect(() => {
-    void fetch('/api/profiles').then(response => response.json()).then(data => {
+    const controller = new AbortController()
+    void fetch('/api/profiles', { signal: controller.signal }).then(response => response.json()).then(data => {
       const next = (data.profiles || []) as Profile[]
       setProfiles(next)
       const active = typeof data.active === 'string' ? data.active : next[0]?.id || 'default'
       setProfileId(active)
       setModel(next.find(profile => profile.id === active)?.model || 'default')
+      setProvider(next.find(profile => profile.id === active)?.provider || '')
     }).catch(() => undefined)
+    void getModelCatalog(controller.signal).then(data => { setCatalog(data.models || []); setCatalogStatus(data.status) }).catch(() => setCatalogStatus('error'))
+    return () => controller.abort()
   }, [])
+
+  const visibleModels = searchModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false })), modelSearch)
+  const modelGroups = groupModelCatalog(visibleModels)
 
   useEffect(() => {
     const input = ref.current
@@ -58,7 +71,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
       setCommandsOpen(false)
       return
     }
-    onSend(value, attachments, { model, provider: activeProfile?.provider }, turnMode)
+    onSend(value, attachments, { model, provider: provider || activeProfile?.provider }, turnMode)
     setValue('')
     setAttachments([])
   }
@@ -171,6 +184,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
                   const next = profiles.find(p => p.id === event.target.value)
                   setProfileId(event.target.value)
                   setModel(next?.model || 'default')
+                  setProvider(next?.provider || '')
                   void fetch('/api/profiles/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: event.target.value }) })
                 }}
                 className="select-menu-up h-7 min-h-7 max-w-28 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
@@ -192,16 +206,17 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
               <Select
                 aria-label="Conversation model"
                 value={model}
-                onChange={event => setModel(event.target.value)}
+                onChange={event => { setModel(event.target.value); setProvider(catalog.find(item => item.id === event.target.value)?.provider || '') }}
                 className="select-menu-up h-7 min-h-7 max-w-36 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
               >
-                <option value="default">Default model</option>
-                {activeProfile?.model && activeProfile.model !== 'default' && <option value={activeProfile.model}>{activeProfile.model}</option>}
-                <option value="GPT 5.5">GPT 5.5</option>
-                <option value="Claude 3.7 Sonnet">Claude 3.7 Sonnet</option>
-                <option value="Gemini 2.0 Flash">Gemini 2.0 Flash</option>
+                <option value="default">{catalogStatus === 'loading' ? 'Loading models…' : catalogStatus === 'error' ? 'Models unavailable' : catalogStatus === 'unavailable' ? 'Catalog unavailable' : 'Default model'}</option>
+                {activeProfile?.model && activeProfile.model !== 'default' && !catalog.some(item => item.id === activeProfile.model) && <option value={activeProfile.model}>{activeProfile.model}</option>}
+                {modelGroups.flatMap(group => group.models.map(item => <option key={`${group.provider}:${item.id}`} value={item.id}>{group.provider} · {item.label}</option>))}
               </Select>
             </div>
+            {catalogStatus === 'ready' && catalog.length > 0 && <input aria-label="Search models" value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="Search models" className="h-7 w-28 rounded-full border border-border/60 bg-muted/40 px-2 text-[11px]" />}
+            {catalogStatus === 'ready' && catalog.length === 0 && <span className="text-[10px] text-muted-foreground">No models available</span>}
+            {catalogStatus === 'unavailable' && <span className="text-[10px] text-muted-foreground">Gateway catalog unavailable</span>}
 
             {/* Reasoning Effort / Turn Mode Pill */}
             <div className="relative inline-flex items-center">

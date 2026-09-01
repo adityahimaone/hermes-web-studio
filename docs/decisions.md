@@ -588,3 +588,7 @@ recorded decision and explicit approval before MVP certification.
   session rhythm, with the skill name above an optional meaningful description.
   Placeholder-only descriptions are hidden. Mobile keeps its inline grouped
   list and existing navigation.
+
+## ADR-023 - Server-owned model catalog
+
+P023 model discovery uses Gateway `/v1/models` through BFF `/api/models/catalog`. Unavailable or malformed upstream responses return explicit unavailable state; browser receives no credentials and no fabricated models.

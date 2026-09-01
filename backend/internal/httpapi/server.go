@@ -153,6 +153,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/profiles", s.handleProfileDelete)
 	mux.HandleFunc("POST /api/profiles/active", s.handleProfileSwitch)
 	mux.HandleFunc("GET /api/providers", s.handleProviders)
+	mux.HandleFunc("GET /api/models/catalog", s.handleModelCatalog)
 	mux.HandleFunc("POST /api/providers", s.handleProviderCreate)
 	mux.HandleFunc("DELETE /api/providers", s.handleProviderDelete)
 	mux.HandleFunc("GET /api/auth/providers", s.handleAuthProviders)
