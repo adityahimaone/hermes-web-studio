@@ -592,3 +592,6 @@ recorded decision and explicit approval before MVP certification.
 ## ADR-023 - Server-owned model catalog
 
 P023 model discovery uses Gateway `/v1/models` through BFF `/api/models/catalog`. Unavailable or malformed upstream responses return explicit unavailable state; browser receives no credentials and no fabricated models.
+## P023 model catalog boundary
+
+Catalog discovery accepts only local `http`/`https` Gateway URLs without userinfo, path, query, or fragment; loopback IPs and `localhost` remain valid for local Hermes. Redirects are disabled. Catalog IDs/providers/aliases are trimmed, control-character stripped, bounded, and deduplicated. Browser receives sanitized catalog state only.

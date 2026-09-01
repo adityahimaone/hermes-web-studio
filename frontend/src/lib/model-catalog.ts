@@ -1,6 +1,20 @@
 export type ModelCatalogItem = { id: string; label: string; provider: string; aliases: string[]; capabilities: string[]; available: boolean }
 export type ModelCatalogGroup = { provider: string; models: ModelCatalogItem[] }
 
+export function normalizeModelCatalog(models: ModelCatalogItem[]): ModelCatalogItem[] {
+  const seen = new Set<string>()
+  return models.flatMap(model => {
+    const id = clean(model.id, 256); if (!id || seen.has(id)) return []
+    seen.add(id)
+    const aliases = [...new Set(model.aliases.map(alias => clean(alias, 128)).filter(Boolean))]
+    return [{ ...model, id, label: clean(model.label, 256), provider: clean(model.provider, 128), aliases }]
+  })
+}
+
+function clean(value: string, limit: number) {
+  return value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, limit)
+}
+
 export function searchModelCatalog(models: ModelCatalogItem[], query: string) {
   const needle = query.trim().toLowerCase()
   return needle ? models.filter(model => [model.id, model.label, model.provider, ...model.aliases].join(' ').toLowerCase().includes(needle)) : models

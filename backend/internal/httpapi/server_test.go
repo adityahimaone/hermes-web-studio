@@ -35,7 +35,7 @@ func TestChatStreamsHermesGatewayResponse(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
 		}
-		if body["model"] != "default" || body["stream"] != true {
+		if body["model"] != "selected-model" || body["provider"] != "selected-provider" || body["stream"] != true {
 			t.Errorf("body = %#v", body)
 		}
 		requestSeen <- struct{}{}
@@ -45,7 +45,7 @@ func TestChatStreamsHermesGatewayResponse(t *testing.T) {
 	defer gw.Close()
 
 	api := newTestServer(t, gw.URL, "secret")
-	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"session_id": "session-1", "message": "hello"})
+	start := postJSON(t, api.URL+"/api/chat/start", map[string]any{"session_id": "session-1", "message": "hello", "model": "selected-model", "provider": "selected-provider"})
 	var started map[string]string
 	decode(t, start.Body, &started)
 	_ = start.Body.Close()

@@ -7,7 +7,7 @@ import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/tu
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
 import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
-import { groupModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
+import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -53,7 +53,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
     return () => controller.abort()
   }, [])
 
-  const visibleModels = searchModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false })), modelSearch)
+  const visibleModels = searchModelCatalog(normalizeModelCatalog(catalog.map(item => ({ id: item.id, label: item.name, provider: item.provider || 'unknown', aliases: item.aliases || [], capabilities: [], available: item.available !== false }))), modelSearch)
   const modelGroups = groupModelCatalog(visibleModels)
 
   useEffect(() => {
@@ -100,7 +100,7 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
     }
   }
 
-  const modelDisplay = model === 'default' ? (activeProfile?.model || 'GPT 5.5') : model
+  const modelDisplay = model === 'default' ? (activeProfile?.model || 'Default model') : model
   const profileDisplay = activeProfile?.name || 'default'
   const workspaceDisplay = workspacePath === '.' ? 'Home' : workspacePath
 
@@ -210,13 +210,16 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
                 className="select-menu-up h-7 min-h-7 max-w-36 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
               >
                 <option value="default">{catalogStatus === 'loading' ? 'Loading models…' : catalogStatus === 'error' ? 'Models unavailable' : catalogStatus === 'unavailable' ? 'Catalog unavailable' : 'Default model'}</option>
-                {activeProfile?.model && activeProfile.model !== 'default' && !catalog.some(item => item.id === activeProfile.model) && <option value={activeProfile.model}>{activeProfile.model}</option>}
-                {modelGroups.flatMap(group => group.models.map(item => <option key={`${group.provider}:${item.id}`} value={item.id}>{group.provider} · {item.label}</option>))}
+                {activeProfile?.model && activeProfile.model !== 'default' && !catalog.some(item => item.id === activeProfile.model) && <option value={activeProfile.model}>{activeProfile.model} (unavailable)</option>}
+                {modelGroups.map(group => <optgroup key={group.provider} label={group.provider}>{group.models.map(item => <option key={`${group.provider}:${item.id}`} value={item.id}>{item.label}</option>)}</optgroup>)}
               </Select>
             </div>
             {catalogStatus === 'ready' && catalog.length > 0 && <input aria-label="Search models" value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="Search models" className="h-7 w-28 rounded-full border border-border/60 bg-muted/40 px-2 text-[11px]" />}
+            {catalogStatus === 'ready' && catalog.length > 0 && visibleModels.length === 0 && <span role="status" className="text-[10px] text-muted-foreground">No matching models</span>}
+            {catalogStatus === 'loading' && <span role="status" className="text-[10px] text-muted-foreground">Loading model catalog…</span>}
             {catalogStatus === 'ready' && catalog.length === 0 && <span className="text-[10px] text-muted-foreground">No models available</span>}
             {catalogStatus === 'unavailable' && <span className="text-[10px] text-muted-foreground">Gateway catalog unavailable</span>}
+            {catalogStatus === 'error' && <span role="status" className="text-[10px] text-destructive">Unable to load model catalog</span>}
 
             {/* Reasoning Effort / Turn Mode Pill */}
             <div className="relative inline-flex items-center">

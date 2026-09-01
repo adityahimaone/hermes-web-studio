@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -33,7 +34,11 @@ type Model struct {
 }
 
 func (c *Client) Models(ctx context.Context) ([]Model, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.config.BaseURL+"/v1/models", nil)
+	baseURL, err := safeBaseURL(c.config.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/v1/models", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -58,16 +63,30 @@ func (c *Client) Models(ctx context.Context) ([]Model, error) {
 		return nil, errors.New("Hermes Gateway returned an invalid model catalog")
 	}
 	models := make([]Model, 0, len(payload.Data))
+	seen := make(map[string]bool)
 	for _, item := range payload.Data {
-		id := strings.TrimSpace(item.ID)
+		id := cleanCatalogText(item.ID, 256)
 		if id == "" {
 			continue
 		}
-		provider := strings.TrimSpace(item.Provider)
-		if provider == "" {
-			provider = strings.TrimSpace(item.OwnedBy)
+		if seen[id] {
+			continue
 		}
-		models = append(models, Model{ID: id, Provider: provider, Aliases: item.Aliases})
+		seen[id] = true
+		provider := cleanCatalogText(item.Provider, 128)
+		if provider == "" {
+			provider = cleanCatalogText(item.OwnedBy, 128)
+		}
+		aliases := make([]string, 0, len(item.Aliases))
+		aliasSeen := map[string]bool{}
+		for _, alias := range item.Aliases {
+			alias = cleanCatalogText(alias, 128)
+			if alias != "" && !aliasSeen[alias] {
+				aliases = append(aliases, alias)
+				aliasSeen[alias] = true
+			}
+		}
+		models = append(models, Model{ID: id, Provider: provider, Aliases: aliases})
 	}
 	return models, nil
 }
@@ -129,8 +148,37 @@ func New(config Config) *Client {
 	transport.ResponseHeaderTimeout = 30 * time.Second
 	return &Client{
 		config: config,
-		http:   &http.Client{Transport: transport},
+		http:   &http.Client{Transport: transport, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return errors.New("gateway redirect rejected") }},
 	}
+}
+
+func safeBaseURL(raw string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+		return "", errors.New("invalid Hermes Gateway URL")
+	}
+	host := u.Hostname()
+	ip := net.ParseIP(host)
+	if host != "localhost" && ip == nil {
+		return "", errors.New("Hermes Gateway URL must target local host")
+	}
+	if ip != nil && !(ip.IsLoopback()) {
+		return "", errors.New("Hermes Gateway URL must target local host")
+	}
+	return strings.TrimRight(u.String(), "/"), nil
+}
+
+func cleanCatalogText(value string, limit int) string {
+	value = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(value))
+	if len(value) > limit {
+		return value[:limit]
+	}
+	return value
 }
 
 func (c *Client) BaseURL() string  { return c.config.BaseURL }
