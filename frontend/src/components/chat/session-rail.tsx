@@ -160,8 +160,8 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/40 px-2 py-1">
           <span className="text-[11px] text-muted-foreground">{selected.length} selected</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); if (failed.length) setBatchError(formatBatchFailureMessage('archive', failed)); else clearBatch() }}>Archive</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); if (failed.length) setBatchError(formatBatchFailureMessage('delete', failed)); else clearBatch() }}>Delete</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); setSelected(failed); if (failed.length) setBatchError(formatBatchFailureMessage('archive', failed)); else setBatchMode(false) }}>Archive</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); setSelected(failed); if (failed.length) setBatchError(formatBatchFailureMessage('delete', failed)); else setBatchMode(false) }}>Delete</Button>
           </div>
         </div>
       )}

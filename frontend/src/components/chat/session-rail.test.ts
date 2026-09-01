@@ -112,13 +112,16 @@ describe('batch session actions', () => {
     expect(root.textContent).toContain('3 selected')
     await act(async () => {
       Array.from(root.querySelectorAll('button')).find(button => button.textContent === (action === 'archive' ? 'Archive' : 'Delete'))?.click()
-      await Promise.resolve()
-      await Promise.resolve()
+      await new Promise(resolve => setTimeout(resolve, 0))
     })
 
     const alert = root.querySelector<HTMLElement>('[role="alert"]')
     expect(alert?.textContent).toContain('two')
     expect(alert?.textContent).toContain('three')
+    expect(root.textContent).toContain('2 selected')
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')).toBeTruthy()
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Deselect Two"]')).toBeTruthy()
+    expect(root.querySelector<HTMLButtonElement>('button[aria-label="Deselect Three"]')).toBeTruthy()
     reactRoot.unmount()
     root.remove()
   })
