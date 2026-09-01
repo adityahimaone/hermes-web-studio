@@ -26,7 +26,32 @@ export function utf8Length(value: string, limit: number) {
 }
 
 export function modelKey(id: string, provider = '') {
-  return `${clean(provider, 128)}:${clean(id, 256)}`
+  return JSON.stringify([clean(provider, 128), clean(id, 256)])
+}
+
+export function encodeModelSelectionValue(provider: string, id: string) {
+  return encodeURIComponent(JSON.stringify([provider, id]))
+}
+
+export function decodeModelSelectionValue(value: string) {
+  try {
+    const decoded: unknown = JSON.parse(decodeURIComponent(value))
+    if (Array.isArray(decoded) && decoded.length === 2 && typeof decoded[0] === 'string' && typeof decoded[1] === 'string') {
+      return { provider: decoded[0], id: decoded[1] }
+    }
+  } catch {
+    // Invalid option values fail closed.
+  }
+  return undefined
+}
+
+export function modelSelectionValue(model: Pick<ModelCatalogItem, 'provider' | 'id'>) {
+  return encodeModelSelectionValue(model.provider, model.id)
+}
+
+export function decodeModelSelection(value: string, models: ModelCatalogItem[]) {
+  const selection = decodeModelSelectionValue(value)
+  return selection ? findCatalogModel(models, selection.id, selection.provider) : undefined
 }
 
 export function findCatalogModel(models: ModelCatalogItem[], id: string, provider = '') {

@@ -70,7 +70,7 @@ func (c *Client) Models(ctx context.Context) ([]Model, error) {
 		return nil, errors.New("Hermes Gateway returned too many models")
 	}
 	models := make([]Model, 0, len(payload.Data))
-	seen := make(map[string]bool)
+	seen := make(map[struct{ provider, id string }]bool)
 	for _, item := range payload.Data {
 		id := cleanCatalogText(item.ID, 256)
 		if id == "" {
@@ -80,7 +80,7 @@ func (c *Client) Models(ctx context.Context) ([]Model, error) {
 		if provider == "" {
 			provider = cleanCatalogText(item.OwnedBy, 128)
 		}
-		key := provider + ":" + id
+		key := struct{ provider, id string }{provider, id}
 		if seen[key] {
 			continue
 		}

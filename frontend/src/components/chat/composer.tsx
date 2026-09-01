@@ -7,7 +7,7 @@ import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/tu
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
 import { getModelCatalog, type ModelCatalogItem, type ModelCatalogStatus } from '../../lib/api-client'
-import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
+import { decodeModelSelectionValue, encodeModelSelectionValue, findCatalogModel, groupModelCatalog, modelSelectionValue, normalizeModelCatalog, searchModelCatalog } from '../../lib/model-catalog'
 import { resolveComposerModel } from '../../lib/composer-state'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
@@ -209,13 +209,18 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
             <div className="relative inline-flex items-center">
               <Select
                 aria-label="Conversation model"
-                value={model}
-                onChange={event => { const selected = findCatalogModel(normalizedCatalog, event.target.value); setModel(selected?.id || 'default'); setProvider(selected?.provider || '') }}
+                value={model === 'default' ? 'default' : encodeModelSelectionValue(provider, model)}
+                onChange={event => {
+                  const selection = decodeModelSelectionValue(event.target.value)
+                  const selected = selection ? findCatalogModel(normalizedCatalog, selection.id, selection.provider) : undefined
+                  setModel(selected?.id || selection?.id || 'default')
+                  setProvider(selected?.provider || selection?.provider || '')
+                }}
                 className="select-menu-up h-7 min-h-7 max-w-36 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
               >
                 <option value="default">{catalogStatus === 'loading' ? 'Loading models…' : catalogStatus === 'error' ? 'Models unavailable' : catalogStatus === 'unavailable' ? 'Catalog unavailable' : 'Default model'}</option>
-                {activeProfile?.model && activeProfile.model !== 'default' && !findCatalogModel(normalizedCatalog, activeProfile.model, activeProfile.provider) && <option value={activeProfile.model}>{activeProfile.model} (unavailable)</option>}
-                {modelGroups.map(group => <optgroup key={group.provider} label={group.provider}>{group.models.map(item => <option key={`${group.provider}:${item.id}`} value={item.id}>{item.label}</option>)}</optgroup>)}
+                {activeProfile?.model && activeProfile.model !== 'default' && !findCatalogModel(normalizedCatalog, activeProfile.model, activeProfile.provider) && <option value={encodeModelSelectionValue(activeProfile.provider || '', activeProfile.model)}>{activeProfile.model} (unavailable)</option>}
+                {modelGroups.map(group => <optgroup key={group.provider} label={group.provider}>{group.models.map(item => <option key={modelSelectionValue(item)} value={modelSelectionValue(item)}>{item.label}</option>)}</optgroup>)}
               </Select>
             </div>
             {catalogStatus === 'ready' && catalog.length > 0 && <input aria-label="Search models" value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="Search models" className="h-7 w-28 rounded-full border border-border/60 bg-muted/40 px-2 text-[11px]" />}

@@ -50,6 +50,23 @@ func TestModelsPreservesSameIDAcrossProviders(t *testing.T) {
 	}
 }
 
+func TestModelsPreservesTuplesContainingColons(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{
+			map[string]any{"id": "b:c", "provider": "a"},
+			map[string]any{"id": "c", "provider": "a:b"},
+		}})
+	}))
+	defer server.Close()
+	models, err := New(Config{BaseURL: server.URL}).Models(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 || models[0].ID != "b:c" || models[0].Provider != "a" || models[1].ID != "c" || models[1].Provider != "a:b" {
+		t.Fatalf("models=%+v", models)
+	}
+}
+
 func TestModelsRejectsUnavailableGateway(t *testing.T) {
 	server := httptest.NewServer(http.NotFoundHandler())
 	defer server.Close()

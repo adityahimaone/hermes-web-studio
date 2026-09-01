@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { utf8Length } from './model-catalog'
-import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from './model-catalog'
+import { decodeModelSelectionValue, encodeModelSelectionValue, findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from './model-catalog'
 
 describe('model catalog', () => {
   const models = [
@@ -48,5 +48,13 @@ describe('model catalog', () => {
 
   it('resolves raw catalog entries through normalized model/provider mapping', () => {
     expect(findCatalogModel([{ id: ' gpt-test ', label: 'GPT', provider: ' openai ', aliases: [], capabilities: [], available: true }], 'gpt-test', 'openai')).toMatchObject({ id: 'gpt-test', provider: 'openai' })
+  })
+
+  it('encodes and decodes provider-aware selections without tuple collisions', () => {
+    const first = encodeModelSelectionValue('a:b', 'c:d')
+    const second = encodeModelSelectionValue('a', 'b:c:d')
+    expect(first).not.toBe(second)
+    expect(decodeModelSelectionValue(first)).toEqual({ provider: 'a:b', id: 'c:d' })
+    expect(decodeModelSelectionValue(second)).toEqual({ provider: 'a', id: 'b:c:d' })
   })
 })

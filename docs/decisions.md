@@ -18,6 +18,14 @@ Batch archive and delete continue independent session actions after an individua
 failure. The UI reports failed session IDs in an accessible alert; successful
 actions remain applied. These operations provide no rollback guarantee.
 
+## ADR-055 - Provider-aware model selection identity
+
+Composer model options encode provider and model ID as a URI-encoded JSON tuple. This keeps native optgroups and exact server-bound tuple values while avoiding collisions from duplicate IDs or colons.
+
+## ADR-056 - Structured model catalog deduplication
+
+Gateway catalog deduplication uses a Go struct tuple key rather than delimiter concatenation, preserving distinct provider/model pairs even when either value contains colons.
+
 ## ADR-005 - Completion de-duplication at the Gateway boundary
 
 Gateway implementations can stream token deltas and then include the complete answer in `run.completed.output`. The adapter treats that terminal output as a completion snapshot: it emits only the missing suffix relative to already streamed text. This keeps the browser contract deterministic and avoids duplicating a response in the chat timeline.
