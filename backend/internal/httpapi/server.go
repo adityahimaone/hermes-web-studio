@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -364,10 +363,12 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		payload := map[string]any{"session_id": item.ID, "title": safeExportValue(item.Title), "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": make([]any, 0, len(item.Messages))}
 		messages := payload["messages"].([]any)
 		for _, raw := range item.Messages {
-			var message any
-			if json.Unmarshal(raw, &message) == nil {
-				messages = append(messages, safeExportValue(message))
+			var message map[string]any
+			if err := json.Unmarshal(raw, &message); err != nil || message == nil {
+				writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+				return
 			}
+			messages = append(messages, safeExportValue(message))
 		}
 		payload["messages"] = messages
 		body, marshalErr := json.MarshalIndent(payload, "", "  ")
@@ -406,9 +407,7 @@ func safeExportValue(value any) any {
 	case map[string]any:
 		out := make(map[string]any, len(item))
 		for key, value := range item {
-			lower := strings.ToLower(key)
-			normalized := strings.NewReplacer("_", "", "-", "").Replace(lower)
-			if strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(normalized, "apikey") || strings.Contains(normalized, "credential") || strings.Contains(normalized, "accesskey") || strings.Contains(normalized, "privatekey") || lower == "authorization" || strings.Contains(lower, "path") || strings.Contains(lower, "directory") || strings.Contains(lower, "dir") {
+			if sensitiveExportKey(key) {
 				continue
 			}
 			out[key] = safeExportValue(value)
@@ -421,13 +420,43 @@ func safeExportValue(value any) any {
 		}
 		return out
 	case string:
-		if filepath.IsAbs(item) {
+		if privateExportPath(item) {
 			return "[redacted]"
 		}
 		return item
 	default:
 		return value
 	}
+}
+
+func sensitiveExportKey(key string) bool {
+	normalized := strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' {
+			return r + ('a' - 'A')
+		}
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return -1
+	}, key)
+	for _, word := range []string{"auth", "token", "secret", "password", "credential"} {
+		if strings.Contains(normalized, word) {
+			return true
+		}
+	}
+	for _, variant := range []string{"key", "apikey", "accesskey", "privatekey", "publickey", "clientkey", "serverkey", "encryptionkey", "signingkey", "authkey", "secretkey"} {
+		if normalized == variant {
+			return true
+		}
+	}
+	return false
+}
+
+func privateExportPath(value string) bool {
+	if strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `\\`) {
+		return true
+	}
+	return len(value) >= 3 && ((value[0] >= 'a' && value[0] <= 'z') || (value[0] >= 'A' && value[0] <= 'Z')) && value[1] == ':' && (value[2] == '/' || value[2] == '\\')
 }
 
 func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {
