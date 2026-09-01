@@ -166,6 +166,25 @@ func TestSpacesP027SanitizesLegacyReferences(t *testing.T) {
 	}
 }
 
+func TestSpacesP027LegacyUnscopedVisibilityIsIntentionalPartialIsolation(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir(), ProfilesJSON: `[{"id":"default","name":"Default"},{"id":"other","name":"Other"}]`}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+	if _, err := server.control.Create("spaces", control.Item{ID: "legacy", Title: "Legacy", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "legacy", "profile_id": ""}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.control.Create("spaces", control.Item{ID: "default", Title: "Default only", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "default", "profile_id": "default"}}); err != nil {
+		t.Fatal(err)
+	}
+	server.stateMu.Lock()
+	server.activeProfile = "other"
+	server.stateMu.Unlock()
+	rec := httptest.NewRecorder()
+	server.handleSpaces(rec, httptest.NewRequest(http.MethodGet, "/api/spaces", nil))
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(`"name":"Legacy"`)) || bytes.Contains(rec.Body.Bytes(), []byte(`"name":"Default only"`)) {
+		t.Fatalf("partial legacy visibility contract failed: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestSpacesGETDoesNotPersistActiveMetadata(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir()}
 	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))

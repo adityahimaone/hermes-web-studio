@@ -618,9 +618,9 @@ Catalog identity uses normalized provider+model ID, so provider collisions remai
 
 ## P027 workspace references
 
-- Browser-facing Spaces payloads expose only opaque `workspace_ref` values: local references remain safe relative references; remote references are sanitized and never expose SSH, URI, or filesystem metadata.
+- Browser-facing Spaces payloads expose only opaque `workspace_ref` values: local references remain safe relative references; remote references become `remote:<id>` with `unavailable` health. Raw configured remote references never return to the browser and never expose SSH, URI, or filesystem metadata.
 - Local Space registration rejects URI/SSH/private refs, traversal, and symlink-escaping references. Containment uses resolved paths.
-- Space create/activate/delete persistence is transactional from the in-memory registry perspective: failed writes restore prior state. Profile-local semantics remain a documented global gap until profile state ownership is migrated.
+- Space create/activate/delete persistence is transactional from the in-memory registry perspective: failed writes restore prior state. Profile-local semantics are partial by compatibility decision: legacy records with empty `profile_id` remain visible to every profile, while new/profile-scoped records are filtered by active profile. Full isolation remains open until legacy state is migrated.
 - Kanban consumes `workspace_ref` directly and does not read legacy `metadata.path`.
 
 ## P027 trusted-header authentication boundary
