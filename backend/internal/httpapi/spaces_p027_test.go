@@ -99,7 +99,7 @@ func TestSpacesP027RejectsUnsafeAndUnauthorizedAssignments(t *testing.T) {
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
 	defer api.Close()
 	for _, body := range []string{
-		`{"name":"bad","location_kind":"local","workspace_ref":"../secret"}`, `{"name":"bad","location_kind":"local","workspace_ref":"/etc"}`, `{"name":"bad","location_kind":"local","workspace_ref":"file://tmp"}`, `{"name":"bad","location_kind":"local","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"~/.ssh"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe:thing"}`, `{"name":"bad","location_kind":"remote","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"unknown"}`,
+		`{"name":"bad","location_kind":"local","workspace_ref":"../secret"}`, `{"name":"bad","location_kind":"local","workspace_ref":"/etc"}`, `{"name":"bad","location_kind":"local","workspace_ref":"file://tmp"}`, `{"name":"bad","location_kind":"local","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"~/.ssh"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe:thing"}`, `{"name":"bad","location_kind":"remote","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"unknown"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"other"}`,
 	} {
 		response, err := http.Post(api.URL+"/api/spaces", "application/json", bytes.NewBufferString(body))
 		if err != nil {

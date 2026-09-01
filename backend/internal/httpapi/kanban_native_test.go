@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -34,6 +36,7 @@ case "$*" in
   *"boards list"*) printf '%s' '[{"slug":"default","name":"Default","task_count":3}]' ;;
   *"list --json"*) printf '%s' '[{"id":"t_1","title":"Ship board","status":"ready","priority":2,"comment_count":1,"parents":[],"children":[]}]' ;;
   *"create"*) printf '%s' '{"id":"t_new","title":"Created","status":"ready"}' ;;
+  *"complete"*) printf '%s' 'completed /srv/private/task\nsubprocess: /usr/bin/hermes --api-key secret-token\n{"ok":true}' ;;
   *) printf '%s' '{"ok":true}' ;;
 esac
 `
@@ -55,10 +58,7 @@ func TestNativeKanbanBoardUsesCLIJSON(t *testing.T) {
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("status=%d", response.StatusCode)
 	}
-	var body []byte
-	buffer := make([]byte, 2048)
-	n, _ := response.Body.Read(buffer)
-	body = buffer[:n]
+	body, _ := io.ReadAll(response.Body)
 	if !strings.Contains(string(body), "t_1") {
 		t.Fatalf("body=%s", body)
 	}
@@ -75,10 +75,33 @@ func TestNativeKanbanCreateDoesNotExposeCLIPath(t *testing.T) {
 	if response.StatusCode != http.StatusCreated {
 		t.Fatalf("status=%d", response.StatusCode)
 	}
-	buffer := make([]byte, 2048)
-	n, _ := response.Body.Read(buffer)
-	if strings.Contains(string(buffer[:n]), "hermes") {
-		t.Fatalf("CLI path leaked: %s", buffer[:n])
+	body, _ := io.ReadAll(response.Body)
+	if strings.Contains(string(body), "hermes") {
+		t.Fatalf("CLI path leaked: %s", body)
+	}
+}
+
+func TestNativeKanbanActionOmitsPrivateCLIOutput(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	request, err := http.NewRequest(http.MethodPost, server.URL+"/api/kanban/tasks/t_1/actions/complete?board=default", bytes.NewBufferString(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	body, _ := io.ReadAll(response.Body)
+	if response.StatusCode != http.StatusOK || string(body) != "{\"action\":\"complete\",\"ok\":true,\"task_id\":\"t_1\"}\n" {
+		t.Fatalf("status=%d body=%s", response.StatusCode, body)
+	}
+	for _, secret := range []string{"/srv/private/task", "/usr/bin/hermes", "secret-token", "subprocess"} {
+		if strings.Contains(string(body), secret) {
+			t.Fatalf("private CLI detail leaked: %q in %s", secret, body)
+		}
 	}
 }
 
@@ -90,10 +113,8 @@ func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer response.Body.Close()
-	buffer := make([]byte, 4096)
-	n, _ := response.Body.Read(buffer)
-	body := string(buffer[:n])
-	if !strings.Contains(body, `"transport":"cli"`) || !strings.Contains(body, `"live_updates":false`) || !strings.Contains(body, `"arbitrary_edit":false`) {
+	body, _ := io.ReadAll(response.Body)
+	if !strings.Contains(string(body), `"transport":"cli"`) || !strings.Contains(string(body), `"live_updates":false`) || !strings.Contains(string(body), `"arbitrary_edit":false`) {
 		t.Fatalf("capabilities=%s", body)
 	}
 }

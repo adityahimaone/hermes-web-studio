@@ -895,7 +895,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 func summaryPayload(item session.Summary) map[string]any {
 	payload := map[string]any{"session_id": item.ID, "title": item.Title}
 	for key, raw := range item.Metadata {
-		if key == "session_id" || key == "title" || key == "messages" {
+		if !safeSessionMetadataKey(key) {
 			continue
 		}
 		var value any
@@ -904,6 +904,15 @@ func summaryPayload(item session.Summary) map[string]any {
 		}
 	}
 	return payload
+}
+
+func safeSessionMetadataKey(key string) bool {
+	switch key {
+	case "created_at", "updated_at", "pinned", "archived", "tags", "project", "source", "origin", "channel", "conversation_id", "thread_id":
+		return true
+	default:
+		return false
+	}
 }
 
 func sessionPayload(item session.Session) map[string]any {

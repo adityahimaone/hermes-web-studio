@@ -252,16 +252,10 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.profileMu.RLock()
-	profileOK := false
-	for _, profile := range s.profiles {
-		if profile.ID == input.ProfileID {
-			profileOK = true
-			break
-		}
-	}
+	activeProfile := s.activeProfile
+	profileOK := input.ProfileID == "" || input.ProfileID == activeProfile
 	if input.ProfileID == "" {
-		input.ProfileID = s.activeProfile
-		profileOK = true
+		input.ProfileID = activeProfile
 	}
 	s.profileMu.RUnlock()
 	if !profileOK {

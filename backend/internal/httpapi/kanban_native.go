@@ -216,7 +216,8 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 		writeKanbanError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "action": action, "task_id": id, "output": strings.TrimSpace(string(out))})
+	_ = out // Native action output stays server-side; browser receives stable status only.
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "action": action, "task_id": id})
 }
 
 func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Request) {
