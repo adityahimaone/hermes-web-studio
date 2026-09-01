@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, canMutatePumpState, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, canMutatePumpState, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, resetOwnedPumpState, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -164,6 +164,24 @@ describe('conversation runtime contracts', () => {
     const restored = { id: 'turn-1', role: 'assistant' as const, content: 'done', status: 'complete' as const }
     expect(dedupeRestoredAssistant([...messages, { ...restored, content: 'old' }], restored)).toEqual([...messages, restored])
     expect(dedupeRestoredAssistant(messages, restored)).toEqual([...messages, restored])
+  })
+
+  it('releases pump ownership synchronously when aborting active pump', () => {
+    const controller = new AbortController()
+    const owner = { current: controller }
+    const pendingUser = { current: 'pending-user-1' as string | null }
+    resetOwnedPumpState(owner, pendingUser)
+    expect(owner.current).toBeNull()
+    expect(controller.signal.aborted).toBe(true)
+    expect(pendingUser.current).toBeNull()
+  })
+
+  it('keeps reset ownership cleanup safe when refs are already clear', () => {
+    const owner = { current: null as AbortController | null }
+    const pendingUser = { current: null as string | null }
+    resetOwnedPumpState(owner, pendingUser)
+    expect(owner.current).toBeNull()
+    expect(pendingUser.current).toBeNull()
   })
 
   it('keeps the lifecycle matrix explicit', () => { expect(lifecycleRows.map((row) => row.kind)).toEqual(['normal', 'error', 'cancel', 'switch', 'reload', 'reconnect', 'compression', 'recovery']) })

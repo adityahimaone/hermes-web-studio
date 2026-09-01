@@ -58,6 +58,12 @@ export function releaseOwnedController(controller: AbortController, currentContr
   return null
 }
 
+export function resetOwnedPumpState(pump: { current: AbortController | null }, pendingUser: { current: string | null }): void {
+  pump.current?.abort()
+  pump.current = null
+  pendingUser.current = null
+}
+
 export function normalizeRestoreError(_error: unknown): string {
   return 'Unable to restore Hermes session.'
 }
