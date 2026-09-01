@@ -227,6 +227,9 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	s.profileMu.RLock()
+	activeProfile := s.activeProfile
+	s.profileMu.RUnlock()
 	var input struct {
 		Name         string `json:"name"`
 		Title        string `json:"title"`
@@ -251,13 +254,10 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "space_invalid", "Space name, location kind, and workspace reference are required.")
 		return
 	}
-	s.profileMu.RLock()
-	activeProfile := s.activeProfile
 	profileOK := input.ProfileID == "" || input.ProfileID == activeProfile
 	if input.ProfileID == "" {
 		input.ProfileID = activeProfile
 	}
-	s.profileMu.RUnlock()
 	if !profileOK {
 		writeError(w, http.StatusBadRequest, "profile_invalid", "The profile was not found.")
 		return
@@ -268,7 +268,7 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		metadata["health"] = "ready"
 	}
-	activeKey := "active_space:" + s.activeProfile
+	activeKey := "active_space:" + activeProfile
 	active := store.Preferences()[activeKey]
 	created, err := store.CreateSpace(control.Item{Title: name, Status: metadata["health"], Metadata: metadata}, activeKey, active == "")
 	if err != nil {
@@ -355,11 +355,12 @@ func (s *Server) handleSpaceDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "space_invalid", "The space ID is required.")
 		return
 	}
-	if !s.spaceOwnedByActiveProfile(store, id) {
+	profileID := s.capturedActiveProfile()
+	if !s.spaceOwnedByProfile(store, id, profileID) {
 		writeError(w, http.StatusNotFound, "space_not_found", "The space was not found.")
 		return
 	}
-	if err := store.SpaceMutation("spaces", id, "active_space:"+s.activeProfile, true); errors.Is(err, control.ErrNotFound) {
+	if err := store.SpaceMutation("spaces", id, "active_space:"+profileID, true); errors.Is(err, control.ErrNotFound) {
 		writeError(w, 404, "space_not_found", "The space was not found.")
 		return
 	} else if err != nil {
@@ -388,11 +389,12 @@ func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "space_invalid", "The space ID is required.")
 		return
 	}
-	if !s.spaceOwnedByActiveProfile(store, input.ID) {
+	profileID := s.capturedActiveProfile()
+	if !s.spaceOwnedByProfile(store, input.ID, profileID) {
 		writeError(w, http.StatusNotFound, "space_not_found", "The space was not found.")
 		return
 	}
-	if err := store.SpaceMutation("spaces", input.ID, "active_space:"+s.activeProfile, false); err != nil {
+	if err := store.SpaceMutation("spaces", input.ID, "active_space:"+profileID, false); err != nil {
 		if errors.Is(err, control.ErrNotFound) {
 			writeError(w, 404, "space_not_found", "The space was not found.")
 		} else {
@@ -403,14 +405,17 @@ func (s *Server) handleSpaceActivate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true, "active": input.ID})
 }
 
-func (s *Server) spaceOwnedByActiveProfile(store *control.Store, id string) bool {
+func (s *Server) capturedActiveProfile() string {
+	s.profileMu.RLock()
+	defer s.profileMu.RUnlock()
+	return s.activeProfile
+}
+
+func (s *Server) spaceOwnedByProfile(store *control.Store, id, profileID string) bool {
 	items, err := store.List("spaces")
 	if err != nil {
 		return false
 	}
-	s.profileMu.RLock()
-	profileID := s.activeProfile
-	s.profileMu.RUnlock()
 	for _, item := range items {
 		if item.ID == id {
 			return item.Metadata["profile_id"] == "" || item.Metadata["profile_id"] == profileID

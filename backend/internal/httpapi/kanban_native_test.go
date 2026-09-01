@@ -16,7 +16,7 @@ import (
 )
 
 func TestExtractJSONIgnoresCLIStatusText(t *testing.T) {
-	value, err := extractJSON([]byte("notice: starting\n[{\"id\":\"t_1\"}]\ncompleted"))
+	value, err := extractJSON([]byte("notice: starting\n[{\"id\":\"t_1\"}]\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,6 +24,25 @@ func TestExtractJSONIgnoresCLIStatusText(t *testing.T) {
 	encoded, _ := json.Marshal(value)
 	if err := json.Unmarshal(encoded, &items); err != nil || items[0]["id"] != "t_1" {
 		t.Fatalf("value=%s err=%v", encoded, err)
+	}
+}
+
+func TestExtractJSONRejectsTrailingData(t *testing.T) {
+	if _, err := extractJSON([]byte(`{"ok":true} trailing`)); err == nil {
+		t.Fatal("trailing data accepted")
+	}
+}
+
+func TestNativeKanbanActionRejectsUnknownActionBeforeCLI(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	response, err := http.Post(server.URL+"/api/kanban/tasks/t_1/actions/unknown", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status=%d", response.StatusCode)
 	}
 }
 

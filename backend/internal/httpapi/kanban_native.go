@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -130,6 +131,12 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "workspace_invalid", "The task workspace reference is invalid or unavailable.")
 		return
 	}
+	// Revalidate immediately before subprocess construction to fail closed on symlink replacement.
+	workspace, ok = s.canonicalKanbanWorkspace(workspace)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "workspace_invalid", "The task workspace reference is invalid or unavailable.")
+		return
+	}
 	args := []string{"create", input.Title, "--json", "--workspace", workspace}
 	if input.Body != "" {
 		args = append(args, "--body", input.Body)
@@ -171,6 +178,13 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 	if input.GoalMaxTurns != nil {
 		args = append(args, "--goal-max-turns", strconv.Itoa(*input.GoalMaxTurns))
 	}
+	// Final containment check sits directly before CLI execution.
+	workspace, ok = s.canonicalKanbanWorkspace(input.Workspace)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "workspace_invalid", "The task workspace reference is invalid or unavailable.")
+		return
+	}
+	args[4] = workspace
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	out, err := s.kanbanCLI().run(ctx, board, args...)
@@ -205,6 +219,10 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 		}
 	}
 	action := r.PathValue("action")
+	if !supportedKanbanActions[action] {
+		writeError(w, http.StatusBadRequest, "action_invalid", "The Kanban action is not supported.")
+		return
+	}
 	args := []string{action, id}
 	if body.Reason != "" && (action == "block" || action == "schedule" || action == "promote" || action == "unblock") {
 		args = append(args, body.Reason)
@@ -218,6 +236,11 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 	}
 	_ = out // Native action output stays server-side; browser receives stable status only.
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "action": action, "task_id": id})
+}
+
+var supportedKanbanActions = map[string]bool{
+	"complete": true, "archive": true, "block": true, "schedule": true,
+	"promote": true, "unblock": true, "assign": true, "comment": true,
 }
 
 func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Request) {
@@ -290,6 +313,13 @@ func extractJSON(data []byte) (any, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data[start:]))
 	var value any
 	if err := decoder.Decode(&value); err != nil {
+		return nil, err
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return nil, errors.New("trailing JSON data")
+		}
 		return nil, err
 	}
 	return value, nil

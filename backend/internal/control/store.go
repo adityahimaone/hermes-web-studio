@@ -489,8 +489,21 @@ func (s *Store) persist() error {
 	if err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, append(data, '\n'), 0600); err != nil {
+	tmpFile, err := os.CreateTemp(filepath.Dir(s.path), ".control.json.tmp-*")
+	if err != nil {
+		return err
+	}
+	tmp := tmpFile.Name()
+	defer os.Remove(tmp)
+	if err := tmpFile.Chmod(0600); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if _, err := tmpFile.Write(append(data, '\n')); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
 		return err
 	}
 	return os.Rename(tmp, s.path)
