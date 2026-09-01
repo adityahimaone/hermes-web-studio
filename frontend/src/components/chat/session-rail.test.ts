@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, findSessionButton, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -21,6 +21,16 @@ describe('session keyboard navigation', () => {
     expect(nextSessionId(['one', 'two', 'three'], 'one', 'next')).toBe('two')
     expect(nextSessionId(['one', 'two', 'three'], 'one', 'previous')).toBe('three')
     expect(nextSessionId(['one', 'two', 'three'], 'three', 'next')).toBe('one')
+  })
+
+  it('focuses exact target button after selection rerender', () => {
+    const root = document.createElement('div')
+    const target = document.createElement('button')
+    target.dataset.sessionId = 'beta'
+    root.append(target)
+    document.body.append(root)
+    focusSessionButton(root, 'beta')
+    expect(document.activeElement).toBe(target)
   })
 
   it('finds session button by exact data attribute without CSS selector escaping', () => {

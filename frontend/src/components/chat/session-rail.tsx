@@ -27,6 +27,12 @@ export function nextSessionId(ids: string[], currentId: string, direction: 'next
 export function findSessionButton(root: ParentNode, sessionId: string) {
   return Array.from(root.querySelectorAll<HTMLButtonElement>('button[data-session-id]')).find(button => button.dataset.sessionId === sessionId)
 }
+export function focusSessionButton(root: ParentNode, sessionId: string) {
+  const button = findSessionButton(root, sessionId)
+  if (!button) return false
+  button.focus()
+  return true
+}
 export function sessionActionVisibilityClass() { return 'absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100' }
 
 function formatCompactDate(dateStr?: string) {
@@ -153,7 +159,15 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
               return (
                 <div key={item.session_id} className={cn('group relative flex min-h-8 items-center rounded-lg px-1.5 py-1 transition-colors hover:bg-accent/50', isActive && 'bg-accent/70 font-medium text-foreground shadow-sm ring-1 ring-border/80', isSelected && 'ring-1 ring-primary/60')}>
                   {batchMode && <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => toggleSelected(item.session_id)} aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.title || 'session'}`}>{isSelected ? <Check size={13} /> : <span className="size-2.5 rounded-sm border" />}</Button>}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} onKeyDown={event => { if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return; event.preventDefault(); const nextId = nextSessionId(visibleSessionIds, item.session_id, event.key === 'ArrowDown' ? 'next' : 'previous'); if (nextId) { onSelectSession(nextId); findSessionButton(document, nextId)?.focus() } }} data-session-id={item.session_id} aria-current={sessionRowAriaCurrent(item.session_id, activeSessionId)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} onKeyDown={event => { if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return; event.preventDefault(); const nextId = nextSessionId(visibleSessionIds, item.session_id, event.key === 'ArrowDown' ? 'next' : 'previous'); if (nextId) {
+  onSelectSession(nextId)
+  const focusAfterSelection = () => {
+    const button = findSessionButton(document, nextId)
+    if (button?.getAttribute('aria-current') === 'page') button.focus()
+    else window.requestAnimationFrame(focusAfterSelection)
+  }
+  window.requestAnimationFrame(focusAfterSelection)
+} }} data-session-id={item.session_id} aria-current={sessionRowAriaCurrent(item.session_id, activeSessionId)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
                     {item.pinned ? <Pin size={11} className="shrink-0 text-primary" /> : null}
                     <span className="min-w-0 flex-1 truncate text-[11px] leading-tight text-foreground/90">{item.title || 'Untitled session'}</span>
                     {channel && <span className="shrink-0 rounded bg-muted px-1 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">{channel}</span>}
