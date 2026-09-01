@@ -32,7 +32,7 @@ export function modelKey(id: string, provider = '') {
 export function findCatalogModel(models: ModelCatalogItem[], id: string, provider = '') {
   const normalizedId = clean(id, 256)
   const normalizedProvider = clean(provider, 128)
-  return models.find(model => model.id === normalizedId && (!normalizedProvider || model.provider === normalizedProvider))
+  return normalizeModelCatalog(models).find(model => model.id === normalizedId && (!normalizedProvider || model.provider === normalizedProvider))
 }
 
 export function validModelSelection(models: ModelCatalogItem[], id: string, provider = '') {

@@ -7,7 +7,7 @@ import { normalizeTurnMode, type PendingTurn, type TurnMode } from '../../lib/tu
 import { localSlashCommand, slashCommandSuggestions } from '../../lib/slash-commands'
 import { cn } from '../../lib/cn'
 import { getModelCatalog, type ModelCatalogItem } from '../../lib/api-client'
-import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from '../../lib/model-catalog'
+import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from '../../lib/model-catalog'
 
 type Profile = { id: string; name: string; model: string; provider?: string }
 type Props = { onSend: (value: string, attachments?: File[], options?: { model?: string; provider?: string }, mode?: TurnMode) => void; onCancel: () => void; onRemoveQueued?: (index: number) => void; onCommand?: (command: string) => void; isStreaming: boolean; draft?: string; onDraftChange?: (value: string) => void; queuedMessages?: PendingTurn[]; contextUsage?: { total?: number; contextLimit?: number }; workspacePath?: string; onWorkspaceOpen?: () => void }
@@ -214,11 +214,11 @@ export function Composer({ onSend, onCancel, onRemoveQueued, onCommand, isStream
               <Select
                 aria-label="Conversation model"
                 value={model}
-                onChange={event => { setModel(event.target.value); setProvider(catalog.find(item => item.id === event.target.value)?.provider || '') }}
+                onChange={event => { const selected = findCatalogModel(normalizedCatalog, event.target.value); setModel(selected?.id || 'default'); setProvider(selected?.provider || '') }}
                 className="select-menu-up h-7 min-h-7 max-w-36 rounded-full border-border/60 bg-muted/40 px-2 text-[11px] font-medium hover:border-border hover:bg-muted/70"
               >
                 <option value="default">{catalogStatus === 'loading' ? 'Loading models…' : catalogStatus === 'error' ? 'Models unavailable' : catalogStatus === 'unavailable' ? 'Catalog unavailable' : 'Default model'}</option>
-                {activeProfile?.model && activeProfile.model !== 'default' && !catalog.some(item => item.id === activeProfile.model) && <option value={activeProfile.model}>{activeProfile.model} (unavailable)</option>}
+                {activeProfile?.model && activeProfile.model !== 'default' && !findCatalogModel(normalizedCatalog, activeProfile.model, activeProfile.provider) && <option value={activeProfile.model}>{activeProfile.model} (unavailable)</option>}
                 {modelGroups.map(group => <optgroup key={group.provider} label={group.provider}>{group.models.map(item => <option key={`${group.provider}:${item.id}`} value={item.id}>{item.label}</option>)}</optgroup>)}
               </Select>
             </div>

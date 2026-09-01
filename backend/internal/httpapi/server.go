@@ -579,13 +579,10 @@ func (s *Server) handleHermesHealth(w http.ResponseWriter, r *http.Request) {
 
 func publicGatewayURL(raw string) string {
 	parsed, err := url.Parse(raw)
-	if err != nil {
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Hostname() == "" {
 		return "configured"
 	}
-	parsed.User = nil
-	parsed.RawQuery = ""
-	parsed.Fragment = ""
-	return parsed.String()
+	return parsed.Scheme + "://" + parsed.Host
 }
 
 func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {

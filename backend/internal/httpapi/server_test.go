@@ -18,6 +18,28 @@ import (
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 )
 
+func TestPublicGatewayURLRedactsPathQueryAndUserinfo(t *testing.T) {
+	got := publicGatewayURL("https://user:secret@example.test/private/path?token=secret#fragment")
+	if got != "https://example.test" {
+		t.Fatalf("publicGatewayURL = %q", got)
+	}
+}
+
+func TestHermesHealthResponseUsesSafeGatewayOrigin(t *testing.T) {
+	api := newTestServer(t, "https://user:secret@example.test/private?token=secret", "")
+	defer api.Close()
+	response, err := api.Client().Get(api.URL + "/api/health/hermes")
+	if err != nil { t.Fatal(err) }
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil { t.Fatal(err) }
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil { t.Fatal(err) }
+	if payload["base_url"] != "https://example.test" || strings.Contains(string(body), "secret") || strings.Contains(string(body), "/private") {
+		t.Fatalf("unsafe health payload: %s", body)
+	}
+}
+
 func TestChatStreamsHermesGatewayResponse(t *testing.T) {
 	requestSeen := make(chan struct{}, 1)
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

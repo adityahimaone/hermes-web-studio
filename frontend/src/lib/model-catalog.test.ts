@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { utf8Length } from './model-catalog'
-import { groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from './model-catalog'
+import { findCatalogModel, groupModelCatalog, normalizeModelCatalog, searchModelCatalog, validModelSelection } from './model-catalog'
 
 describe('model catalog', () => {
   const models = [
@@ -38,5 +38,9 @@ describe('model catalog', () => {
     expect(validModelSelection(models, 'missing', 'openai')).toBe(false)
     expect(validModelSelection(models, 'gpt-test', 'anthropic')).toBe(false)
     expect(validModelSelection(models, 'gpt-test', 'openai')).toBe(true)
+  })
+
+  it('resolves raw catalog entries through normalized model/provider mapping', () => {
+    expect(findCatalogModel([{ id: ' gpt-test ', label: 'GPT', provider: ' openai ', aliases: [], capabilities: [], available: true }], 'gpt-test', 'openai')).toMatchObject({ id: 'gpt-test', provider: 'openai' })
   })
 })
