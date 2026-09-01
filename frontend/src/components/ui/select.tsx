@@ -27,10 +27,6 @@ export function readOptions(children: ReactNode): Option[] {
   })
 }
 
-function readGroupLabel(options: Option[], index: number) {
-  return index === 0 || options[index - 1]?.group !== options[index]?.group ? options[index]?.group : undefined
-}
-
 export function groupOptions(options: Option[]) {
   return options.reduce<{ label?: string; options: Option[] }[]>((groups, option) => {
     const current = groups[groups.length - 1]
