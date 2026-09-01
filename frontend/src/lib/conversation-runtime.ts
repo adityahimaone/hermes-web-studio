@@ -44,6 +44,16 @@ export function isCurrentPump(controller: AbortController, currentController: Ab
   return controller === currentController && current.sessionId === sessionId && current.epoch === epoch
 }
 
+export function resetAnswerAtSessionBoundary(answer: { current: string }): void {
+  answer.current = ''
+}
+
+export function releaseOwnedController(controller: AbortController, currentController: AbortController | null): AbortController | null {
+  if (currentController !== controller) return currentController
+  controller.abort()
+  return null
+}
+
 export function normalizeRestoreError(_error: unknown): string {
   return 'Unable to restore Hermes session.'
 }
