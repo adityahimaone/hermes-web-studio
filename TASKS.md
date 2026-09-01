@@ -35,6 +35,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)
 - [~] Attachments and multimodal messages (validated upload/download, MIME-specific Gateway transport, and attachment turns safely stay on chat-completions when Runs mode is enabled; current live model completion proof blocked by provider HTTP 402)
 - [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and Playwright interruption/reconnect coverage verified; current live replay proof blocked by provider HTTP 402)
+- [x] Harden chat turn failure boundaries (per-session turn serialization, owned rollback error reporting, nested HTTP-200 error rejection, terminal SSE validation, and assistant persistence failure handling; live provider completion remains blocked by current HTTP 402)
 - [x] Context/token usage indicator
 - [x] Chat keyboard, focus, screen-reader, and mobile acceptance tests (Playwright coverage passes for mobile navigation, focus/labels, desktop rail, Shift+Enter, and Enter-to-send)
 

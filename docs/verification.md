@@ -23,7 +23,7 @@ Live verification must be added as a separate dated entry using `scripts/smoke-h
 | `./scripts/smoke-hermes.sh` | Blocked: could not connect to the local BFF at `127.0.0.1:8787` |
 | Hermes Gateway probe | Blocked: `127.0.0.1:8642` was not reachable |
 
-The live M0 gate remains open. Re-run after starting both the Hermes Gateway and Hermes Web Studio API, then record the Hermes version, model/provider, first-token latency, and final response here.
+The live M0 gate remains open. Re-run after starting both the Hermes Gateway and Hermes Web Studio API, then record the Hermes version, model/provider, first-token latency, and final response here. Historical live entries below are scoped to their recorded date/provider state; current provider HTTP 402 insufficient-credit responses remain blocked and are not current completion evidence.
 
 ## 2026-08-30 - M0 live proof
 

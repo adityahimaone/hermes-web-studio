@@ -361,6 +361,7 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 	var dataLines []string
 	answer := ""
 	reasoningSnapshot := ""
+	terminal := false
 
 	flush := func() error {
 		if len(dataLines) == 0 {
@@ -372,24 +373,40 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		name := eventName
 		eventName = "message"
 		if data == "[DONE]" {
+			terminal = true
 			return io.EOF
 		}
 		var payload map[string]any
 		if err := json.Unmarshal([]byte(data), &payload); err != nil {
-			return nil
+			return errors.New("Hermes completion failed.")
+		}
+		frameName := stringValue(payload["event"])
+		if frameName == "" {
+			frameName = stringValue(payload["type"])
+		}
+		if frameName == "" || frameName == "message" {
+			frameName = name
+		}
+		if frameName == "run.completed" || frameName == "message.complete" {
+			terminal = true
+			if containsErrorField(payload) {
+				return errors.New("Hermes completion failed.")
+			}
+		}
+		if frameName == "error" || frameName == "run.failed" {
+			return errors.New("Hermes completion failed.")
 		}
 		translated, delta, terminalErr := translate(name, payload)
 		if terminalErr != nil {
 			return terminalErr
 		}
-		effectiveName := name
 		if payloadName := stringValue(payload["event"]); payloadName != "" {
-			effectiveName = payloadName
+			name = payloadName
 		}
 		if payloadName := stringValue(payload["type"]); payloadName != "" {
-			effectiveName = payloadName
+			name = payloadName
 		}
-		if (effectiveName == "run.completed" || effectiveName == "message.complete") && delta != "" {
+		if (name == "run.completed" || name == "message.complete") && delta != "" {
 			if sameSnapshot(answer, delta) {
 				delta = ""
 			} else {
@@ -430,7 +447,7 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		line := scanner.Text()
 		if line == "" {
 			if err := flush(); errors.Is(err, io.EOF) {
-				return answer, nil
+				break
 			} else if err != nil {
 				return answer, err
 			}
@@ -448,13 +465,43 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return answer, err
+		return answer, errors.New("Hermes completion failed.")
 	}
 	if err := flush(); err != nil && !errors.Is(err, io.EOF) {
 		return answer, err
 	}
+	if terminal && strings.TrimSpace(answer) == "" {
+		return answer, errors.New("Hermes completion failed.")
+	}
+	if !terminal && strings.TrimSpace(answer) != "" {
+		return answer, errors.New("Hermes completion failed.")
+	}
 	return answer, nil
 }
+
+func containsErrorField(value any) bool {
+	switch item := value.(type) {
+	case map[string]any:
+		for key, child := range item {
+			lower := strings.ToLower(key)
+			if lower == "error" || strings.HasSuffix(lower, "_error") || lower == "errors" || strings.HasSuffix(lower, ".error") {
+				return true
+			}
+			if containsErrorField(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range item {
+			if containsErrorField(child) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ponytail: in-memory per-session locking is sufficient for this single BFF process; upgrade to filesystem CAS if multiple writers are introduced.
 
 // Gateways may send token deltas and then repeat the complete answer in
 // run.completed. Only emit the suffix that was not already streamed.

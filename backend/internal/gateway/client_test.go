@@ -33,6 +33,25 @@ func TestParseSSETranslatesOpenAIAndHermesFrames(t *testing.T) {
 	}
 }
 
+func TestParseSSERejectsNestedHTTP200ErrorAndMissingTerminal(t *testing.T) {
+	for _, input := range []string{
+		"event: run.completed\ndata: {\"result\":{\"errors\":[{\"message\":\"secret\"}]}}\n\ndata: [DONE]\n\n",
+		"data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n",
+	} {
+		_, err := parseSSE(strings.NewReader(input), func(Event) {})
+		if err == nil || !strings.Contains(err.Error(), "Hermes completion failed") {
+			t.Fatalf("input=%q err=%v", input, err)
+		}
+	}
+}
+
+func TestParseSSERejectsEmptyTerminalSuccess(t *testing.T) {
+	_, err := parseSSE(strings.NewReader("event: run.completed\ndata: {}\n\n"), func(Event) {})
+	if err == nil || !strings.Contains(err.Error(), "Hermes completion failed") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestParseSSESurfacesRunFailure(t *testing.T) {
 	input := "event: run.failed\ndata: {\"error\":\"provider secret detail\"}\n\n"
 	_, err := parseSSE(strings.NewReader(input), func(Event) {})

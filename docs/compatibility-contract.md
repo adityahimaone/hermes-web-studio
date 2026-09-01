@@ -177,7 +177,9 @@ Attachment uploads are multipart `file` requests, limited to 10 MiB and image/PD
 
 Editing a persisted user message uses `POST /api/sessions/{session_id}/truncate` with `{"count":<message-count>}`. The BFF keeps the transcript prefix, preserves session metadata, and the next composer send creates the replacement branch.
 
-Retry/regenerate uses the same prefix operation and immediately starts a replacement turn, preventing the previous assistant branch from being appended as a second answer.
+Retry/regenerate uses the same prefix operation and immediately starts a replacement turn, preventing the previous assistant branch from being appended as a second answer. Turns serialize per session inside one BFF process; failed turns roll back only state they own. Rollback failures emit `apperror` and preserve state rather than claiming cleanup. Assistant persistence failure never emits `done`.
+
+Gateway HTTP 200 completion frames must contain a non-empty answer and valid terminal SSE completion (`[DONE]` or recognized completion event). Truncated streams, scanner EOF, nested error fields, and empty completion payloads fail without assistant persistence. Current provider HTTP 402 insufficient-credit responses remain upstream limitations; they are reported as controlled errors and do not prove live completion or rollback beyond the safely owned session prefix.
 
 ## M2 workspace contract
 

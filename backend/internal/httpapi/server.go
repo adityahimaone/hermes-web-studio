@@ -30,6 +30,7 @@ type Server struct {
 	gateway       *gateway.Client
 	sessions      *session.Store
 	turns         map[string]*turn
+	sessionLocks  map[string]*sync.Mutex
 	workspace     *workspace.Service
 	workspaceErr  error
 	auth          *auth.Service
@@ -107,7 +108,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 			profiles = configured
 		}
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -648,6 +649,15 @@ func (s *Server) handleChatStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequest) {
 	defer s.finishTurn(item)
+	s.mu.Lock()
+	lock := s.sessionLocks[input.SessionID]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		s.sessionLocks[input.SessionID] = lock
+	}
+	s.mu.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 	_, loadErr := s.sessions.Load(input.SessionID)
 	createdSession := errors.Is(loadErr, os.ErrNotExist)
 	originalMessageCount := 0
@@ -685,21 +695,36 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 			s.publish(item, gateway.Event{Name: "cancel", Data: map[string]any{"message": "Cancelled by user"}})
 			return
 		}
+		rollbackErr := error(nil)
 		if createdSession {
-			_ = s.sessions.Delete(input.SessionID)
+			rollbackErr = s.sessions.Delete(input.SessionID)
 		} else {
-			_ = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
+			rollbackErr = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
 		}
 		code := "gateway_unavailable"
+		if rollbackErr != nil {
+			code = "session_rollback_failed"
+		}
 		message := "Hermes Gateway is unavailable. Check that it is running and reachable."
+		if rollbackErr != nil {
+			message = "The turn failed and its session state could not be rolled back."
+		}
 		var httpErr *gateway.HTTPError
-		if errors.As(err, &httpErr) {
+		if errors.As(err, &httpErr) && rollbackErr == nil {
 			code, message = httpErr.Code, httpErr.Message
 		}
 		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": message}})
 		return
 	}
-	_ = s.sessions.AppendMessages(input.SessionID, mustMessage("assistant", answer))
+	if err := s.sessions.AppendMessages(input.SessionID, mustMessage("assistant", answer)); err != nil {
+		rollbackErr := s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
+		code := "session_persist_failed"
+		if rollbackErr != nil {
+			code = "session_rollback_failed"
+		}
+		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": "The assistant response could not be saved."}})
+		return
+	}
 	s.publish(item, gateway.Event{Name: "done", Data: map[string]any{"answer": answer, "session_id": item.sessionID}})
 }
 
