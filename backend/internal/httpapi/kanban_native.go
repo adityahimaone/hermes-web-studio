@@ -14,7 +14,65 @@ import (
 	"time"
 )
 
-const maxKanbanActionReasonLength = 512
+const (
+	maxKanbanActionReasonLength = 512
+	maxKanbanProjectionItems    = 100
+	maxKanbanCLIOutput          = 1 << 20
+	maxKanbanIdentifierLength   = 128
+)
+
+func validateKanbanIdentifier(value string, allowEmpty bool) (string, error) {
+	if allowEmpty && value == "" {
+		return "", nil
+	}
+	if value == "" || len(value) > maxKanbanIdentifierLength || strings.TrimSpace(value) != value || strings.HasPrefix(value, "-") || strings.ContainsAny(value, "/\\\\;|&$`<>()\"") {
+		return "", errors.New("invalid kanban identifier")
+	}
+	for _, r := range value {
+		if r < 0x20 || r == 0x7f {
+			return "", errors.New("invalid kanban identifier")
+		}
+	}
+	return value, nil
+}
+
+func validateKanbanMax(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 1 || n > 100 {
+		return "", errors.New("invalid kanban max")
+	}
+	return strconv.Itoa(n), nil
+}
+
+func validateKanbanArgument(value string, allowEmpty bool) error {
+	if allowEmpty && value == "" {
+		return nil
+	}
+	if value == "" || len(value) > 2048 || strings.TrimSpace(value) != value || strings.HasPrefix(value, "-") {
+		return errors.New("invalid kanban argument")
+	}
+	for _, r := range value {
+		if r < 0x20 || r == 0x7f {
+			return errors.New("invalid kanban argument")
+		}
+	}
+	return nil
+}
+
+func validateKanbanArgumentList(values []string) error {
+	if len(values) > maxKanbanProjectionItems {
+		return errors.New("too many kanban arguments")
+	}
+	for _, value := range values {
+		if err := validateKanbanArgument(strings.TrimSpace(value), false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 type kanbanCLI struct{ path string }
 
@@ -37,6 +95,9 @@ func (c kanbanCLI) run(ctx context.Context, board string, args ...string) ([]byt
 			return nil, fmt.Errorf("hermes kanban failed: %s", strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return nil, err
+	}
+	if len(output) > maxKanbanCLIOutput {
+		return nil, errors.New("hermes kanban output too large")
 	}
 	return output, nil
 }
@@ -71,14 +132,23 @@ func (s *Server) handleKanbanBoards(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleKanbanBoardNative(w http.ResponseWriter, r *http.Request) {
-	board := strings.TrimSpace(r.URL.Query().Get("board"))
+	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
+		return
+	}
+	tenant, err := validateKanbanIdentifier(strings.TrimSpace(r.URL.Query().Get("tenant")), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "tenant_invalid", "The Kanban tenant is invalid.")
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	args := []string{"list", "--json"}
 	if r.URL.Query().Get("include_archived") == "true" {
 		args = append(args, "--archived")
 	}
-	if tenant := strings.TrimSpace(r.URL.Query().Get("tenant")); tenant != "" {
+	if tenant != "" {
 		args = append(args, "--tenant", tenant)
 	}
 	out, err := s.kanbanCLI().run(ctx, board, args...)
@@ -90,7 +160,11 @@ func (s *Server) handleKanbanBoardNative(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleKanbanTaskNative(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id, err := validateKanbanIdentifier(r.PathValue("id"), false)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "task_id_invalid", "The Kanban task ID is invalid.")
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	out, err := s.kanbanCLI().run(ctx, "", "show", id, "--json")
@@ -127,7 +201,25 @@ func (s *Server) handleKanbanTaskCreateNative(w http.ResponseWriter, r *http.Req
 		writeError(w, 400, "title_required", "A task title is required.")
 		return
 	}
-	board := strings.TrimSpace(r.URL.Query().Get("board"))
+	for _, value := range []string{input.Title, input.Body, input.Assignee, input.Tenant, input.IdempotencyKey} {
+		if err := validateKanbanArgument(value, true); err != nil {
+			writeError(w, http.StatusBadRequest, "task_field_invalid", "A Kanban task field is invalid.")
+			return
+		}
+	}
+	if err := validateKanbanArgumentList(input.Parents); err != nil {
+		writeError(w, http.StatusBadRequest, "task_field_invalid", "A Kanban task field is invalid.")
+		return
+	}
+	if err := validateKanbanArgumentList(input.Skills); err != nil {
+		writeError(w, http.StatusBadRequest, "task_field_invalid", "A Kanban task field is invalid.")
+		return
+	}
+	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
+		return
+	}
 	workspace, ok := s.canonicalKanbanWorkspace(input.Workspace)
 	if !ok {
 		writeError(w, http.StatusBadRequest, "workspace_invalid", "The task workspace reference is invalid or unavailable.")
@@ -210,8 +302,16 @@ func (s *Server) canonicalKanbanWorkspace(value string) (string, bool) {
 }
 
 func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	board := strings.TrimSpace(r.URL.Query().Get("board"))
+	id, err := validateKanbanIdentifier(r.PathValue("id"), false)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "task_id_invalid", "The Kanban task ID is invalid.")
+		return
+	}
+	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
+		return
+	}
 	var body struct {
 		Reason string `json:"reason"`
 	}
@@ -252,15 +352,23 @@ var supportedKanbanActions = map[string]bool{
 
 func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Request) {
 	args := []string{"dispatch", "--json"}
+	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
+		return
+	}
 	if r.URL.Query().Get("dry_run") == "true" {
 		args = append(args, "--dry-run")
 	}
-	if max := strings.TrimSpace(r.URL.Query().Get("max")); max != "" {
+	if max, err := validateKanbanMax(strings.TrimSpace(r.URL.Query().Get("max"))); err != nil {
+		writeError(w, http.StatusBadRequest, "max_invalid", "The Kanban dispatch maximum is invalid.")
+		return
+	} else if max != "" {
 		args = append(args, "--max", max)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
-	out, err := s.kanbanCLI().run(ctx, strings.TrimSpace(r.URL.Query().Get("board")), args...)
+	out, err := s.kanbanCLI().run(ctx, board, args...)
 	if err != nil {
 		writeKanbanError(w, err)
 		return
@@ -291,6 +399,10 @@ func writeKanbanError(w http.ResponseWriter, err error) {
 }
 
 func writeKanbanProjection(w http.ResponseWriter, status int, data []byte) {
+	if len(data) > maxKanbanCLIOutput {
+		writeError(w, http.StatusBadGateway, "kanban_invalid_response", "Hermes returned an invalid Kanban response.")
+		return
+	}
 	value, err := extractJSON(data)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "kanban_invalid_response", "Hermes returned an invalid Kanban response.")
@@ -304,8 +416,8 @@ func sanitizeKanbanProjection(value any) any {
 	// particular, never project arbitrary CLI JSON, workspace paths, or runs.
 	switch rows := value.(type) {
 	case []any:
-		out := make([]map[string]any, 0, len(rows))
-		for _, row := range rows {
+		out := make([]map[string]any, 0, min(len(rows), maxKanbanProjectionItems))
+		for _, row := range rows[:min(len(rows), maxKanbanProjectionItems)] {
 			if item, ok := row.(map[string]any); ok {
 				out = append(out, sanitizeKanbanItem(item))
 			}
@@ -320,8 +432,8 @@ func sanitizeKanbanProjection(value any) any {
 		}
 		for _, key := range []string{"tenants", "assignees"} {
 			if values, ok := rows[key].([]any); ok {
-				items := make([]string, 0, len(values))
-				for _, value := range values {
+				items := make([]string, 0, min(len(values), maxKanbanProjectionItems))
+				for _, value := range values[:min(len(values), maxKanbanProjectionItems)] {
 					if text, ok := value.(string); ok && len(text) <= 256 {
 						items = append(items, text)
 					}
@@ -414,12 +526,14 @@ func safeBoundedKanbanValue(value any) (any, bool) {
 		return nil, true
 	case []any:
 		out := make([]any, 0, min(len(v), 100))
-		for _, item := range v[:min(len(v), 100)] {
+		for _, item := range v[:min(len(v), maxKanbanProjectionItems)] {
 			if _, nested := item.([]any); nested {
-				continue
+				return nil, false
 			}
 			if safe, ok := safeBoundedKanbanValue(item); ok {
 				out = append(out, safe)
+			} else {
+				return nil, false
 			}
 		}
 		return out, true
@@ -459,6 +573,9 @@ func min(a, b int) int {
 // the first JSON object/array must decode completely, and no arbitrary text is
 // ever forwarded to the browser.
 func extractJSON(data []byte) (any, error) {
+	if len(data) > maxKanbanCLIOutput {
+		return nil, errors.New("JSON document too large")
+	}
 	start := bytes.IndexAny(data, "{[")
 	if start < 0 {
 		return nil, errors.New("no JSON document")
