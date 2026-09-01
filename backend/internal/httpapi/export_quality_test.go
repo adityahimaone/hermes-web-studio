@@ -2,10 +2,12 @@ package httpapi
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
@@ -111,5 +113,75 @@ func TestSensitiveExportKeyDoesNotRedactUnrelatedKeyNames(t *testing.T) {
 		if sensitiveExportKey(key) {
 			t.Fatalf("unrelated key redacted: %q", key)
 		}
+	}
+}
+
+func TestSafeExportValueRedactsURIAndRelativePrivatePaths(t *testing.T) {
+	for _, path := range []string{"file:///home/user/.env", "file://C:/Users/name/key", "./.env", "../secrets/key", "../../private/file"} {
+		if got := safeExportValue(path); got != "[redacted]" {
+			t.Fatalf("path %q got %#v", path, got)
+		}
+	}
+	for _, text := range []string{"normal ./ prose", "normal ../ prose"} {
+		if got := safeExportValue(text); got != text {
+			t.Fatalf("free-form text changed: %#v", got)
+		}
+	}
+}
+
+func TestMarkdownExportRedactsTitleAndMessagePaths(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"safe","title":"file:///home/user/private.md","messages":[{"role":"user","content":"../secrets/key"},{"role":"assistant","content":"ordinary **Markdown**"}]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "safe.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions/safe/export?format=markdown")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", response.StatusCode)
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, secret := range []string{"file:///home/user/private.md", "../secrets/key"} {
+		if strings.Contains(text, secret) {
+			t.Fatalf("markdown leaked %q: %s", secret, text)
+		}
+	}
+	if !strings.Contains(text, "# [redacted]") || !strings.Contains(text, "ordinary **Markdown**") {
+		t.Fatalf("markdown lost redaction or free-form content: %s", text)
+	}
+}
+
+func TestMarkdownExportRejectsMalformedPersistedMessage(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"broken-markdown","title":"Broken","messages":["malformed message"]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "broken-markdown.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	response, err := http.Get(api.URL + "/api/sessions/broken-markdown/export?format=markdown")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status=%d", response.StatusCode)
 	}
 }

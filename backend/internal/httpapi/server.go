@@ -382,20 +382,23 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body strings.Builder
-	body.WriteString("# " + item.Title + "\n\n")
+	body.WriteString("# " + safeExportValue(item.Title).(string) + "\n\n")
 	for _, raw := range item.Messages {
-		var message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
+		var message map[string]any
+		if err := json.Unmarshal(raw, &message); err != nil || message == nil {
+			writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+			return
 		}
-		if json.Unmarshal(raw, &message) != nil || message.Content == "" {
+		role, _ := message["role"].(string)
+		content, _ := message["content"].(string)
+		if content == "" {
 			continue
 		}
 		label := "User"
-		if message.Role == "assistant" {
+		if role == "assistant" {
 			label = "Hermes"
 		}
-		body.WriteString("## " + label + "\n\n" + message.Content + "\n\n")
+		body.WriteString("## " + label + "\n\n" + safeExportValue(content).(string) + "\n\n")
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.md"`)
@@ -462,7 +465,7 @@ func sensitiveExportKey(key string) bool {
 }
 
 func privateExportPath(value string) bool {
-	if strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `\\`) {
+	if strings.HasPrefix(value, "file://") || strings.HasPrefix(value, "./") || strings.HasPrefix(value, "../") || strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `\\`) {
 		return true
 	}
 	return len(value) >= 3 && ((value[0] >= 'a' && value[0] <= 'z') || (value[0] >= 'A' && value[0] <= 'Z')) && value[1] == ':' && (value[2] == '/' || value[2] == '\\')
