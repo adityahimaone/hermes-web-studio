@@ -78,6 +78,10 @@ safe offline UI while Hermes is restarting.
 
 ## ADR-017 - Shared UI primitives and Chat-owned session navigation
 
+## ADR-018 - Arrow-key session selection
+
+Session rows keep native button activation and add ArrowUp/ArrowDown navigation across currently visible, filtered sessions. Navigation wraps at list boundaries and moves focus to the selected row, preserving active-session selection without introducing a roving-tabindex abstraction.
+
 Session overflow actions remain visible by default, while preserving existing hover/focus-within styling, so keyboard and touch users can reach them without hover.
 
 Visible controls use the repository's copy-owned shadcn-style `Button`,
@@ -89,13 +93,20 @@ control-center menu is active; session actions and search behavior remain
 unchanged. The rail lives inside the Chat content area, leaving the primary
 navigation sidebar focused on product sections.
 
-## ADR-018 - Copy-owned dialogs for destructive and naming actions
+## ADR-052 - Copy-owned dialogs for destructive and naming actions
 
 Session rename/delete and workspace create/rename/delete use the shared Dialog
 primitive instead of browser-native prompt/confirm surfaces. This keeps focus,
 copy, cancellation, and destructive intent visible and consistent. The API
 actions remain unchanged, so the compatibility boundary and rollback behavior
 are preserved.
+
+## ADR-053 - Bound session selection focus retries
+
+Arrow-key session navigation schedules focus after selection so React can
+rerender the active row. The retry is capped at ten animation frames; missing,
+filtered, or unmounted targets terminate safely instead of spinning forever.
+Successful rerenders still focus the row marked `aria-current="page"`.
 
 ## ADR-019 - Icon rail with Chat-owned session toggle
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -13,6 +13,49 @@ describe('session filter accessibility', () => {
     ['dynamic tag unselected', 'all', 'work', false],
   ])('%s', (_label, selected, value, expected) => {
     expect(filterAriaPressed(selected, value)).toBe(expected)
+  })
+})
+
+describe('session keyboard navigation', () => {
+  it('wraps ArrowDown and ArrowUp selection across visible session ids', () => {
+    expect(nextSessionId(['one', 'two', 'three'], 'one', 'next')).toBe('two')
+    expect(nextSessionId(['one', 'two', 'three'], 'one', 'previous')).toBe('three')
+    expect(nextSessionId(['one', 'two', 'three'], 'three', 'next')).toBe('one')
+  })
+
+  it('focuses exact target button after selection rerender', () => {
+    const root = document.createElement('div')
+    const target = document.createElement('button')
+    target.dataset.sessionId = 'beta'
+    root.append(target)
+    document.body.append(root)
+    focusSessionButton(root, 'beta')
+    expect(document.activeElement).toBe(target)
+  })
+
+  it('stops focus retries when selected session never appears', () => {
+    const root = document.createElement('div')
+    const frames: FrameRequestCallback[] = []
+    let scheduled = 0
+    focusSessionButtonAfterSelection(root, 'missing', callback => {
+      scheduled += 1
+      frames.push(callback)
+      return scheduled
+    })
+
+    while (frames.length) frames.shift()?.(0)
+
+    expect(scheduled).toBe(11)
+    expect(frames).toHaveLength(0)
+  })
+
+  it('finds session button by exact data attribute without CSS selector escaping', () => {
+    const root = document.createElement('div')
+    const target = document.createElement('button')
+    target.dataset.sessionId = 'quote" ]: hostile'
+    root.append(target)
+    expect(findSessionButton(root, 'quote" ]: hostile')).toBe(target)
+    expect(findSessionButton(root, 'quote" ]: missing')).toBeUndefined()
   })
 })
 
