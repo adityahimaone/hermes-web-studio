@@ -261,19 +261,23 @@ func (s *Server) handleSpaceCreate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		metadata["health"] = "ready"
 	}
-	created, err := store.Create("spaces", control.Item{Title: name, Status: metadata["health"], Metadata: metadata})
+	active := store.Preferences()["active_space"]
+	created, err := store.CreateSpace(control.Item{Title: name, Status: metadata["health"], Metadata: metadata}, "active_space", active == "")
 	if err != nil {
-		writeError(w, 400, "space_invalid", "The space could not be registered.")
+		writeError(w, 500, "space_persist_failed", "The space could not be registered.")
 		return
 	}
-	if store.Preferences()["active_space"] == "" {
-		_ = store.SetPreferences(map[string]string{"active_space": created.ID})
+	if active == "" {
+		active = created.ID
 	}
-	writeJSON(w, http.StatusCreated, spacePayloads([]control.Item{created}, store.Preferences()["active_space"])[0])
+	writeJSON(w, http.StatusCreated, spacePayloads([]control.Item{created}, active)[0])
 }
 
 func safeSpaceRef(s *Server, kind, ref string) bool {
-	if ref == "" || strings.ContainsAny(ref, "\\\\\x00") || strings.HasPrefix(ref, "/") || strings.Contains(ref, "..") {
+	if ref == "" || strings.ContainsAny(ref, "\\\\\x00:") || strings.HasPrefix(ref, "/") || strings.HasPrefix(ref, "~") || strings.Contains(ref, "..") || strings.Contains(ref, "://") {
+		return false
+	}
+	if strings.Contains(ref, ".ssh") || strings.Contains(ref, "id_rsa") || strings.Contains(ref, "private") || strings.Contains(ref, "secret") {
 		return false
 	}
 	if kind == "remote" {
@@ -296,7 +300,19 @@ func safeSpaceRef(s *Server, kind, ref string) bool {
 	if err != nil {
 		return false
 	}
-	return candidate == root || strings.HasPrefix(candidate, root+string(filepath.Separator))
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	realCandidate, err := filepath.EvalSymlinks(candidate)
+	if err == nil {
+		rel, relErr := filepath.Rel(realRoot, realCandidate)
+		return relErr == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	}
+	if !os.IsNotExist(err) {
+		return false
+	}
+	return candidate != root && strings.HasPrefix(candidate, root+string(filepath.Separator))
 }
 
 func sanitizeSpaceRef(item control.Item) string {
@@ -304,7 +320,7 @@ func sanitizeSpaceRef(item control.Item) string {
 		return "remote:" + item.ID
 	}
 	ref := item.Metadata["workspace_ref"]
-	if ref == "" || strings.HasPrefix(ref, "/") || strings.Contains(ref, "..") || strings.ContainsAny(ref, "\\\\\x00") {
+	if ref == "" || strings.HasPrefix(ref, "/") || strings.HasPrefix(ref, "~") || strings.Contains(ref, "..") || strings.ContainsAny(ref, "\\\\\x00:") || strings.Contains(ref, "://") || strings.Contains(ref, ".ssh") || strings.Contains(ref, "private") || strings.Contains(ref, "secret") {
 		return "unavailable"
 	}
 	return ref

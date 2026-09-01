@@ -255,13 +255,36 @@ func (s *Store) Preferences() map[string]string {
 	}
 	return result
 }
+func (s *Store) CreateSpace(item Item, activeKey string, activate bool) (Item, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	previous := s.state
+	previous.Preferences = cloneSafeMap(s.state.Preferences)
+	items := append([]Item{}, s.state.Spaces...)
+	now := time.Now().UTC()
+	item.ID, item.CreatedAt, item.UpdatedAt = newID(), now, now
+	items = append(items, item)
+	s.state.Spaces = items
+	if activate {
+		s.state.Preferences[activeKey] = item.ID
+	}
+	if err := s.persist(); err != nil {
+		s.state = previous
+		return Item{}, err
+	}
+	return item, nil
+}
+
 func (s *Store) SpaceMutation(collection, id, activeKey string, deleteItem bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	previous := s.state
+	previous.Preferences = cloneSafeMap(s.state.Preferences)
 	items, err := s.items(collection)
 	if err != nil {
 		return err
 	}
+	items = append([]Item{}, items...)
 	if deleteItem && s.state.Preferences[activeKey] == id {
 		return errors.New("active space protected")
 	}
@@ -282,12 +305,17 @@ func (s *Store) SpaceMutation(collection, id, activeKey string, deleteItem bool)
 		s.state.Preferences[activeKey] = id
 	}
 	s.setItems(collection, items)
-	return s.persist()
+	if err := s.persist(); err != nil {
+		s.state = previous
+		return err
+	}
+	return nil
 }
 
 func (s *Store) SetPreferences(values map[string]string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	previous := cloneSafeMap(s.state.Preferences)
 	for key, value := range values {
 		lowerKey := strings.ToLower(strings.TrimSpace(key))
 		if strings.HasPrefix(lowerKey, "secret") || strings.Contains(lowerKey, "token") || strings.Contains(lowerKey, "password") || strings.Contains(lowerKey, "api_key") || strings.Contains(lowerKey, "apikey") || strings.Contains(lowerKey, "authorization") {
@@ -295,7 +323,11 @@ func (s *Store) SetPreferences(values map[string]string) error {
 		}
 		s.state.Preferences[key] = value
 	}
-	return s.persist()
+	if err := s.persist(); err != nil {
+		s.state.Preferences = previous
+		return err
+	}
+	return nil
 }
 
 func (s *Store) MCPServers() []MCPServer {

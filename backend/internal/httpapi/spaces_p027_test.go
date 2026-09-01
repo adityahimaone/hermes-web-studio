@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
@@ -62,10 +64,10 @@ func TestSpacesP027RegistryLifecycleAndRemoteState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	response.Body.Close()
 	if response.StatusCode != http.StatusNotFound {
 		t.Fatalf("activate missing status=%d", response.StatusCode)
 	}
-	response.Body.Close()
 }
 
 func TestSpacesP027ProtectsActiveDeletion(t *testing.T) {
@@ -96,7 +98,9 @@ func TestSpacesP027RejectsUnsafeAndUnauthorizedAssignments(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir(), ProfilesJSON: `[{"id":"default","name":"Default"},{"id":"other","name":"Other"}]`}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
 	defer api.Close()
-	for _, body := range []string{`{"name":"bad","location_kind":"local","workspace_ref":"../secret"}`, `{"name":"bad","location_kind":"local","workspace_ref":"/etc"}`, `{"name":"bad","location_kind":"remote","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"unknown"}`} {
+	for _, body := range []string{
+		`{"name":"bad","location_kind":"local","workspace_ref":"../secret"}`, `{"name":"bad","location_kind":"local","workspace_ref":"/etc"}`, `{"name":"bad","location_kind":"local","workspace_ref":"file://tmp"}`, `{"name":"bad","location_kind":"local","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"~/.ssh"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe:thing"}`, `{"name":"bad","location_kind":"remote","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"unknown"}`,
+	} {
 		response, err := http.Post(api.URL+"/api/spaces", "application/json", bytes.NewBufferString(body))
 		if err != nil {
 			t.Fatal(err)
@@ -105,6 +109,34 @@ func TestSpacesP027RejectsUnsafeAndUnauthorizedAssignments(t *testing.T) {
 		if response.StatusCode != http.StatusBadRequest {
 			t.Fatalf("body=%s status=%d", body, response.StatusCode)
 		}
+	}
+}
+
+func TestSpacesP027ResolvesSymlinkBeforeContainment(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: root}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+	if safeSpaceRef(server, "local", "link") {
+		t.Fatal("symlink escaping workspace accepted")
+	}
+	if !safeSpaceRef(server, "local", "missing/nested") {
+		t.Fatal("safe relative reference rejected")
+	}
+}
+
+func TestSpacesP027SanitizesLegacyReferences(t *testing.T) {
+	item := control.Item{ID: "space-1", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "file:///secret"}}
+	if got := sanitizeSpaceRef(item); got == "file:///secret" || got == "" {
+		t.Fatalf("unsafe ref leaked: %q", got)
+	}
+	remote := control.Item{ID: "space-1", Metadata: map[string]string{"location_kind": "remote", "workspace_ref": "ssh://host/private"}}
+	if got := sanitizeSpaceRef(remote); got != "remote:space-1" {
+		t.Fatalf("remote ref=%q", got)
 	}
 }
 

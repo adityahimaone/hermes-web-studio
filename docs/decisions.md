@@ -611,3 +611,10 @@ unavailable state, and prevents send until valid model selection or `default`.
 ## P023 catalog fail-closed boundary
 
 Catalog identity uses normalized provider+model ID, so provider collisions remain distinct. Browser catalog responses accept only known statuses and validated model shapes; unavailable models cannot resolve as valid selections.
+
+## P027 workspace references
+
+- Browser-facing Spaces payloads expose only opaque `workspace_ref` values: local references remain safe relative references; remote references are sanitized and never expose SSH, URI, or filesystem metadata.
+- Local Space registration rejects URI/SSH/private refs, traversal, and symlink-escaping references. Containment uses resolved paths.
+- Space create/activate/delete persistence is transactional from the in-memory registry perspective: failed writes restore prior state. Profile-local semantics remain a documented global gap until profile state ownership is migrated.
+- Kanban consumes `workspace_ref` directly and does not read legacy `metadata.path`.
