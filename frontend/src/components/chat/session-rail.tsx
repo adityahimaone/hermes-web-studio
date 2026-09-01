@@ -10,7 +10,7 @@ import { sessionExportUrl } from '../../lib/api-client'
 import { DropdownMenu } from '../ui/dropdown-menu'
 import { ContextRail } from '../layout/context-rail'
 
-type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
+type Props = { sessions: SessionSummary[]; activeSessionId: string; onSelectSession: (id: string) => void; onSearch?: (query: string) => Promise<unknown>; onRename: (id: string, title: string) => Promise<void>; onPin: (id: string, pinned: boolean) => void; onArchive: (id: string, archived: boolean) => Promise<void> | void; onDelete: (id: string) => Promise<void>; onDuplicate?: (id: string) => Promise<void>; onNewChat: () => void; loading: boolean; error?: string; onToggle: () => void }
 type SourceFilter = 'all' | 'webui' | 'cli'
 
 function field(session: SessionSummary, ...keys: string[]) { for (const key of keys) { const value = session[key]; if (typeof value === 'string' && value.trim()) return value.trim() } return '' }
@@ -18,6 +18,16 @@ function sourceOf(session: SessionSummary): SourceFilter { const source = field(
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 export function filterAriaPressed(selected: string, value: string) { return selected === value }
 export function sessionRowAriaCurrent(sessionId: string, activeSessionId: string) { return sessionId === activeSessionId ? 'page' : undefined }
+export async function runBatchSessionAction(ids: string[], action: (id: string) => Promise<unknown> | void) {
+  const failed: string[] = []
+  for (const id of ids) {
+    try { await action(id) } catch { failed.push(id) }
+  }
+  return failed
+}
+export function formatBatchFailureMessage(action: 'archive' | 'delete', failed: string[]) {
+  return `Could not ${action} ${failed.length} session${failed.length === 1 ? '' : 's'}: ${failed.join(', ')}.`
+}
 export function nextSessionId(ids: string[], currentId: string, direction: 'next' | 'previous') {
   if (!ids.length) return undefined
   const currentIndex = ids.indexOf(currentId)
@@ -64,6 +74,8 @@ function formatCompactDate(dateStr?: string) {
 export function SessionRail({ sessions, activeSessionId, onSelectSession, onSearch, onRename, onPin, onArchive, onDelete, onDuplicate, onNewChat, loading, error, onToggle }: Props) {
   const [query, setQuery] = useState(''); const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all'); const [tagFilter, setTagFilter] = useState('all'); const [selected, setSelected] = useState<string[]>([]); const [batchMode, setBatchMode] = useState(false); const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null); const [deleteTarget, setDeleteTarget] = useState<SessionSummary | null>(null); const [renameValue, setRenameValue] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [batchError, setBatchError] = useState<string | undefined>()
+  const [batchInFlight, setBatchInFlight] = useState(false)
   
   const webCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'webui').length, [sessions])
   const cliCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'cli').length, [sessions])
@@ -91,8 +103,20 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
   const visibleSessionIds = groups.flatMap(group => group.sessions.map(item => item.session_id))
   const activeProjection = useMemo(() => projectSessions(sessions).find(item => item.session_id === activeSessionId), [sessions, activeSessionId])
   useEffect(() => { if (!onSearch) return; const timer = window.setTimeout(() => { void onSearch(query) }, 250); return () => window.clearTimeout(timer) }, [onSearch, query])
-  const toggleSelected = (id: string) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
-  const clearBatch = () => { setSelected([]); setBatchMode(false) }
+  const toggleSelected = (id: string) => { setBatchError(undefined); setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]) }
+  const clearBatch = () => { setSelected([]); setBatchMode(false); setBatchError(undefined) }
+  const runBatch = async (action: 'archive' | 'delete') => {
+    if (batchInFlight) return
+    setBatchError(undefined)
+    setBatchInFlight(true)
+    try {
+      const failed = await runBatchSessionAction(selected, id => action === 'archive' ? Promise.resolve(onArchive(id, true)) : onDelete(id))
+      setSelected(failed)
+      if (failed.length) setBatchError(formatBatchFailureMessage(action, failed)); else setBatchMode(false)
+    } finally {
+      setBatchInFlight(false)
+    }
+  }
 
   return <>
     <ContextRail title="Chat" subtitle="Recent sessions" open onToggle={onToggle} action={<Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground" onClick={onNewChat} aria-label="New chat" title="New chat"><Plus size={16} /></Button>}>
@@ -137,7 +161,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
           <button type="button" onClick={() => setShowArchived(v => !v)} className="hover:text-muted-foreground underline-offset-2 hover:underline">
             {showArchived ? 'Hide archived' : 'Show archived'}
           </button>
-          <button type="button" onClick={() => { setBatchMode(v => !v); setSelected([]) }} className="hover:text-muted-foreground">
+          <button type="button" disabled={batchInFlight} onClick={() => { setBatchMode(v => !v); setSelected([]); setBatchError(undefined) }} className="hover:text-muted-foreground">
             {batchMode ? 'Done' : 'Select'}
           </button>
         </div>
@@ -149,11 +173,12 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/40 px-2 py-1">
           <span className="text-[11px] text-muted-foreground">{selected.length} selected</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { await Promise.all(selected.map(id => onArchive(id, true))); clearBatch() }}>Archive</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { await Promise.all(selected.map(onDelete)); clearBatch() }}>Delete</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" disabled={batchInFlight} onClick={() => { void runBatch('archive') }}>Archive</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" disabled={batchInFlight} onClick={() => { void runBatch('delete') }}>Delete</Button>
           </div>
         </div>
       )}
+      {batchError && <p className="mt-1 px-2 text-[11px] text-destructive" role="alert">{batchError}</p>}
 
       {/* Session list items */}
       <div className="mt-2 space-y-3">
@@ -170,8 +195,8 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
               const dateBadge = formatCompactDate(item.updated_at)
               return (
                 <div key={item.session_id} className={cn('group relative flex min-h-8 items-center rounded-lg px-1.5 py-1 transition-colors hover:bg-accent/50', isActive && 'bg-accent/70 font-medium text-foreground shadow-sm ring-1 ring-border/80', isSelected && 'ring-1 ring-primary/60')}>
-                  {batchMode && <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => toggleSelected(item.session_id)} aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.title || 'session'}`}>{isSelected ? <Check size={13} /> : <span className="size-2.5 rounded-sm border" />}</Button>}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} onKeyDown={event => { if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return; event.preventDefault(); const nextId = nextSessionId(visibleSessionIds, item.session_id, event.key === 'ArrowDown' ? 'next' : 'previous'); if (nextId) {
+                  {batchMode && <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" disabled={batchInFlight} onClick={() => toggleSelected(item.session_id)} aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.title || 'session'}`}>{isSelected ? <Check size={13} /> : <span className="size-2.5 rounded-sm border" />}</Button>}
+                  <Button type="button" variant="ghost" size="sm" disabled={batchInFlight} onClick={() => onSelectSession(item.session_id)} onKeyDown={event => { if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return; event.preventDefault(); const nextId = nextSessionId(visibleSessionIds, item.session_id, event.key === 'ArrowDown' ? 'next' : 'previous'); if (nextId) {
   onSelectSession(nextId)
   focusSessionButtonAfterSelection(document, nextId)
 } }} data-session-id={item.session_id} aria-current={sessionRowAriaCurrent(item.session_id, activeSessionId)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
@@ -182,13 +207,13 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
                   </Button>
                   <div className={sessionActionVisibilityClass()}>
                     <DropdownMenu label={`Actions for ${item.title || 'session'}`} items={[
-                      { label: 'Rename conversation', icon: Pencil, onSelect: () => { setRenameTarget(item); setRenameValue(item.title || '') } },
-                      { label: 'Duplicate conversation', icon: Copy, onSelect: () => { if (onDuplicate) void onDuplicate(item.session_id) } },
-                      { label: 'Export Markdown', icon: Download, onSelect: () => { window.location.assign(sessionExportUrl(item.session_id)) } },
-                      { label: item.pinned ? 'Unpin conversation' : 'Pin conversation', icon: Pin, onSelect: () => onPin(item.session_id, !item.pinned) },
-                      { label: item.archived ? 'Unarchive conversation' : 'Archive conversation', icon: item.archived ? Archive : ArchiveX, onSelect: () => onArchive(item.session_id, !item.archived) },
-                      { label: 'Delete conversation', icon: Trash2, onSelect: () => setDeleteTarget(item), destructive: true }
-                    ]} />
+                      { label: 'Rename conversation', icon: Pencil, onSelect: () => { setRenameTarget(item); setRenameValue(item.title || '') }, disabled: batchInFlight },
+                      { label: 'Duplicate conversation', icon: Copy, onSelect: () => { if (onDuplicate) void onDuplicate(item.session_id) }, disabled: batchInFlight },
+                      { label: 'Export Markdown', icon: Download, onSelect: () => { window.location.assign(sessionExportUrl(item.session_id)) }, disabled: batchInFlight },
+                      { label: item.pinned ? 'Unpin conversation' : 'Pin conversation', icon: Pin, onSelect: () => onPin(item.session_id, !item.pinned), disabled: batchInFlight },
+                      { label: item.archived ? 'Unarchive conversation' : 'Archive conversation', icon: item.archived ? Archive : ArchiveX, onSelect: () => onArchive(item.session_id, !item.archived), disabled: batchInFlight },
+                      { label: 'Delete conversation', icon: Trash2, onSelect: () => setDeleteTarget(item), destructive: true, disabled: batchInFlight }
+                    ]} disabled={batchInFlight} />
                   </div>
                 </div>
               )

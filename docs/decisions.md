@@ -12,6 +12,12 @@ The adapter uses `POST /v1/chat/completions` with streaming enabled. Approval de
 
 The browser uses the original two-step shape: start a turn, then subscribe to a stream. The BFF normalizes Gateway-specific frames to `token`, `reasoning`, `tool`, `tool_complete`, `done`, `cancel`, and `apperror` events.
 
+## ADR-054 - Partial batch session actions
+
+Batch archive and delete continue independent session actions after an individual
+failure. The UI reports failed session IDs in an accessible alert; successful
+actions remain applied. These operations provide no rollback guarantee.
+
 ## ADR-005 - Completion de-duplication at the Gateway boundary
 
 Gateway implementations can stream token deltas and then include the complete answer in `run.completed.output`. The adapter treats that terminal output as a completion snapshot: it emits only the missing suffix relative to already streamed text. This keeps the browser contract deterministic and avoids duplicating a response in the chat timeline.

@@ -2,9 +2,9 @@ import { MoreVertical } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import { Button } from './button'
 
-type MenuItem = { label: string; icon: ComponentType<{ size?: number }>; onSelect: () => void; destructive?: boolean }
+type MenuItem = { label: string; icon: ComponentType<{ size?: number }>; onSelect: () => void; destructive?: boolean; disabled?: boolean }
 
-export function DropdownMenu({ label, items }: { label: string; items: MenuItem[] }) {
+export function DropdownMenu({ label, items, disabled = false }: { label: string; items: MenuItem[]; disabled?: boolean }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -22,9 +22,9 @@ export function DropdownMenu({ label, items }: { label: string; items: MenuItem[
   useLayoutEffect(() => { if (open) itemRefs.current[0]?.focus() }, [open])
 
   return <div ref={rootRef} className="relative z-[100] shrink-0">
-    <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="size-10" aria-label={label} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreVertical size={16} /></Button>
+    <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="size-10" disabled={disabled} aria-label={label} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreVertical size={16} /></Button>
     {open && <div ref={menuRef} role="menu" aria-label={label} className="absolute right-0 top-9 z-[110] min-w-52 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-xl">
-      {items.map(({ label: itemLabel, icon: Icon, onSelect, destructive }, index) => <button ref={element => { itemRefs.current[index] = element }} key={itemLabel} type="button" role="menuitem" className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none ${destructive ? 'text-destructive hover:bg-destructive/10' : ''}`} onKeyDown={event => { const next = event.key === 'ArrowDown' ? index + 1 : event.key === 'ArrowUp' ? index - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : -1; if (next >= 0) { event.preventDefault(); itemRefs.current[(next + items.length) % items.length]?.focus() } }} onClick={() => { triggerRef.current?.focus(); onSelect(); setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()) }}><Icon size={15} />{itemLabel}</button>)}
+      {items.map(({ label: itemLabel, icon: Icon, onSelect, destructive, disabled: itemDisabled }, index) => <button ref={element => { itemRefs.current[index] = element }} key={itemLabel} type="button" role="menuitem" disabled={itemDisabled} className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none ${destructive ? 'text-destructive hover:bg-destructive/10' : ''}`} onKeyDown={event => { const next = event.key === 'ArrowDown' ? index + 1 : event.key === 'ArrowUp' ? index - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : -1; if (next >= 0) { event.preventDefault(); itemRefs.current[(next + items.length) % items.length]?.focus() } }} onClick={() => { if (itemDisabled) return; triggerRef.current?.focus(); onSelect(); setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()) }}><Icon size={15} />{itemLabel}</button>)}
     </div>}
   </div>
 }
