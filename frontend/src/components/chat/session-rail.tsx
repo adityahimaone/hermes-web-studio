@@ -75,6 +75,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
   const [query, setQuery] = useState(''); const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all'); const [tagFilter, setTagFilter] = useState('all'); const [selected, setSelected] = useState<string[]>([]); const [batchMode, setBatchMode] = useState(false); const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null); const [deleteTarget, setDeleteTarget] = useState<SessionSummary | null>(null); const [renameValue, setRenameValue] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const [batchError, setBatchError] = useState<string | undefined>()
+  const [batchInFlight, setBatchInFlight] = useState(false)
   
   const webCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'webui').length, [sessions])
   const cliCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'cli').length, [sessions])
@@ -102,8 +103,20 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
   const visibleSessionIds = groups.flatMap(group => group.sessions.map(item => item.session_id))
   const activeProjection = useMemo(() => projectSessions(sessions).find(item => item.session_id === activeSessionId), [sessions, activeSessionId])
   useEffect(() => { if (!onSearch) return; const timer = window.setTimeout(() => { void onSearch(query) }, 250); return () => window.clearTimeout(timer) }, [onSearch, query])
-  const toggleSelected = (id: string) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
-  const clearBatch = () => { setSelected([]); setBatchMode(false) }
+  const toggleSelected = (id: string) => { setBatchError(undefined); setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]) }
+  const clearBatch = () => { setSelected([]); setBatchMode(false); setBatchError(undefined) }
+  const runBatch = async (action: 'archive' | 'delete') => {
+    if (batchInFlight) return
+    setBatchError(undefined)
+    setBatchInFlight(true)
+    try {
+      const failed = await runBatchSessionAction(selected, id => action === 'archive' ? Promise.resolve(onArchive(id, true)) : onDelete(id))
+      setSelected(failed)
+      if (failed.length) setBatchError(formatBatchFailureMessage(action, failed)); else setBatchMode(false)
+    } finally {
+      setBatchInFlight(false)
+    }
+  }
 
   return <>
     <ContextRail title="Chat" subtitle="Recent sessions" open onToggle={onToggle} action={<Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground" onClick={onNewChat} aria-label="New chat" title="New chat"><Plus size={16} /></Button>}>
@@ -148,7 +161,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
           <button type="button" onClick={() => setShowArchived(v => !v)} className="hover:text-muted-foreground underline-offset-2 hover:underline">
             {showArchived ? 'Hide archived' : 'Show archived'}
           </button>
-          <button type="button" onClick={() => { setBatchMode(v => !v); setSelected([]) }} className="hover:text-muted-foreground">
+          <button type="button" onClick={() => { setBatchMode(v => !v); setSelected([]); setBatchError(undefined) }} className="hover:text-muted-foreground">
             {batchMode ? 'Done' : 'Select'}
           </button>
         </div>
@@ -160,8 +173,8 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/40 px-2 py-1">
           <span className="text-[11px] text-muted-foreground">{selected.length} selected</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); setSelected(failed); if (failed.length) setBatchError(formatBatchFailureMessage('archive', failed)); else setBatchMode(false) }}>Archive</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); setSelected(failed); if (failed.length) setBatchError(formatBatchFailureMessage('delete', failed)); else setBatchMode(false) }}>Delete</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" disabled={batchInFlight} onClick={() => { void runBatch('archive') }}>Archive</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" disabled={batchInFlight} onClick={() => { void runBatch('delete') }}>Delete</Button>
           </div>
         </div>
       )}
