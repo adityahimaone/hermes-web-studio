@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeRestoreError, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -90,6 +90,17 @@ describe('conversation runtime contracts', () => {
 
   it('normalizes restore failures without exposing private details', () => {
     expect(normalizeRestoreError(new Error('/home/adityahimaone/.hermes/token secret=abc'))).toBe('Unable to restore Hermes session.')
+  })
+
+  it('normalizes client failures without exposing backend details', () => {
+    expect(normalizeClientError(new Error('gateway token=abc /private/path'))).toBe('Unable to complete Hermes request.')
+  })
+
+  it('marks pending pump replacement safe when no stream ID exists', () => {
+    const oldController = new AbortController()
+    const currentController = new AbortController()
+    expect(shouldReplacePendingPump(oldController, currentController, 'session-1', 2, { sessionId: 'session-1', epoch: 2 })).toBe(true)
+    expect(shouldReplacePendingPump(oldController, null, 'session-1', 2, { sessionId: 'session-1', epoch: 2 })).toBe(false)
   })
 
   it('computes queued turn baseline from completed transcript', () => {

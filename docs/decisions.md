@@ -69,6 +69,11 @@ identity is opt-in for an already authenticated reverse proxy, while OIDC and
 WebAuthn remain explicit capability states until provider registration is
 configured.
 
+Normal live-stream completion has no persisted assistant ID in browser SSE
+events, so it creates a local transcript ID. Poll fallback uses persisted IDs
+and deduplicates by identity; this keeps restored history stable without
+inventing a durable ID during normal completion.
+
 ## ADR-014 - Embedded frontend with recoverable state migration
 
 The release binary embeds the Vite output so production does not require a

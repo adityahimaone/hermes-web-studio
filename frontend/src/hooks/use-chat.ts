@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
+import { dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -52,7 +52,7 @@ export function useChat() {
   useEffect(() => {
     const controller = new AbortController()
     refreshSessions(controller.signal).then(() => setSessionLoading(false)).catch((error) => {
-      if (error?.name !== 'AbortError') setSessionError(error instanceof Error ? error.message : 'Unable to load sessions.')
+      if (error?.name !== 'AbortError') setSessionError(normalizeRestoreError(error))
       setSessionLoading(false)
     })
     return () => controller.abort()
@@ -126,7 +126,7 @@ export function useChat() {
         } else finish(streamId, sessionId, epoch, { ...initialChatState, error: 'Hermes stream did not settle before polling timed out.' }, 'error')
       }).catch((error) => {
         if (!controller.signal.aborted && isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) && terminalRef.current !== streamId) {
-          finish(streamId, sessionId, epoch, { ...initialChatState, error: error instanceof Error ? error.message : 'Unable to restore Hermes session.' }, 'error')
+          finish(streamId, sessionId, epoch, { ...initialChatState, error: normalizeRestoreError(error) }, 'error')
         }
       }).finally(() => {
         if (fallbackStreamRef.current === streamId) fallbackStreamRef.current = null
@@ -176,7 +176,7 @@ export function useChat() {
         removePending()
         setStreamState(initialChatState)
       } else {
-        setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })
+        setStreamState({ ...initialChatState, status: 'error', error: normalizeClientError(error) })
       }
     }
     finally { if (pumpControllerRef.current === controller) pumpControllerRef.current = null }
@@ -203,6 +203,7 @@ export function useChat() {
       streamIdRef.current = journal.stream_id
       terminalRef.current = null
       lastEventIdRef.current = journal.last_event_id || 0
+      if (pollControllerRef.current === controller) pollControllerRef.current = null
       connectStream(journal.stream_id, journal.session_id, epoch)
     }).catch((error) => {
       if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== journal.session_id) return
@@ -230,6 +231,20 @@ export function useChat() {
         if (streamId) {
           void cancelChat(streamId).catch(() => undefined)
           finish(streamId, activeSessionRef.current, sessionEpochRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
+        } else {
+          pumpControllerRef.current?.abort()
+          const pendingId = pendingUserIdRef.current
+          if (pendingId) {
+            const nextMessages = messagesRef.current.filter((message) => message.id !== pendingId)
+            messagesRef.current = nextMessages
+            setMessages(nextMessages)
+            pendingUserIdRef.current = null
+          }
+          chatStateRef.current = initialChatState
+          setStreamState(initialChatState)
+          queueRef.current = []
+          setQueuedMessages([])
+          pump(clean, files, messagesRef.current, options)
         }
       }
     } else pump(clean, files, undefined, options)
@@ -238,7 +253,7 @@ export function useChat() {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
     try { await truncateSession(activeSessionRef.current, index) } catch (error) {
-      setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to retry this message.' })
+      setStreamState({ ...initialChatState, status: 'error', error: normalizeClientError(error) })
       return
     }
     setMessages((current) => current.slice(0, index))
@@ -249,7 +264,7 @@ export function useChat() {
     const index = messages.findIndex((item) => item.id === message.id)
     if (index < 0) return
     try { await truncateSession(activeSessionRef.current, index) } catch (error) {
-      setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to edit this message.' })
+      setStreamState({ ...initialChatState, status: 'error', error: normalizeClientError(error) })
       return
     }
     setMessages((current) => current.slice(0, index))
@@ -293,6 +308,7 @@ export function useChat() {
       pollControllerRef.current?.abort(); pollControllerRef.current = controller
       const detail = await getSession(sessionId, controller.signal)
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
+      if (pollControllerRef.current === controller) pollControllerRef.current = null
       const restored = normalizeSessionMessages(detail.messages)
       setMessages(restored)
       turnBaselineRef.current = restored.length
@@ -304,7 +320,7 @@ export function useChat() {
       }
     } catch (error) {
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
-      setMessages([]); setSessionError(error instanceof Error ? error.message : 'Unable to load this session.')
+      setMessages([]); setSessionError(normalizeRestoreError(error))
     } finally {
       if (sessionEpochRef.current === epoch) setSessionLoading(false)
     }

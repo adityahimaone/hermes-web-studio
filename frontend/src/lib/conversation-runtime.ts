@@ -44,6 +44,14 @@ export function normalizeRestoreError(_error: unknown): string {
   return 'Unable to restore Hermes session.'
 }
 
+export function normalizeClientError(_error: unknown): string {
+  return 'Unable to complete Hermes request.'
+}
+
+export function shouldReplacePendingPump(controller: AbortController, currentController: AbortController | null, sessionId: string, epoch: number, current: { sessionId: string; epoch: number }): boolean {
+  return currentController !== null && controller !== currentController && current.sessionId === sessionId && current.epoch === epoch
+}
+
 export function queuedTurnBaseline(messages: ChatMessage[]): number {
   return messages.length + 1
 }
