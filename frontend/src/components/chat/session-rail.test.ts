@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, nextSessionId, runBatchSessionAction, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, formatBatchFailureMessage, nextSessionId, runBatchSessionAction, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -69,6 +69,10 @@ describe('batch session actions', () => {
 
     expect(acted).toEqual(['one', 'two', 'three'])
     expect(failed).toEqual(['two'])
+  })
+
+  it('formats failed ids for an accessible batch result', () => {
+    expect(formatBatchFailureMessage('archive', ['two', 'three'])).toBe('Could not archive 2 sessions: two, three.')
   })
 })
 

@@ -25,6 +25,9 @@ export async function runBatchSessionAction(ids: string[], action: (id: string) 
   }
   return failed
 }
+export function formatBatchFailureMessage(action: 'archive' | 'delete', failed: string[]) {
+  return `Could not ${action} ${failed.length} session${failed.length === 1 ? '' : 's'}: ${failed.join(', ')}.`
+}
 export function nextSessionId(ids: string[], currentId: string, direction: 'next' | 'previous') {
   if (!ids.length) return undefined
   const currentIndex = ids.indexOf(currentId)
@@ -157,8 +160,8 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/40 px-2 py-1">
           <span className="text-[11px] text-muted-foreground">{selected.length} selected</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); if (failed.length) setBatchError(`Could not archive ${failed.length} session${failed.length === 1 ? '' : 's'}.`); else clearBatch() }}>Archive</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); if (failed.length) setBatchError(`Could not delete ${failed.length} session${failed.length === 1 ? '' : 's'}.`); else clearBatch() }}>Delete</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); if (failed.length) setBatchError(formatBatchFailureMessage('archive', failed)); else clearBatch() }}>Archive</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); if (failed.length) setBatchError(formatBatchFailureMessage('delete', failed)); else clearBatch() }}>Delete</Button>
           </div>
         </div>
       )}
