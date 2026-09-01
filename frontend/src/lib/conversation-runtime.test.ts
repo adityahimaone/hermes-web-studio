@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeRestoreError, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -79,6 +79,17 @@ describe('conversation runtime contracts', () => {
     expect(isCurrentConversation('stream-1', 'session-1', 2, { streamId: 'stream-1', sessionId: 'session-1', epoch: 2 })).toBe(true)
     expect(isCurrentConversation('stream-1', 'session-1', 1, { streamId: 'stream-1', sessionId: 'session-1', epoch: 2 })).toBe(false)
     expect(isCurrentConversation('stream-1', 'session-1', 2, { streamId: 'stream-1', sessionId: 'session-2', epoch: 2 })).toBe(false)
+  })
+
+  it('isolates cancelled old pump from queued replacement lifecycle', () => {
+    const oldController = new AbortController()
+    const newController = new AbortController()
+    expect(isCurrentPump(oldController, newController, 'session-1', 3, { sessionId: 'session-1', epoch: 3 })).toBe(false)
+    expect(isCurrentPump(newController, newController, 'session-1', 3, { sessionId: 'session-1', epoch: 3 })).toBe(true)
+  })
+
+  it('normalizes restore failures without exposing private details', () => {
+    expect(normalizeRestoreError(new Error('/home/adityahimaone/.hermes/token secret=abc'))).toBe('Unable to restore Hermes session.')
   })
 
   it('computes queued turn baseline from completed transcript', () => {

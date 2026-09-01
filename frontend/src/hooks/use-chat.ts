@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { dedupeRestoredAssistant, isCurrentConversation, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
+import { dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -170,10 +170,14 @@ export function useChat() {
       window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: returnedSessionId, last_event_id: 0 }))
       connectStream(started.stream_id, returnedSessionId, epoch)
     } catch (error) {
-      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) {
+      const ownsLifecycle = isCurrentPump(controller, pumpControllerRef.current, sessionId, epoch, { sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })
+      if (!ownsLifecycle) return
+      if (controller.signal.aborted) {
         removePending()
-        if (sessionEpochRef.current === epoch && activeSessionRef.current === sessionId) setStreamState(initialChatState)
-      } else setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })
+        setStreamState(initialChatState)
+      } else {
+        setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })
+      }
     }
     finally { if (pumpControllerRef.current === controller) pumpControllerRef.current = null }
   }, [closeSource, connectStream, messages, refreshSessions])
@@ -200,7 +204,16 @@ export function useChat() {
       terminalRef.current = null
       lastEventIdRef.current = journal.last_event_id || 0
       connectStream(journal.stream_id, journal.session_id, epoch)
-    }).catch(() => undefined)
+    }).catch((error) => {
+      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== journal.session_id) return
+      if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === journal.stream_id) window.localStorage.removeItem(inflightTurnKey)
+      if (pollControllerRef.current === controller) pollControllerRef.current = null
+      streamIdRef.current = null
+      fallbackStreamRef.current = null
+      chatStateRef.current = initialChatState
+      setStreamState({ ...initialChatState, status: 'error', error: normalizeRestoreError(error) })
+      setSessionError(normalizeRestoreError(error))
+    })
     return () => { controller.abort(); sessionEpochRef.current += 1; closeSource(); pumpControllerRef.current?.abort(); pollControllerRef.current?.abort() }
   }, [closeSource, connectStream])
 

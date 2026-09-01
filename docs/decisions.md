@@ -62,7 +62,7 @@ files while leaving the text-only Runs path available for approval parity work.
 Local password setup and signed session cookies are owned by the Go BFF. The
 browser receives only authentication state, never password hashes, cookie
 signing material, Gateway keys, provider credentials, or raw profile config.
-Inflight pump and fallback work is bound to session epoch and AbortSignal. Journal stores last received SSE ID, restored assistant messages retain persisted identity, and stale stream callbacks cannot mutate current state or start competing fallback lifecycles. Timeout reports error without adding empty assistant content.
+Inflight pump and fallback work is bound to session epoch and AbortSignal. Journal stores last received SSE ID, restored assistant messages retain persisted identity, and stale stream callbacks cannot mutate current state or start competing fallback lifecycles. Timeout reports error without adding empty assistant content. Pump catch cleanup also requires controller ownership, preventing cancelled turns from resetting queued replacements. Reload restore failures clear matching journal/stream state and expose generic retry-safe errors without private details.
 
 Remote binding is refused until authentication is configured. Trusted-header
 identity is opt-in for an already authenticated reverse proxy, while OIDC and

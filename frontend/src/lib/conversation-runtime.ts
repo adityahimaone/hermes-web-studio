@@ -36,6 +36,14 @@ export function isCurrentConversation(streamId: string, sessionId: string, epoch
   return current.streamId === streamId && current.sessionId === sessionId && current.epoch === epoch
 }
 
+export function isCurrentPump(controller: AbortController, currentController: AbortController | null, sessionId: string, epoch: number, current: { sessionId: string; epoch: number }): boolean {
+  return controller === currentController && current.sessionId === sessionId && current.epoch === epoch
+}
+
+export function normalizeRestoreError(_error: unknown): string {
+  return 'Unable to restore Hermes session.'
+}
+
 export function queuedTurnBaseline(messages: ChatMessage[]): number {
   return messages.length + 1
 }
