@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { branchFromTurn, createCompactionBarrier, defaultDisclosure, discoverModels, exportSession, lifecycleRows, normalizeActivityMode, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, undoToTurn } from './conversation-runtime'
+import { describe, expect, it, vi } from 'vitest'
+import { branchFromTurn, createCompactionBarrier, defaultDisclosure, discoverModels, exportSession, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -41,6 +41,18 @@ describe('conversation runtime contracts', () => {
     expect(exportSession('a/b', messages, 'markdown').filename).toBe('a-b.md')
     expect(exportSession('x', messages, 'json').content).toContain('"messages"')
     expect(exportSession('<x>', [{ ...messages[0], content: '<script>' }], 'html').content).toContain('&lt;script&gt;')
+  })
+
+  it('polls restored session until expired stream turn has persisted assistant reply', async () => {
+    const getSession = vi.fn().mockResolvedValueOnce({ messages: [{ role: 'user', content: 'hello' }] }).mockResolvedValueOnce({ messages: [...messages, { role: 'assistant', content: 'done' }] })
+    await expect(pollSessionUntilSettled(getSession, 2, 2)).resolves.toMatchObject({ role: 'assistant', content: 'done' })
+    expect(getSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('times out expired stream polling without inventing transcript content', async () => {
+    const getSession = vi.fn().mockResolvedValue({ messages })
+    await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toBeNull()
+    expect(getSession).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the lifecycle matrix explicit', () => { expect(lifecycleRows.map((row) => row.kind)).toEqual(['normal', 'error', 'cancel', 'switch', 'reload', 'reconnect', 'compression', 'recovery']) })

@@ -1,4 +1,4 @@
-import type { ChatMessage, SessionSummary } from './chat-contract'
+import { normalizeSessionMessages, type ChatMessage, type SessionSummary } from './chat-contract'
 
 export type ActivityMode = 'compact' | 'transparent' | 'final'
 export type LifecycleKind = 'normal' | 'error' | 'cancel' | 'switch' | 'reload' | 'reconnect' | 'compression' | 'recovery'
@@ -30,6 +30,17 @@ export function repairPartialTranscript(messages: ChatMessage[], auditId: string
   const valid = messages.filter((message) => message.content.trim() && (message.role === 'user' || message.role === 'assistant'))
   const removed = messages.filter((message) => !valid.includes(message))
   return { messages: valid.map((message) => ({ ...message, status: message.status === 'streaming' ? 'cancelled' : message.status })), removed, reason: removed.length ? 'Removed empty or unfinished transcript entries.' : 'Transcript is already valid.', auditId }
+}
+
+export async function pollSessionUntilSettled<T extends { messages?: unknown[] }>(getSession: () => Promise<T>, baselineMessageCount: number, maxPolls: number, intervalMs = 0): Promise<ChatMessage | null> {
+  for (let poll = 0; poll < maxPolls; poll += 1) {
+    if (poll > 0 && intervalMs > 0) await new Promise((resolve) => setTimeout(resolve, intervalMs))
+    const detail = await getSession()
+    const messages = normalizeSessionMessages(detail.messages)
+    const assistant = messages.slice(baselineMessageCount).filter((message) => message.role === 'assistant' && message.content.trim()).at(-1)
+    if (assistant) return assistant
+  }
+  return null
 }
 
 export interface Lineage { id: string; parentId?: string; branch: number; action: 'root' | 'fork' | 'undo' | 'duplicate' }

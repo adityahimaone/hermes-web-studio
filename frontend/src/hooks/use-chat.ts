@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
+import { pollSessionUntilSettled } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -25,6 +26,8 @@ export function useChat() {
   const answerRef = useRef('')
   const terminalRef = useRef<string | null>(null)
   const lastEventIdRef = useRef(0)
+  const turnBaselineRef = useRef(0)
+  const fallbackStreamRef = useRef<string | null>(null)
   const chatStateRef = useRef<ChatState>(initialChatState)
   const pumpRef = useRef<(content: string, files?: File[], baseMessages?: ChatMessage[], options?: TurnOptions) => void>(() => undefined)
 
@@ -55,7 +58,7 @@ export function useChat() {
     if (streamIdRef.current !== streamId) return
     terminalRef.current = streamId; closeSource(); streamIdRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
-    if (activeSessionRef.current === sessionId && (state.answer || status !== 'complete')) setMessages((current) => [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
+    if (activeSessionRef.current === sessionId && (state.answer || status !== 'complete')) setMessages((current) => current.some((message) => message.role === 'assistant' && message.content === state.answer) ? current : [...current, { id: newId(), role: 'assistant', content: state.answer, status }])
     chatStateRef.current = initialChatState
     setStreamState(initialChatState)
     void refreshSessions().catch(() => undefined)
@@ -86,13 +89,29 @@ export function useChat() {
       if (activeSessionRef.current === sessionId) setStreamState(next)
     }))
     source.onerror = () => {
-      if (source.readyState === EventSource.CLOSED && terminalRef.current !== streamId && activeSessionRef.current === sessionId) setStreamState((state) => ({ ...state, status: 'error', error: 'The Hermes stream closed unexpectedly. Reconnecting…' }))
+      if (source.readyState !== EventSource.CLOSED || terminalRef.current === streamId || activeSessionRef.current !== sessionId || fallbackStreamRef.current === streamId) return
+      source.close()
+      fallbackStreamRef.current = streamId
+      setStreamState((state) => ({ ...state, status: 'error', error: 'The Hermes stream closed unexpectedly. Reconnecting…' }))
+      void pollSessionUntilSettled(
+        async () => getSession(sessionId),
+        turnBaselineRef.current,
+        6,
+        1000,
+      ).then((assistant) => {
+        if (!assistant || streamIdRef.current !== streamId || terminalRef.current === streamId) return
+        setMessages((current) => current.some((message) => message.role === 'assistant' && message.content === assistant.content) ? current : [...current, assistant])
+        finish(streamId, sessionId, { ...initialChatState, answer: assistant.content })
+      }).catch(() => undefined).finally(() => {
+        if (fallbackStreamRef.current === streamId) fallbackStreamRef.current = null
+      })
     }
   }, [finish])
 
   const pump = useCallback(async (content: string, files: File[] = [], baseMessages?: ChatMessage[], options?: TurnOptions) => {
     const clean = content.trim(); if (!clean) return
-    closeSource(); answerRef.current = ''; terminalRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
+    closeSource(); answerRef.current = ''; terminalRef.current = null; fallbackStreamRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
+    turnBaselineRef.current = (baseMessages || messages).length + 1
     setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
     setStreamState({ ...initialChatState, status: 'streaming' })
     try {
@@ -103,7 +122,7 @@ export function useChat() {
       window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: started.session_id || activeSessionRef.current }))
       connectStream(started.stream_id, started.session_id || activeSessionRef.current)
     } catch (error) { setStreamState((state) => ({ ...state, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })) }
-  }, [closeSource, connectStream, refreshSessions])
+  }, [closeSource, connectStream, messages, refreshSessions])
   pumpRef.current = pump
 
   useEffect(() => {
@@ -116,7 +135,9 @@ export function useChat() {
     void getSession(journal.session_id).then((detail) => {
       if (cancelled) return
       setActiveSessionId(journal.session_id)
-      setMessages(normalizeSessionMessages(detail.messages))
+      const restored = normalizeSessionMessages(detail.messages)
+      setMessages(restored)
+      turnBaselineRef.current = restored.length
       setStreamState({ ...initialChatState, status: 'streaming' })
       streamIdRef.current = journal.stream_id
       terminalRef.current = null
@@ -180,7 +201,9 @@ export function useChat() {
     closeSource(); setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     try {
       const detail = await getSession(sessionId)
-      setMessages(normalizeSessionMessages(detail.messages))
+      const restored = normalizeSessionMessages(detail.messages)
+      setMessages(restored)
+      turnBaselineRef.current = restored.length
       const journal = parseInflightTurn(window.localStorage.getItem(inflightTurnKey))
       if (journal?.session_id === sessionId) {
         streamIdRef.current = journal.stream_id
