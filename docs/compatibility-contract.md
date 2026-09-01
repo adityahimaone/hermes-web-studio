@@ -358,6 +358,9 @@ Conversation runtime helpers define disclosure, compaction repair, branch
 lineage, session projection, model search, safe export, and deterministic
 lifecycle rows. These helpers do not certify the corresponding upstream/live
 Hermes behavior until browser and side-by-side evidence is recorded.
+Session reads, duplication, exports, mutations, and chat turns use one
+process-local per-session lock, so concurrent writers are serialized within a
+single BFF process; this is not a multi-process compare-and-swap guarantee.
 
 The production frontend exposes a manifest and service worker under the Vite
 base path. Registration is production-only and uses the configured base path;

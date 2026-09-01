@@ -247,6 +247,9 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("session_id")
+	lock := s.sessionLock(id)
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Load(id)
 	if err != nil {
 		if errors.Is(err, session.ErrInvalidSessionID) {
@@ -373,6 +376,9 @@ func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSessionDuplicate(w http.ResponseWriter, r *http.Request) {
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Duplicate(r.PathValue("session_id"), newID())
 	if err != nil {
 		sessionError(w, err)
@@ -387,6 +393,9 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown and JSON export are supported.")
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Load(r.PathValue("session_id"))
 	if err != nil {
 		sessionError(w, err)
@@ -690,15 +699,14 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 	s.mu.Unlock()
 	lock.Lock()
 	defer lock.Unlock()
-	_, loadErr := s.sessions.Load(input.SessionID)
+	loaded, loadErr := s.sessions.Load(input.SessionID)
 	createdSession := errors.Is(loadErr, os.ErrNotExist)
+	if loadErr != nil && !createdSession {
+		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be loaded."}})
+		return
+	}
 	originalMessageCount := 0
 	if loadErr == nil {
-		loaded, err := s.sessions.Load(input.SessionID)
-		if err != nil {
-			s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be loaded."}})
-			return
-		}
 		originalMessageCount = len(loaded.Messages)
 	}
 	if createdSession {
