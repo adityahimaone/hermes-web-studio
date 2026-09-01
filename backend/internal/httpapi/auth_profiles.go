@@ -298,12 +298,18 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 	if !decodeBody(w, r, &input) {
 		return
 	}
-	providers := s.providerIDs()
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
 	for _, p := range s.profiles {
 		if p.ID == input.ID {
-			if p.ProviderID != "" && !providers[p.ProviderID] {
+			providerAvailable := p.ProviderID == ""
+			for _, provider := range s.providers {
+				if provider.ID == p.ProviderID {
+					providerAvailable = true
+					break
+				}
+			}
+			if !providerAvailable {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The profile references an unavailable provider.")
 				return
 			}

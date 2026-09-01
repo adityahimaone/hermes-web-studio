@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const maxKanbanActionReasonLength = 512
+
 type kanbanCLI struct{ path string }
 
 func (s *Server) kanbanCLI() kanbanCLI { return kanbanCLI{path: s.config.HermesCLIPath} }
@@ -225,7 +227,12 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 	}
 	args := []string{action, id}
 	if body.Reason != "" && (action == "block" || action == "schedule" || action == "promote" || action == "unblock") {
-		args = append(args, body.Reason)
+		reason, err := validateKanbanActionReason(body.Reason)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "reason_invalid", "The Kanban action reason is invalid.")
+			return
+		}
+		args = append(args, reason)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
@@ -344,7 +351,9 @@ func sanitizeKanbanItem(item map[string]any) map[string]any {
 	out := map[string]any{}
 	for _, key := range []string{"id", "title", "body", "status", "assignee", "tenant", "priority", "comment_count", "created_at", "updated_at", "slug", "name", "task_count", "archived", "parents", "children", "skills"} {
 		if value, ok := item[key]; ok {
-			out[key] = boundedKanbanValue(value)
+			if safe, ok := safeBoundedKanbanValue(value); ok {
+				out[key] = safe
+			}
 		}
 	}
 	if workspace, ok := item["workspace"].(string); ok && safeKanbanWorkspace(workspace) {
@@ -378,7 +387,9 @@ func sanitizeKanbanActivity(values []any, kind string) []map[string]any {
 		}
 		for _, key := range keys {
 			if value, ok := item[key]; ok {
-				row[key] = boundedKanbanValue(value)
+				if safe, ok := safeBoundedKanbanValue(value); ok {
+					row[key] = safe
+				}
 			}
 		}
 		out = append(out, row)
@@ -387,19 +398,46 @@ func sanitizeKanbanActivity(values []any, kind string) []map[string]any {
 }
 
 func boundedKanbanValue(value any) any {
+	result, _ := safeBoundedKanbanValue(value)
+	return result
+}
+
+func safeBoundedKanbanValue(value any) (any, bool) {
 	switch v := value.(type) {
 	case string:
-		return boundedText(v, 512)
+		return boundedText(v, 512), true
+	case bool:
+		return v, true
+	case float64:
+		return v, true
+	case nil:
+		return nil, true
 	case []any:
 		out := make([]any, 0, min(len(v), 100))
 		for _, item := range v[:min(len(v), 100)] {
-			out = append(out, boundedKanbanValue(item))
+			if _, nested := item.([]any); nested {
+				continue
+			}
+			if safe, ok := safeBoundedKanbanValue(item); ok {
+				out = append(out, safe)
+			}
 		}
-		return out
+		return out, true
 	default:
-		return value
+		return nil, false
 	}
 }
+
+func validateKanbanActionReason(reason string) (string, error) {
+	if reason == "" || len(reason) > maxKanbanActionReasonLength || strings.TrimSpace(reason) != reason {
+		return "", errors.New("invalid action reason")
+	}
+	if strings.ContainsAny(reason, "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f;|&$`<>\\") {
+		return "", errors.New("unsafe action reason")
+	}
+	return reason, nil
+}
+
 func boundedText(value string, limit int) string {
 	if len(value) > limit {
 		return value[:limit]
