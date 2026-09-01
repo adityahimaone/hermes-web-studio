@@ -30,6 +30,7 @@ export function useChat() {
   const fallbackStreamRef = useRef<string | null>(null)
   const pollControllerRef = useRef<AbortController | null>(null)
   const pumpControllerRef = useRef<AbortController | null>(null)
+  const pendingUserIdRef = useRef<string | null>(null)
   const sessionEpochRef = useRef(0)
   const chatStateRef = useRef<ChatState>(initialChatState)
   const messagesRef = useRef<ChatMessage[]>([])
@@ -61,12 +62,14 @@ export function useChat() {
   const finish = useCallback((streamId: string, sessionId: string, epoch: number, state: ChatState, status: ChatMessage['status'] = 'complete') => {
     if (terminalRef.current === streamId) return
     if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })) return
-    terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null
+    terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null; fallbackStreamRef.current = null; pumpControllerRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
     const completedMessages = activeSessionRef.current === sessionId && state.answer.trim()
       ? [...messagesRef.current, { id: newId(), role: 'assistant' as const, content: state.answer, status }]
       : messagesRef.current
-    if (completedMessages.length !== messagesRef.current.length) setMessages(completedMessages)
+    messagesRef.current = completedMessages
+    if (state.answer.trim() && activeSessionRef.current === sessionId) setMessages(completedMessages)
+    pendingUserIdRef.current = null
     chatStateRef.current = initialChatState
     setStreamState(status === 'error' ? { ...initialChatState, status: 'error', error: state.error } : initialChatState)
     void refreshSessions().catch(() => undefined)
@@ -116,10 +119,16 @@ export function useChat() {
       ).then((assistant) => {
         if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) || terminalRef.current === streamId) return
         if (assistant) {
-          setMessages((current) => dedupeRestoredAssistant(current, assistant))
+          const restored = dedupeRestoredAssistant(messagesRef.current, assistant)
+          messagesRef.current = restored
+          setMessages(restored)
           finish(streamId, sessionId, epoch, { ...initialChatState, answer: '' })
         } else finish(streamId, sessionId, epoch, { ...initialChatState, error: 'Hermes stream did not settle before polling timed out.' }, 'error')
-      }).catch(() => undefined).finally(() => {
+      }).catch((error) => {
+        if (!controller.signal.aborted && isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current }) && terminalRef.current !== streamId) {
+          finish(streamId, sessionId, epoch, { ...initialChatState, error: error instanceof Error ? error.message : 'Unable to restore Hermes session.' }, 'error')
+        }
+      }).finally(() => {
         if (fallbackStreamRef.current === streamId) fallbackStreamRef.current = null
         if (pollControllerRef.current === controller) pollControllerRef.current = null
       })
@@ -135,18 +144,37 @@ export function useChat() {
     pumpControllerRef.current = controller
     closeSource(); pollControllerRef.current?.abort(); answerRef.current = ''; terminalRef.current = null; fallbackStreamRef.current = null; lastEventIdRef.current = 0; chatStateRef.current = initialChatState
     turnBaselineRef.current = queuedTurnBaseline(baseMessages || messagesRef.current)
-    setMessages((current) => [...(baseMessages || current), { id: newId(), role: 'user', content: clean, status: 'complete' }])
+    const pendingUserId = newId()
+    pendingUserIdRef.current = pendingUserId
+    const pendingMessages = [...(baseMessages || messagesRef.current), { id: pendingUserId, role: 'user' as const, content: clean, status: 'complete' as const }]
+    messagesRef.current = pendingMessages
+    setMessages(pendingMessages)
     setStreamState({ ...initialChatState, status: 'streaming' })
+
+    const removePending = () => {
+      if (pendingUserIdRef.current !== pendingUserId) return
+      const next = messagesRef.current.filter((message) => message.id !== pendingUserId)
+      messagesRef.current = next
+      setMessages(next)
+      pendingUserIdRef.current = null
+    }
     try {
       const uploaded = await Promise.all(files.map((file) => uploadAttachment(file, sessionId, controller.signal)))
-      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
+      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) { removePending(); return }
       const started = await startChat({ session_id: sessionId, message: clean, model: options?.model, provider: options?.provider, attachment_ids: uploaded.map((file) => file.id) }, controller.signal)
-      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
+      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) { removePending(); return }
       streamIdRef.current = started.stream_id
-      setActiveSessionId(started.session_id || sessionId)
-      window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: started.session_id || sessionId, last_event_id: 0 }))
-      connectStream(started.stream_id, started.session_id || sessionId, epoch)
-    } catch (error) { if (!controller.signal.aborted && sessionEpochRef.current === epoch && activeSessionRef.current === sessionId) setStreamState((state) => ({ ...state, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })) }
+      const returnedSessionId = started.session_id || sessionId
+      activeSessionRef.current = returnedSessionId
+      setActiveSessionId(returnedSessionId)
+      window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: returnedSessionId, last_event_id: 0 }))
+      connectStream(started.stream_id, returnedSessionId, epoch)
+    } catch (error) {
+      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) {
+        removePending()
+        if (sessionEpochRef.current === epoch && activeSessionRef.current === sessionId) setStreamState(initialChatState)
+      } else setStreamState({ ...initialChatState, status: 'error', error: error instanceof Error ? error.message : 'Unable to start Hermes.' })
+    }
     finally { if (pumpControllerRef.current === controller) pumpControllerRef.current = null }
   }, [closeSource, connectStream, messages, refreshSessions])
   pumpRef.current = pump
@@ -160,6 +188,7 @@ export function useChat() {
     const epoch = sessionEpochRef.current
     activeSessionRef.current = journal.session_id
     const controller = new AbortController()
+    pollControllerRef.current = controller
     void getSession(journal.session_id, controller.signal).then((detail) => {
       if (!isCurrentConversation(journal.stream_id, journal.session_id, epoch, { streamId: journal.stream_id, sessionId: activeSessionRef.current, epoch }) || activeSessionRef.current !== journal.session_id) return
       setActiveSessionId(journal.session_id)
@@ -219,9 +248,26 @@ export function useChat() {
   }, [])
   const cancel = useCallback(async () => {
     pumpControllerRef.current?.abort()
-    const streamId = streamIdRef.current; if (!streamId) return
-    await cancelChat(streamId).catch(() => undefined); finish(streamId, activeSessionRef.current, sessionEpochRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
+    const streamId = streamIdRef.current
+    if (!streamId) {
+      const pendingId = pendingUserIdRef.current
+      if (pendingId) {
+        const nextMessages = messagesRef.current.filter((message) => message.id !== pendingId)
+        messagesRef.current = nextMessages
+        setMessages(nextMessages)
+        pendingUserIdRef.current = null
+      }
+      chatStateRef.current = initialChatState
+      setStreamState(initialChatState)
+      const next = queueRef.current.shift()
+      setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))
+      if (next) pumpRef.current(next.content, next.files, messagesRef.current, next.options)
+      return
+    }
+    await cancelChat(streamId).catch(() => undefined)
+    finish(streamId, activeSessionRef.current, sessionEpochRef.current, { ...initialChatState, status: 'cancelled' }, 'cancelled')
   }, [finish])
+
   const removeQueued = useCallback((index: number) => {
     queueRef.current = queueRef.current.filter((_, itemIndex) => itemIndex !== index)
     setQueuedMessages(queueRef.current.map(({ content, attachmentNames }) => ({ content, attachmentNames })))

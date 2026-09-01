@@ -49,6 +49,16 @@ describe('conversation runtime contracts', () => {
     expect(getSession).toHaveBeenCalledTimes(2)
   })
 
+  it('propagates non-abort polling failures for lifecycle cleanup', async () => {
+    const failure = new Error('session read failed')
+    await expect(pollSessionUntilSettled(async () => { throw failure }, 0, 1)).rejects.toThrow('session read failed')
+  })
+
+  it('merges restored assistant into latest queued transcript by identity', () => {
+    const queued = [...messages, { id: 'u2', role: 'user' as const, content: 'next', status: 'complete' as const }]
+    expect(dedupeRestoredAssistant(queued, { id: 'a2', role: 'assistant', content: 'done', status: 'complete' })).toEqual([...queued, { id: 'a2', role: 'assistant', content: 'done', status: 'complete' }])
+  })
+
   it('aborts polling and ignores pending completion', async () => {
     const controller = new AbortController()
     let resolve!: (value: { messages: ChatMessage[] }) => void
