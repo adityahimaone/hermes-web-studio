@@ -142,6 +142,19 @@ func TestSpacesP027RejectsMissingDescendantBehindSymlink(t *testing.T) {
 	}
 }
 
+func TestSpacesP027RejectsUnsafeRemoteWorkspaceRefs(t *testing.T) {
+	for _, ref := range []string{"-oProxyCommand=bad", "user@host:22", "host/path", "host;id", "host\ncommand", "host port"} {
+		if validateRemoteWorkspaceRef(ref) {
+			t.Fatalf("unsafe remote ref accepted: %q", ref)
+		}
+	}
+	for _, ref := range []string{"macbook-project", "host_2", "host-2", "host.example"} {
+		if !validateRemoteWorkspaceRef(ref) {
+			t.Fatalf("safe remote ref rejected: %q", ref)
+		}
+	}
+}
+
 func TestSpacesP027SanitizesLegacyReferences(t *testing.T) {
 	item := control.Item{ID: "space-1", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "file:///secret"}}
 	if got := sanitizeSpaceRef(item); got == "file:///secret" || got == "" {

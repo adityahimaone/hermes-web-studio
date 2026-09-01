@@ -167,16 +167,7 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	providerAvailable := true
-	if patch.ProviderID != "" {
-		providerAvailable = false
-		for _, item := range s.providers {
-			if item.ID == patch.ProviderID {
-				providerAvailable = true
-				break
-			}
-		}
-	}
+	providerAvailable := patch.ProviderID == "" || s.providerExistsLocked(patch.ProviderID)
 	for i := range s.profiles {
 		if s.profiles[i].ID == patch.ID {
 			if patch.ProviderID != "" && s.profiles[i].ID == s.activeProfile && !providerAvailable {
@@ -324,6 +315,10 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 func (s *Server) providerExists(id string) bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
+	return s.providerExistsLocked(id)
+}
+
+func (s *Server) providerExistsLocked(id string) bool {
 	for _, item := range s.providers {
 		if item.ID == id {
 			return true

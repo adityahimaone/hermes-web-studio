@@ -137,7 +137,7 @@ func (s *Server) handleKanbanBoardNative(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
 		return
 	}
-	tenant, err := validateKanbanIdentifier(strings.TrimSpace(r.URL.Query().Get("tenant")), true)
+	tenant, err := validateKanbanIdentifier(r.URL.Query().Get("tenant"), true)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "tenant_invalid", "The Kanban tenant is invalid.")
 		return
@@ -360,7 +360,7 @@ func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Reque
 	if r.URL.Query().Get("dry_run") == "true" {
 		args = append(args, "--dry-run")
 	}
-	if max, err := validateKanbanMax(strings.TrimSpace(r.URL.Query().Get("max"))); err != nil {
+	if max, err := validateKanbanMax(r.URL.Query().Get("max")); err != nil {
 		writeError(w, http.StatusBadRequest, "max_invalid", "The Kanban dispatch maximum is invalid.")
 		return
 	} else if max != "" {

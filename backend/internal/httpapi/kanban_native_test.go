@@ -167,6 +167,19 @@ func TestKanbanWorkspaceValueRejectsRemoteAndUnsafeReferences(t *testing.T) {
 	}
 }
 
+func TestKanbanQueryRejectsWhitespaceBeforeNormalization(t *testing.T) {
+	for _, raw := range []string{" tenant", "tenant ", " 4", "4 "} {
+		if _, err := validateKanbanIdentifier(raw, true); err == nil {
+			t.Fatalf("tenant accepted whitespace: %q", raw)
+		}
+	}
+	for _, raw := range []string{" 4", "4 "} {
+		if _, err := validateKanbanMax(raw); err == nil {
+			t.Fatalf("max accepted whitespace: %q", raw)
+		}
+	}
+}
+
 func TestSanitizeKanbanDetailProjectsSafeActivityFields(t *testing.T) {
 	got := sanitizeKanbanProjection(map[string]any{
 		"id": "t_1", "workspace": "dir:project", "comments": []any{map[string]any{"id": "c1", "body": "safe", "secret": "no"}},

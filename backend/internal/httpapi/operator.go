@@ -289,12 +289,7 @@ func safeSpaceRef(s *Server, kind, ref string) bool {
 		return false
 	}
 	if kind == "remote" {
-		for _, r := range ref {
-			if !(r == '-' || r == '_' || r == '.' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9') {
-				return false
-			}
-		}
-		return true
+		return validateRemoteWorkspaceRef(ref)
 	}
 	clean := filepath.Clean(filepath.FromSlash(ref))
 	if clean == "." || s.workspace == nil {
@@ -332,6 +327,18 @@ func safeSpaceRef(s *Server, kind, ref string) bool {
 		}
 		nearest = filepath.Dir(nearest)
 	}
+}
+
+func validateRemoteWorkspaceRef(ref string) bool {
+	if ref == "" || len(ref) > 128 || strings.HasPrefix(ref, "-") {
+		return false
+	}
+	for _, r := range ref {
+		if !(r == '-' || r == '_' || r == '.' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func sanitizeSpaceRef(item control.Item) string {
