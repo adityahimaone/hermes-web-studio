@@ -44,6 +44,10 @@ export function isCurrentPump(controller: AbortController, currentController: Ab
   return controller === currentController && current.sessionId === sessionId && current.epoch === epoch
 }
 
+export function canMutatePumpState(controller: AbortController, currentController: AbortController | null, sessionId: string, epoch: number, current: { sessionId: string; epoch: number }): boolean {
+  return !controller.signal.aborted && isCurrentPump(controller, currentController, sessionId, epoch, current)
+}
+
 export function resetAnswerAtSessionBoundary(answer: { current: string }): void {
   answer.current = ''
 }

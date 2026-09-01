@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { appendCompletedAssistant, claimInflightTurn, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline, releaseOwnedController, resetAnswerAtSessionBoundary } from '../lib/conversation-runtime'
+import { appendCompletedAssistant, canMutatePumpState, claimInflightTurn, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline, releaseOwnedController, resetAnswerAtSessionBoundary } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -151,8 +151,9 @@ export function useChat() {
     setMessages(pendingMessages)
     setStreamState({ ...initialChatState, status: 'streaming' })
 
+    const ownsPump = () => canMutatePumpState(controller, pumpControllerRef.current, sessionId, epoch, { sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })
     const removePending = () => {
-      if (pendingUserIdRef.current !== pendingUserId) return
+      if (!ownsPump() || pendingUserIdRef.current !== pendingUserId) return
       const next = messagesRef.current.filter((message) => message.id !== pendingUserId)
       messagesRef.current = next
       setMessages(next)
@@ -160,9 +161,9 @@ export function useChat() {
     }
     try {
       const uploaded = await Promise.all(files.map((file) => uploadAttachment(file, sessionId, controller.signal)))
-      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) { removePending(); return }
+      if (!ownsPump()) return
       const started = await startChat({ session_id: sessionId, message: clean, model: options?.model, provider: options?.provider, attachment_ids: uploaded.map((file) => file.id) }, controller.signal)
-      if (controller.signal.aborted || sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) { removePending(); return }
+      if (!ownsPump()) return
       streamIdRef.current = started.stream_id
       const returnedSessionId = started.session_id || sessionId
       activeSessionRef.current = returnedSessionId
@@ -171,7 +172,7 @@ export function useChat() {
       if (pumpControllerRef.current === controller) pumpControllerRef.current = null
       connectStream(started.stream_id, returnedSessionId, epoch)
     } catch (error) {
-      const ownsLifecycle = isCurrentPump(controller, pumpControllerRef.current, sessionId, epoch, { sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })
+      const ownsLifecycle = ownsPump()
       if (!ownsLifecycle) return
       if (controller.signal.aborted) {
         removePending()
@@ -306,7 +307,7 @@ export function useChat() {
   }, [])
   const selectSession = useCallback(async (sessionId: string) => {
     const epoch = sessionEpochRef.current + 1
-    sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort(); resetAnswerAtSessionBoundary(answerRef); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
+    sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort(); pendingUserIdRef.current = null; messagesRef.current = []; setMessages([]); resetAnswerAtSessionBoundary(answerRef); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     const controller = new AbortController()
     pollControllerRef.current?.abort(); pollControllerRef.current = controller
     try {

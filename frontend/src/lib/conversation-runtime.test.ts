@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, canMutatePumpState, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -94,6 +94,26 @@ describe('conversation runtime contracts', () => {
     expect(owned.signal.aborted).toBe(true)
     expect(releaseOwnedController(owned, replacement)).toBe(replacement)
     expect(replacement.signal.aborted).toBe(false)
+  })
+
+  it('rejects delayed stale pump completion after session switch', async () => {
+    let resolve!: () => void
+    const delayed = new Promise<void>((done) => { resolve = done })
+    const oldController = new AbortController()
+    const newController = new AbortController()
+    const current = { sessionId: 'session-new', epoch: 2 }
+    const completion = delayed.then(() => isCurrentPump(oldController, newController, 'session-old', 1, current))
+
+    oldController.abort()
+    resolve()
+
+    expect(await completion).toBe(false)
+  })
+
+  it('blocks stale pump state mutation after delayed completion', () => {
+    const oldController = new AbortController()
+    const newController = new AbortController()
+    expect(canMutatePumpState(oldController, newController, 'session-old', 1, { sessionId: 'session-new', epoch: 2 })).toBe(false)
   })
 
   it('guards conversation callbacks by epoch, stream, and session identity', () => {
