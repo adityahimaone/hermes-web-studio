@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -349,8 +350,9 @@ func (s *Server) handleSessionDuplicate(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("format") != "markdown" {
-		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown export is supported.")
+	format := r.URL.Query().Get("format")
+	if format != "markdown" && format != "json" {
+		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown and JSON export are supported.")
 		return
 	}
 	item, err := s.sessions.Load(r.PathValue("session_id"))
@@ -358,25 +360,142 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 		sessionError(w, err)
 		return
 	}
-	var body strings.Builder
-	body.WriteString("# " + item.Title + "\n\n")
-	for _, raw := range item.Messages {
-		var message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
+	messages, err := exportMessages(item.Messages)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+		return
+	}
+	if format == "json" {
+		payload := map[string]any{"session_id": item.ID, "title": safeExportValue(item.Title), "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": safeExportValue(messages)}
+		body, marshalErr := json.MarshalIndent(payload, "", "  ")
+		if marshalErr != nil {
+			writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+			return
 		}
-		if json.Unmarshal(raw, &message) != nil || message.Content == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.json"`)
+		_, _ = w.Write(append(body, '\n'))
+		return
+	}
+	var body strings.Builder
+	body.WriteString("# " + safeExportValue(item.Title).(string) + "\n\n")
+	for _, message := range messages {
+		role := message["role"].(string)
+		content := message["content"].(string)
+		if content == "" {
 			continue
 		}
 		label := "User"
-		if message.Role == "assistant" {
+		if role == "assistant" {
 			label = "Hermes"
 		}
-		body.WriteString("## " + label + "\n\n" + message.Content + "\n\n")
+		body.WriteString("## " + label + "\n\n" + safeExportValue(content).(string) + "\n\n")
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.md"`)
 	_, _ = io.WriteString(w, body.String())
+}
+
+func exportMessages(rawMessages []json.RawMessage) ([]map[string]any, error) {
+	messages := make([]map[string]any, 0, len(rawMessages))
+	for _, raw := range rawMessages {
+		var message any
+		if err := json.Unmarshal(raw, &message); err != nil {
+			return nil, err
+		}
+		object, ok := message.(map[string]any)
+		if !ok || object == nil {
+			return nil, errors.New("message must be object")
+		}
+		if _, ok := object["role"].(string); !ok {
+			return nil, errors.New("message role must be string")
+		}
+		if _, ok := object["content"].(string); !ok {
+			return nil, errors.New("message content must be string")
+		}
+		messages = append(messages, object)
+	}
+	return messages, nil
+}
+
+var privateExportPathToken = regexp.MustCompile(`(?i)(^|[\s"'(])(?:file://[^\s,;]+|[A-Za-z]:[\\/][^\s,;]+|\\\\[^\s,;]+|~[/\\][^\s,;]+|(?:\.\.?[/\\])+[^\s,;]+|/(?:[A-Za-z0-9_.~-]+[/\\]){1,}[A-Za-z0-9_.~-]+|(?:[A-Za-z0-9_.-]+[/\\])+(?:\.env|secrets?|private|credentials?)(?:[/\\][^\s,;]*)?|(?:secrets?|private|credentials?)[/\\][^\s,;]*)`)
+
+func safeExportValue(value any) any {
+	switch item := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(item))
+		for key, value := range item {
+			if sensitiveExportKey(key) {
+				continue
+			}
+			out[key] = safeExportValue(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(item))
+		for i, value := range item {
+			out[i] = safeExportValue(value)
+		}
+		return out
+	case []map[string]any:
+		out := make([]any, len(item))
+		for i, value := range item {
+			out[i] = safeExportValue(value)
+		}
+		return out
+	case string:
+		if privateExportPath(item) {
+			return "[redacted]"
+		}
+		return privateExportPathToken.ReplaceAllString(item, "$1[redacted]")
+	default:
+		return value
+	}
+}
+
+func sensitiveExportKey(key string) bool {
+	var normalized strings.Builder
+	for i, r := range key {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 {
+				normalized.WriteByte(' ')
+			}
+			normalized.WriteByte(byte(r + ('a' - 'A')))
+			continue
+		}
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			normalized.WriteRune(r)
+			continue
+		}
+		normalized.WriteByte(' ')
+	}
+	words := strings.Fields(normalized.String())
+	compact := strings.Join(words, "")
+	for _, variant := range []string{"apikey", "accesskey", "privatekey", "publickey", "clientkey", "serverkey", "encryptionkey", "signingkey", "authkey", "secretkey"} {
+		if compact == variant {
+			return true
+		}
+	}
+	for _, word := range words {
+		switch word {
+		case "auth", "authorization", "token", "secret", "password", "credential", "key":
+			return true
+		}
+	}
+	return false
+}
+
+func privateExportPath(value string) bool {
+	if strings.HasPrefix(value, "file://") || strings.HasPrefix(value, "./") || strings.HasPrefix(value, "../") || strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `\\`) {
+		return true
+	}
+	if strings.Contains(value, "://") {
+		return false
+	}
+	if strings.ContainsAny(value, "/\\") && !strings.ContainsAny(value, " 	\r\n") {
+		return true
+	}
+	return len(value) >= 3 && ((value[0] >= 'a' && value[0] <= 'z') || (value[0] >= 'A' && value[0] <= 'Z')) && value[1] == ':' && (value[2] == '/' || value[2] == '\\')
 }
 
 func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {

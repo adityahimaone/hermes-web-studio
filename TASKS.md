@@ -158,7 +158,7 @@ personal source as the new acceptance baseline.
 - [~] P022 Complete Markdown, syntax, JSON/YAML tree, Mermaid toolbar, KaTeX, tables, safe links, media tokens, timestamps, and routing metadata (safe export/runtime helpers added; renderer and routing parity remain)
 - [~] P023 Complete searchable provider-grouped model selection, live custom endpoint discovery, auxiliary models, aliases, quota/cost/TPS, reasoning, and toolsets (deterministic model discovery/search helpers added; live provider groups and runtime metadata remain)
 - [~] P024 Complete slash-command registry/autocomplete and reference built-ins with transparent pass-through for unknown commands (typed `/help` and `/clear` registry, keyboard suggestions, and unknown-command pass-through added; full reference command catalog and live command effects remain)
-- [~] P025 Complete transcript/session Markdown, JSON, and self-contained HTML export; import; public share creation/revocation; and safe download behavior (safe Markdown/JSON/HTML export helpers added; import/share endpoints remain)
+- [~] P025 Complete transcript/session Markdown, JSON, and self-contained HTML export; import; public share creation/revocation; and safe download behavior (safe Markdown/JSON export endpoints and HTML/runtime helpers added; frontend exposes Markdown only; import/share endpoints remain)
 - [~] P026 Add deterministic normal/error/cancel/switch/reload/reconnect/compression/recovery lifecycle rows plus live Hermes side-by-side acceptance (lifecycle rows helper added; live side-by-side evidence remains)
 
 ## M9 — Workbench and operator parity
