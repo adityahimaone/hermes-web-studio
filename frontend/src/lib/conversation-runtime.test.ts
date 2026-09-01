@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { branchFromTurn, createCompactionBarrier, defaultDisclosure, discoverModels, exportSession, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, undoToTurn } from './conversation-runtime'
+import { branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, lifecycleRows, normalizeActivityMode, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -68,6 +68,12 @@ describe('conversation runtime contracts', () => {
   it('keeps identical assistant replies distinct across turns', async () => {
     const getSession = vi.fn().mockResolvedValue({ messages: [...messages, { id: 'a2', role: 'assistant', content: 'hi', status: 'complete' }] })
     await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toMatchObject({ id: 'a2', content: 'hi' })
+  })
+
+  it('preserves restored assistant identity while deduplicating same turn', () => {
+    const restored = { id: 'turn-1', role: 'assistant' as const, content: 'done', status: 'complete' as const }
+    expect(dedupeRestoredAssistant([...messages, { ...restored, content: 'old' }], restored)).toEqual([...messages, restored])
+    expect(dedupeRestoredAssistant(messages, restored)).toEqual([...messages, restored])
   })
 
   it('keeps the lifecycle matrix explicit', () => { expect(lifecycleRows.map((row) => row.kind)).toEqual(['normal', 'error', 'cancel', 'switch', 'reload', 'reconnect', 'compression', 'recovery']) })

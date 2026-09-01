@@ -108,6 +108,7 @@ export interface SessionDetail extends SessionSummary {
 export interface InflightTurn {
   stream_id: string
   session_id: string
+  last_event_id?: number
 }
 
 export function parseInflightTurn(value: string | null): InflightTurn | null {
@@ -115,7 +116,7 @@ export function parseInflightTurn(value: string | null): InflightTurn | null {
   try {
     const parsed = JSON.parse(value) as Partial<InflightTurn>
     if (typeof parsed.stream_id !== 'string' || !parsed.stream_id || typeof parsed.session_id !== 'string' || !parsed.session_id) return null
-    return { stream_id: parsed.stream_id, session_id: parsed.session_id }
+    return { stream_id: parsed.stream_id, session_id: parsed.session_id, last_event_id: typeof parsed.last_event_id === 'number' ? parsed.last_event_id : undefined }
   } catch {
     return null
   }

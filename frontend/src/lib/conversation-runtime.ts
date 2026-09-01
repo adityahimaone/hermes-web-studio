@@ -32,6 +32,11 @@ export function repairPartialTranscript(messages: ChatMessage[], auditId: string
   return { messages: valid.map((message) => ({ ...message, status: message.status === 'streaming' ? 'cancelled' : message.status })), removed, reason: removed.length ? 'Removed empty or unfinished transcript entries.' : 'Transcript is already valid.', auditId }
 }
 
+export function dedupeRestoredAssistant(messages: ChatMessage[], assistant: ChatMessage): ChatMessage[] {
+  const index = messages.findIndex((message) => message.id === assistant.id)
+  return index < 0 ? [...messages, assistant] : messages.map((message, itemIndex) => itemIndex === index ? assistant : message)
+}
+
 export async function pollSessionUntilSettled<T extends { messages?: unknown[] }>(getSession: (signal?: AbortSignal) => Promise<T>, baselineMessageCount: number, maxPolls: number, intervalMs = 0, signal?: AbortSignal): Promise<ChatMessage | null> {
   for (let poll = 0; poll < maxPolls; poll += 1) {
     if (signal?.aborted) return null

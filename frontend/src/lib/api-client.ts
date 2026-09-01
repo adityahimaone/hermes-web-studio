@@ -24,11 +24,11 @@ export interface StartChatResponse {
 
 export interface UploadedAttachment { id: string; name: string; mime: string; size: number }
 
-export async function uploadAttachment(file: File, sessionId?: string) {
+export async function uploadAttachment(file: File, sessionId?: string, signal?: AbortSignal) {
   const body = new FormData()
   body.append('file', file)
   if (sessionId) body.append('session_id', sessionId)
-  return readJson<UploadedAttachment>(await fetch('/api/attachments', { method: 'POST', body }))
+  return readJson<UploadedAttachment>(await fetch('/api/attachments', { method: 'POST', body, signal }))
 }
 
 export async function readJson<T>(response: Response): Promise<T> {
@@ -49,12 +49,13 @@ export async function getHermesHealth(signal?: AbortSignal) {
   return readJson<HermesHealth>(await fetch('/api/health/hermes', { signal }))
 }
 
-export async function startChat(input: StartChatInput) {
+export async function startChat(input: StartChatInput, signal?: AbortSignal) {
   return readJson<StartChatResponse>(
     await fetch('/api/chat/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
+      signal,
     }),
   )
 }
