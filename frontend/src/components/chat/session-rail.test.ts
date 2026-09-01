@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, nextSessionId, runBatchSessionAction, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -56,6 +56,19 @@ describe('session keyboard navigation', () => {
     root.append(target)
     expect(findSessionButton(root, 'quote" ]: hostile')).toBe(target)
     expect(findSessionButton(root, 'quote" ]: missing')).toBeUndefined()
+  })
+})
+
+describe('batch session actions', () => {
+  it('returns failed ids while preserving successful actions', async () => {
+    const acted: string[] = []
+    const failed = await runBatchSessionAction(['one', 'two', 'three'], async (id) => {
+      acted.push(id)
+      if (id === 'two') throw new Error('temporary failure')
+    })
+
+    expect(acted).toEqual(['one', 'two', 'three'])
+    expect(failed).toEqual(['two'])
   })
 })
 

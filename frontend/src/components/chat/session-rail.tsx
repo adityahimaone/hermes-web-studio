@@ -18,6 +18,13 @@ function sourceOf(session: SessionSummary): SourceFilter { const source = field(
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 export function filterAriaPressed(selected: string, value: string) { return selected === value }
 export function sessionRowAriaCurrent(sessionId: string, activeSessionId: string) { return sessionId === activeSessionId ? 'page' : undefined }
+export async function runBatchSessionAction(ids: string[], action: (id: string) => Promise<unknown>) {
+  const failed: string[] = []
+  for (const id of ids) {
+    try { await action(id) } catch { failed.push(id) }
+  }
+  return failed
+}
 export function nextSessionId(ids: string[], currentId: string, direction: 'next' | 'previous') {
   if (!ids.length) return undefined
   const currentIndex = ids.indexOf(currentId)
@@ -64,6 +71,7 @@ function formatCompactDate(dateStr?: string) {
 export function SessionRail({ sessions, activeSessionId, onSelectSession, onSearch, onRename, onPin, onArchive, onDelete, onDuplicate, onNewChat, loading, error, onToggle }: Props) {
   const [query, setQuery] = useState(''); const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all'); const [tagFilter, setTagFilter] = useState('all'); const [selected, setSelected] = useState<string[]>([]); const [batchMode, setBatchMode] = useState(false); const [renameTarget, setRenameTarget] = useState<SessionSummary | null>(null); const [deleteTarget, setDeleteTarget] = useState<SessionSummary | null>(null); const [renameValue, setRenameValue] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [batchError, setBatchError] = useState<string | undefined>()
   
   const webCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'webui').length, [sessions])
   const cliCount = useMemo(() => sessions.filter(item => sourceOf(item) === 'cli').length, [sessions])
@@ -149,11 +157,12 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
         <div className="mt-2 flex items-center justify-between rounded-lg border bg-muted/40 px-2 py-1">
           <span className="text-[11px] text-muted-foreground">{selected.length} selected</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { await Promise.all(selected.map(id => onArchive(id, true))); clearBatch() }}>Archive</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { await Promise.all(selected.map(onDelete)); clearBatch() }}>Delete</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, id => Promise.resolve(onArchive(id, true))); if (failed.length) setBatchError(`Could not archive ${failed.length} session${failed.length === 1 ? '' : 's'}.`); else clearBatch() }}>Archive</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-destructive" onClick={async () => { setBatchError(undefined); const failed = await runBatchSessionAction(selected, onDelete); if (failed.length) setBatchError(`Could not delete ${failed.length} session${failed.length === 1 ? '' : 's'}.`); else clearBatch() }}>Delete</Button>
           </div>
         </div>
       )}
+      {batchError && <p className="mt-1 px-2 text-[11px] text-destructive" role="alert">{batchError}</p>}
 
       {/* Session list items */}
       <div className="mt-2 space-y-3">
