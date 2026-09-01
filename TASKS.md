@@ -31,7 +31,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [x] Load and resume existing session history
 - [~] Edit/regenerate/retry and queue while processing (server-side edit truncation awaited before edit/retry, queued text/attachment delivery and live persisted branch semantics verified; original-UI side-by-side click proof remains)
 - [x] Markdown, code highlight/copy, Mermaid, safe links
-- [~] Tool cards, subagent cards, reasoning blocks (canonical Runs lifecycle aliases, upserted progress cards, redaction, and live tool events verified; current Gateway emitted no structured subagent event)
+- [~] Tool cards, subagent cards, reasoning blocks (canonical Runs lifecycle aliases, bounded redaction for browser-facing previews/summaries and task/name strings, and live tool events verified; current Gateway emitted no structured subagent event)
 - [~] Runs API approval request/response parity (BFF forwarding and UI decision path implemented; live Runs API proof remains)
 - [~] Attachments and multimodal messages (validated upload/download, MIME-specific Gateway transport, and attachment turns safely stay on chat-completions when Runs mode is enabled; current live model completion proof blocked by provider HTTP 402)
 - [~] Reconnect/replay cursor and duplicate suppression (SSE IDs, `Last-Event-ID`/`after`, bounded replay, and Playwright interruption/reconnect coverage verified; current live replay proof blocked by provider HTTP 402)

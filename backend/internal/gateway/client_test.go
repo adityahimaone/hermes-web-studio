@@ -72,6 +72,27 @@ func TestParseSSERejectsFailureInAnyChoice(t *testing.T) {
 	}
 }
 
+func TestParseSSERejectsUnnamedGenericFailureFrames(t *testing.T) {
+	for _, input := range []string{
+		"data: {\"error\":\"upstream secret\"}\n\ndata: [DONE]\n\n",
+		"data: {\"errors\":[{\"message\":\"upstream secret\"}]}\n\ndata: [DONE]\n\n",
+		"data: {\"meta\":{\"failure\":\"upstream secret\"}}\n\ndata: [DONE]\n\n",
+	} {
+		_, err := parseSSE(strings.NewReader(input), func(Event) {})
+		if err == nil {
+			t.Fatalf("accepted failure frame: %s", input)
+		}
+	}
+}
+
+func TestParseSSEIgnoresNullFailureFields(t *testing.T) {
+	input := "data: {\"error\":null,\"errors\":null,\"failure\":null,\"choices\":[{\"delta\":{\"content\":\"safe\"}}]}\n\ndata: [DONE]\n\n"
+	answer, err := parseSSE(strings.NewReader(input), func(Event) {})
+	if err != nil || answer != "safe" {
+		t.Fatalf("answer=%q err=%v", answer, err)
+	}
+}
+
 func TestParseSSERejectsHermesFailedPayloadShapes(t *testing.T) {
 	for _, payload := range []string{
 		`{"hermes":{"failed":true}}`,

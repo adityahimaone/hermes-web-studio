@@ -111,6 +111,17 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
 }
 
+func (s *Server) sessionLock(id string) *sync.Mutex {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	lock := s.sessionLocks[id]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		s.sessionLocks[id] = lock
+	}
+	return lock
+}
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
@@ -263,6 +274,9 @@ func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
 	if input.SessionID == "" {
 		input.SessionID = newID()
 	}
+	lock := s.sessionLock(input.SessionID)
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Create(input.SessionID, strings.TrimSpace(input.Title), nil)
 	if err != nil {
 		sessionError(w, err)
@@ -276,6 +290,9 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Update(r.PathValue("session_id"), patch)
 	if err != nil {
 		sessionError(w, err)
@@ -291,6 +308,9 @@ func (s *Server) handleSessionRename(w http.ResponseWriter, r *http.Request) {
 	if !decodeBody(w, r, &input) {
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.Rename(r.PathValue("session_id"), strings.TrimSpace(input.Title))
 	if err != nil {
 		sessionError(w, err)
@@ -309,6 +329,9 @@ func (s *Server) handleSessionPin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.SetPinned(r.PathValue("session_id"), *input.Pinned)
 	if err != nil {
 		sessionError(w, err)
@@ -327,6 +350,9 @@ func (s *Server) handleSessionArchive(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	item, err := s.sessions.SetArchived(r.PathValue("session_id"), *input.Archived)
 	if err != nil {
 		sessionError(w, err)
@@ -336,6 +362,9 @@ func (s *Server) handleSessionArchive(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	if err := s.sessions.Delete(r.PathValue("session_id")); err != nil {
 		sessionError(w, err)
 		return
@@ -511,6 +540,9 @@ func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	lock := s.sessionLock(r.PathValue("session_id"))
+	lock.Lock()
+	defer lock.Unlock()
 	if err := s.sessions.TruncateMessages(r.PathValue("session_id"), *input.Count); err != nil {
 		sessionError(w, err)
 		return
@@ -677,7 +709,17 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 	}
 	userMessage := mustMessage("user", input.Message)
 	if err := s.sessions.AppendMessages(input.SessionID, userMessage); err != nil {
-		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be updated."}})
+		rollbackErr := error(nil)
+		if createdSession {
+			rollbackErr = s.sessions.Delete(input.SessionID)
+		} else {
+			rollbackErr = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
+		}
+		code, message := "session_persist_failed", "The chat message could not be saved."
+		if rollbackErr != nil {
+			code, message = "session_rollback_failed", "The chat message failed and its session state could not be rolled back."
+		}
+		s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": code, "message": message}})
 		return
 	}
 	stream := s.gateway.Stream
@@ -717,7 +759,12 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		return
 	}
 	if err := s.sessions.AppendMessages(input.SessionID, mustMessage("assistant", answer)); err != nil {
-		rollbackErr := s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
+		rollbackErr := error(nil)
+		if createdSession {
+			rollbackErr = s.sessions.Delete(input.SessionID)
+		} else {
+			rollbackErr = s.sessions.TruncateMessages(input.SessionID, originalMessageCount)
+		}
 		code := "session_persist_failed"
 		if rollbackErr != nil {
 			code = "session_rollback_failed"

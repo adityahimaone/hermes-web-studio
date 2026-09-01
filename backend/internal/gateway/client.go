@@ -387,11 +387,11 @@ func parseSSE(reader io.Reader, emit func(Event)) (string, error) {
 		if frameName == "" || frameName == "message" {
 			frameName = name
 		}
+		if containsErrorField(payload) {
+			return errors.New("Hermes completion failed.")
+		}
 		if frameName == "run.completed" || frameName == "message.complete" {
 			terminal = true
-			if containsErrorField(payload) {
-				return errors.New("Hermes completion failed.")
-			}
 		}
 		if frameName == "error" || frameName == "run.failed" {
 			return errors.New("Hermes completion failed.")
@@ -484,7 +484,7 @@ func containsErrorField(value any) bool {
 	case map[string]any:
 		for key, child := range item {
 			lower := strings.ToLower(key)
-			if lower == "error" || strings.HasSuffix(lower, "_error") || lower == "errors" || strings.HasSuffix(lower, ".error") {
+			if (lower == "error" || strings.HasSuffix(lower, "_error") || lower == "errors" || strings.HasSuffix(lower, ".error") || lower == "failure" || strings.HasSuffix(lower, "_failure")) && !isEmptyFailure(child) {
 				return true
 			}
 			if containsErrorField(child) {
@@ -499,6 +499,25 @@ func containsErrorField(value any) bool {
 		}
 	}
 	return false
+}
+
+func isEmptyFailure(value any) bool {
+	switch item := value.(type) {
+	case nil:
+		return true
+	case bool:
+		return !item
+	case string:
+		return strings.TrimSpace(item) == ""
+	case []any:
+		return len(item) == 0
+	case map[string]any:
+		return len(item) == 0
+	case float64:
+		return item == 0
+	default:
+		return false
+	}
 }
 
 // ponytail: in-memory per-session locking is sufficient for this single BFF process; upgrade to filesystem CAS if multiple writers are introduced.
@@ -628,7 +647,7 @@ func toolData(payload map[string]any, complete bool) map[string]any {
 	if name == "" {
 		name = stringValue(payload["tool_name"])
 	}
-	result := map[string]any{"name": name, "is_error": false}
+	result := map[string]any{"name": redact(name), "is_error": false}
 	tid := stringValue(payload["tid"])
 	if tid == "" {
 		tid = stringValue(payload["tool_id"])
@@ -642,10 +661,10 @@ func toolData(payload map[string]any, complete bool) map[string]any {
 	if complete {
 		result["is_error"] = payload["error"] != nil || boolValue(payload["is_error"])
 		if summary := stringValue(payload["summary"]); summary != "" {
-			result["result"] = summary
+			result["result"] = redact(summary)
 		}
 	} else if preview := stringValue(payload["preview"]); preview != "" {
-		result["result"] = preview
+		result["result"] = redact(preview)
 	}
 	return result
 }
@@ -666,7 +685,7 @@ func subagentData(payload map[string]any, status string) map[string]any {
 			state = "error"
 		}
 	}
-	return map[string]any{"id": id, "name": name, "status": state, "task": stringValue(payload["task"]), "result": redact(payload["result"])}
+	return map[string]any{"id": id, "name": redact(name), "status": state, "task": redact(stringValue(payload["task"])), "result": redact(payload["result"])}
 }
 
 func approvalData(payload map[string]any) map[string]any {
@@ -711,9 +730,27 @@ func redact(value any) any {
 			out[i] = redact(value)
 		}
 		return out
+	case string:
+		return redactString(item)
 	default:
 		return value
 	}
+}
+
+func redactString(value string) string {
+	if len(value) > 4096 {
+		return "[redacted]"
+	}
+	lower := strings.ToLower(value)
+	for _, marker := range []string{"api_key", "apikey", "access_token", "refresh_token", "authorization", "bearer ", "password", "secret", "private_key", "-----begin"} {
+		if strings.Contains(lower, marker) {
+			return "[redacted]"
+		}
+	}
+	if strings.HasPrefix(value, "/") || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, "file://") || strings.HasPrefix(value, `\\`) {
+		return "[redacted]"
+	}
+	return value
 }
 
 func stringValue(value any) string {

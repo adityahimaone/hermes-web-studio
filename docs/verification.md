@@ -1,6 +1,6 @@
 # Verification record
 
-## 2026-08-30 — M0 local verification
+## 2026-08-30 — M0 local verification (historical evidence; not current gate)
 
 Environment: Linux amd64, Go 1.27.0, Node 24.19.0, pnpm 11.19.0.
 
@@ -16,16 +16,16 @@ The backend integration suite uses an HTTP mock that implements the Hermes Gatew
 
 Live verification must be added as a separate dated entry using `scripts/smoke-hermes.sh`. Do not convert the live task to complete based on this mock result.
 
-## 2026-08-30 - Live verification attempt
+## 2026-08-30 - Live verification attempt (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
 | `./scripts/smoke-hermes.sh` | Blocked: could not connect to the local BFF at `127.0.0.1:8787` |
 | Hermes Gateway probe | Blocked: `127.0.0.1:8642` was not reachable |
 
-The live M0 gate remains open. Re-run after starting both the Hermes Gateway and Hermes Web Studio API, then record the Hermes version, model/provider, first-token latency, and final response here. Historical live entries below are scoped to their recorded date/provider state; current provider HTTP 402 insufficient-credit responses remain blocked and are not current completion evidence.
+Current live verification gate remains open. Re-run after starting both Hermes Gateway and Hermes Web Studio API, then record current Hermes version, model/provider, first-token latency, and final response in a new dated entry. Historical rows below are scoped to recorded date/provider state and do not satisfy current completion evidence. Current provider HTTP 402 insufficient-credit responses remain blocked.
 
-## 2026-08-30 - M0 live proof
+## 2026-08-30 - M0 live proof (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
@@ -40,7 +40,7 @@ The live M0 gate remains open. Re-run after starting both the Hermes Gateway and
 
 This closes the M0 live gate. The version is intentionally recorded as unavailable rather than inferred.
 
-## 2026-08-30 - M1 automated acceptance
+## 2026-08-30 - M1 automated acceptance (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
@@ -61,7 +61,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Opt-in live Runs approval-shaped prompt | Pass: reasoning snapshot/full token duplication is suppressed; Gateway returned a textual confirmation rather than a structured approval event, so no command was run |
 | Live approval interaction | Pending operator verification; safe prompt did not create a Runs approval event; tracked as `[~]` in `TASKS.md` |
 
-## 2026-08-30 — M1 duplicate-response and queued-attachment regression
+## 2026-08-30 — M1 duplicate-response and queued-attachment regression (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
@@ -69,7 +69,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Queued attachment | Pass: an attachment selected while the first turn is streaming is retained in the queued turn and forwarded after the reconnecting turn completes |
 | Canonical Runs activity events | Pass: fixture coverage normalizes `tool.start/progress/complete`, `subagent.start/complete`, and reasoning delta aliases without duplicate activity cards |
 
-## 2026-08-30 — M1 live parity probes
+## 2026-08-30 — M1 live parity probes (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
@@ -95,7 +95,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Performance budget script | Pass against the existing frontend/dist artifact |
 | M5 browser acceptance | Ready: `node frontend/e2e/m5-browser-check.mjs`; requires Vite on port 5173 and is pending hosted/manual execution |
 
-## 2026-08-31 - M7-M12 bounded local/live follow-up
+## 2026-08-31 - M7-M12 bounded local/live follow-up (historical evidence; not current gate)
 
 | Check | Result |
 |---|---|
