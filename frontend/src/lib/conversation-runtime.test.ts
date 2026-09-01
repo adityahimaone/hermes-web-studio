@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { appendCompletedAssistant, branchFromTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, repairPartialTranscript, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -73,6 +73,12 @@ describe('conversation runtime contracts', () => {
     const getSession = vi.fn().mockResolvedValue({ messages })
     await expect(pollSessionUntilSettled(getSession, 2, 1)).resolves.toBeNull()
     expect(getSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('claims hard-reload journal before stream assignment and rejects stale restore', () => {
+    expect(claimInflightTurn('stream-1', 'session-1', 2, { streamId: null, sessionId: 'session-1', epoch: 2 })).toBe(true)
+    expect(claimInflightTurn('stream-1', 'session-1', 2, { streamId: 'stream-2', sessionId: 'session-1', epoch: 2 })).toBe(false)
+    expect(claimInflightTurn('stream-1', 'session-1', 1, { streamId: null, sessionId: 'session-1', epoch: 2 })).toBe(false)
   })
 
   it('guards conversation callbacks by epoch, stream, and session identity', () => {

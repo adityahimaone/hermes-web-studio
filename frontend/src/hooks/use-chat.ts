@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { appendCompletedAssistant, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
+import { appendCompletedAssistant, claimInflightTurn, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -62,7 +62,7 @@ export function useChat() {
   const finish = useCallback((streamId: string, sessionId: string, epoch: number, state: ChatState, status: ChatMessage['status'] = 'complete') => {
     if (terminalRef.current === streamId) return
     if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })) return
-    terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null; fallbackStreamRef.current = null; pumpControllerRef.current = null
+    terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null; fallbackStreamRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
     const completedMessages = activeSessionRef.current === sessionId
       ? appendCompletedAssistant(messagesRef.current, state.answer, status)
@@ -168,6 +168,7 @@ export function useChat() {
       activeSessionRef.current = returnedSessionId
       setActiveSessionId(returnedSessionId)
       window.localStorage.setItem(inflightTurnKey, JSON.stringify({ stream_id: started.stream_id, session_id: returnedSessionId, last_event_id: 0 }))
+      if (pumpControllerRef.current === controller) pumpControllerRef.current = null
       connectStream(started.stream_id, returnedSessionId, epoch)
     } catch (error) {
       const ownsLifecycle = isCurrentPump(controller, pumpControllerRef.current, sessionId, epoch, { sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })
@@ -194,7 +195,7 @@ export function useChat() {
     const controller = new AbortController()
     pollControllerRef.current = controller
     void getSession(journal.session_id, controller.signal).then((detail) => {
-      if (!isCurrentConversation(journal.stream_id, journal.session_id, epoch, { streamId: journal.stream_id, sessionId: activeSessionRef.current, epoch }) || activeSessionRef.current !== journal.session_id) return
+      if (!claimInflightTurn(journal.stream_id, journal.session_id, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })) return
       setActiveSessionId(journal.session_id)
       const restored = normalizeSessionMessages(detail.messages)
       setMessages(restored)

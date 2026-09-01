@@ -36,6 +36,10 @@ export function isCurrentConversation(streamId: string, sessionId: string, epoch
   return current.streamId === streamId && current.sessionId === sessionId && current.epoch === epoch
 }
 
+export function claimInflightTurn(streamId: string, sessionId: string, epoch: number, current: { streamId: string | null; sessionId: string; epoch: number }): boolean {
+  return current.sessionId === sessionId && current.epoch === epoch && (current.streamId === null || current.streamId === streamId)
+}
+
 export function isCurrentPump(controller: AbortController, currentController: AbortController | null, sessionId: string, epoch: number, current: { sessionId: string; epoch: number }): boolean {
   return controller === currentController && current.sessionId === sessionId && current.epoch === epoch
 }
