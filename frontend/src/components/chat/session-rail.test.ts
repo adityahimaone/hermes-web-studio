@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, sessionActionVisibilityClass } from './session-rail'
+import { filterAriaPressed, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -13,6 +13,13 @@ describe('session filter accessibility', () => {
     ['dynamic tag unselected', 'all', 'work', false],
   ])('%s', (_label, selected, value, expected) => {
     expect(filterAriaPressed(selected, value)).toBe(expected)
+  })
+})
+
+describe('active session accessibility', () => {
+  it('marks only active session row as current', () => {
+    expect(sessionRowAriaCurrent('active', 'active')).toBe('page')
+    expect(sessionRowAriaCurrent('other', 'active')).toBeUndefined()
   })
 })
 

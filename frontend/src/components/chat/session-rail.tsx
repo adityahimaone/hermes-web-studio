@@ -17,6 +17,7 @@ function field(session: SessionSummary, ...keys: string[]) { for (const key of k
 function sourceOf(session: SessionSummary): SourceFilter { const source = field(session, 'source', 'session_source', 'origin', 'session_type').toLocaleLowerCase(); return source.includes('cli') || source.includes('cron') ? 'cli' : 'webui' }
 function channelOf(session: SessionSummary) { return field(session, 'channel', 'channel_name', 'external_channel', 'transport') }
 export function filterAriaPressed(selected: string, value: string) { return selected === value }
+export function sessionRowAriaCurrent(sessionId: string, activeSessionId: string) { return sessionId === activeSessionId ? 'page' : undefined }
 export function sessionActionVisibilityClass() { return 'absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100' }
 
 function formatCompactDate(dateStr?: string) {
@@ -142,7 +143,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
               return (
                 <div key={item.session_id} className={cn('group relative flex min-h-8 items-center rounded-lg px-1.5 py-1 transition-colors hover:bg-accent/50', isActive && 'bg-accent/70 font-medium text-foreground shadow-sm ring-1 ring-border/80', isSelected && 'ring-1 ring-primary/60')}>
                   {batchMode && <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => toggleSelected(item.session_id)} aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.title || 'session'}`}>{isSelected ? <Check size={13} /> : <span className="size-2.5 rounded-sm border" />}</Button>}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} aria-current={isActive ? 'page' : undefined} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} aria-current={sessionRowAriaCurrent(item.session_id, activeSessionId)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
                     {item.pinned ? <Pin size={11} className="shrink-0 text-primary" /> : null}
                     <span className="min-w-0 flex-1 truncate text-[11px] leading-tight text-foreground/90">{item.title || 'Untitled session'}</span>
                     {channel && <span className="shrink-0 rounded bg-muted px-1 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">{channel}</span>}
