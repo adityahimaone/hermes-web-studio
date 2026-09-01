@@ -30,7 +30,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		slog.Info("Hermes Web Studio API listening", "addr", addr, "gateway", cfg.GatewayBaseURL)
+		slog.Info("Hermes Web Studio API listening", "addr", addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("API server stopped", "error", err)
 			os.Exit(1)
