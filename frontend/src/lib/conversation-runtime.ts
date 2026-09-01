@@ -61,6 +61,13 @@ export function dedupeRestoredAssistant(messages: ChatMessage[], assistant: Chat
   return index < 0 ? [...messages, assistant] : messages.map((message, itemIndex) => itemIndex === index ? assistant : message)
 }
 
+export function appendCompletedAssistant(messages: ChatMessage[], content: string, status: ChatMessage['status'] = 'complete'): ChatMessage[] {
+  if (!content.trim()) return messages
+  const last = messages.at(-1)
+  if (last?.role === 'assistant' && last.content === content) return messages
+  return [...messages, { id: crypto.randomUUID(), role: 'assistant', content, status }]
+}
+
 export async function pollSessionUntilSettled<T extends { messages?: unknown[] }>(getSession: (signal?: AbortSignal) => Promise<T>, baselineMessageCount: number, maxPolls: number, intervalMs = 0, signal?: AbortSignal): Promise<ChatMessage | null> {
   for (let poll = 0; poll < maxPolls; poll += 1) {
     if (signal?.aborted) return null

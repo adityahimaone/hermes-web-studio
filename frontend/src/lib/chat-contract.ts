@@ -230,6 +230,6 @@ export function reduceChatEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'cancel':
       return { ...state, status: 'cancelled' }
     case 'apperror':
-      return { ...state, status: 'error', error: eventText(event.data, 'message') || 'Hermes could not complete the request.' }
+      return { ...state, status: 'error', error: 'Hermes could not complete the request.' }
   }
 }

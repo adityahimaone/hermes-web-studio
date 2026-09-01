@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
+import { appendCompletedAssistant, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -64,8 +64,8 @@ export function useChat() {
     if (!isCurrentConversation(streamId, sessionId, epoch, { streamId: streamIdRef.current, sessionId: activeSessionRef.current, epoch: sessionEpochRef.current })) return
     terminalRef.current = streamId; closeSource(); streamIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null; fallbackStreamRef.current = null; pumpControllerRef.current = null
     if (parseInflightTurn(window.localStorage.getItem(inflightTurnKey))?.stream_id === streamId) window.localStorage.removeItem(inflightTurnKey)
-    const completedMessages = activeSessionRef.current === sessionId && state.answer.trim()
-      ? [...messagesRef.current, { id: newId(), role: 'assistant' as const, content: state.answer, status }]
+    const completedMessages = activeSessionRef.current === sessionId
+      ? appendCompletedAssistant(messagesRef.current, state.answer, status)
       : messagesRef.current
     messagesRef.current = completedMessages
     if (state.answer.trim() && activeSessionRef.current === sessionId) setMessages(completedMessages)
@@ -303,9 +303,9 @@ export function useChat() {
   const selectSession = useCallback(async (sessionId: string) => {
     const epoch = sessionEpochRef.current + 1
     sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort(); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
+    const controller = new AbortController()
+    pollControllerRef.current?.abort(); pollControllerRef.current = controller
     try {
-      const controller = new AbortController()
-      pollControllerRef.current?.abort(); pollControllerRef.current = controller
       const detail = await getSession(sessionId, controller.signal)
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
       if (pollControllerRef.current === controller) pollControllerRef.current = null
@@ -322,6 +322,7 @@ export function useChat() {
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
       setMessages([]); setSessionError(normalizeRestoreError(error))
     } finally {
+      if (pollControllerRef.current === controller) pollControllerRef.current = null
       if (sessionEpochRef.current === epoch) setSessionLoading(false)
     }
   }, [closeSource, connectStream])

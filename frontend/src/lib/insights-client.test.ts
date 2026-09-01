@@ -15,12 +15,14 @@ describe('getInsights', () => {
   it('surfaces the server error without inventing fallback data', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ message: 'Insights state could not be read.' }), { status: 503 }))
 
-    await expect(getInsights()).rejects.toThrow('Insights state could not be read.')
+    await expect(getInsights()).rejects.toThrow('Request failed (503)')
+    await expect(getInsights()).rejects.not.toThrow('Insights state could not be read.')
   })
 
   it('turns a non-JSON legacy proxy response into an actionable HTTP error', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('404 page not found\n', { status: 404 }))
 
-    await expect(getInsights()).rejects.toThrow('Request failed (404): 404 page not found')
+    await expect(getInsights()).rejects.toThrow('Request failed (404)')
+    await expect(getInsights()).rejects.not.toThrow('404 page not found')
   })
 })

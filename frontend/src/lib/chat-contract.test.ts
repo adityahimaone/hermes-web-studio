@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { filterSessions, groupSessionsByDate, initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent } from './chat-contract'
+import { readJson } from './api-client'
 import { localSlashCommand, slashCommandSuggestions } from './slash-commands'
 
 describe('chat event reducer', () => {
@@ -27,10 +28,15 @@ describe('chat event reducer', () => {
     expect(state.subagents).toEqual([{ id: 's1', name: 'research', status: 'complete', task: undefined }])
   })
 
-  it('surfaces safe application errors', () => {
-    const state = reduceChatEvent(initialChatState, { type: 'apperror', data: { message: 'Gateway unavailable' } })
+  it('sanitizes application errors before exposing backend details', () => {
+    const state = reduceChatEvent(initialChatState, { type: 'apperror', data: { message: '/home/user/token=secret' } })
     expect(state.status).toBe('error')
-    expect(state.error).toBe('Gateway unavailable')
+    expect(state.error).toBe('Hermes could not complete the request.')
+  })
+
+  it('hides raw HTTP error bodies while preserving status classification', async () => {
+    await expect(readJson(new Response('/private/path token=secret', { status: 502 }))).rejects.toThrow('Request failed (502)')
+    await expect(readJson(new Response('/private/path token=secret', { status: 502 }))).rejects.not.toThrow('secret')
   })
 
   it('normalizes legacy history and ignores unsupported message shapes', () => {

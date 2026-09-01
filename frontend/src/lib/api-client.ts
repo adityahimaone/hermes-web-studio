@@ -37,10 +37,9 @@ export async function readJson<T>(response: Response): Promise<T> {
   try {
     data = raw.trim() ? JSON.parse(raw) as T & { message?: string } : null
   } catch {
-    const detail = raw.trim().replace(/\s+/g, ' ').slice(0, 160)
-    throw new Error(response.ok ? `Invalid JSON response from server${detail ? `: ${detail}` : '.'}` : `Request failed (${response.status})${detail ? `: ${detail}` : ''}`)
+    throw new Error(response.ok ? 'Invalid JSON response from server.' : `Request failed (${response.status})`)
   }
-  if (!response.ok) throw new Error(data?.message || `Request failed (${response.status})`)
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
   if (!data) throw new Error('Server returned an empty response.')
   return data
 }
