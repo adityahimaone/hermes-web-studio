@@ -52,6 +52,21 @@ export function resetAnswerAtSessionBoundary(answer: { current: string }): void 
   answer.current = ''
 }
 
+export function resetCursorAtSessionBoundary(cursor: { current: number }): void {
+  cursor.current = 0
+}
+
+export function resetConversationRuntimeState(state: {
+  cursor: { current: number }
+  pump: { current: AbortController | null }
+  pendingUser: { current: string | null }
+  answer: { current: string }
+}): void {
+  resetCursorAtSessionBoundary(state.cursor)
+  resetOwnedPumpState(state.pump, state.pendingUser)
+  resetAnswerAtSessionBoundary(state.answer)
+}
+
 export function releaseOwnedController(controller: AbortController, currentController: AbortController | null): AbortController | null {
   if (currentController !== controller) return currentController
   controller.abort()

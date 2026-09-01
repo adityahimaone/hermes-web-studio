@@ -350,8 +350,9 @@ The acceptance script verifies it is visible only on Chat.
 - Added a validated inflight turn journal, transcript restore, cursor-aware
   reconnect, and stale-stream protection for session switch and hard reload.
 - Separated Skills/Memory preview loading, empty, success, and error states.
-- P013-P015 and P034 remain `[~]`; full source fixtures, expired-stream polling,
-  live reload proof, and complete Skills parity are still open.
+- P013-P015 and P034 remain `[~]`; full source fixtures, live reload proof,
+  live Hermes stream-boundary proof, and complete Skills parity are still open.
+  Expired-stream polling is implemented and covered by frontend regressions.
 
 ## 2026-08-30 — Parallel remaining-task wave
 

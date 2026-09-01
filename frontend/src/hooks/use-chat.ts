@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelChat, deleteSession, duplicateSession, getSession, getSessions, renameSession, resolveApproval, searchSessions, setSessionArchived, setSessionPinned, startChat, streamUrl, truncateSession, uploadAttachment, type ApprovalChoice } from '../lib/api-client'
 import { initialChatState, normalizeSessionMessages, parseInflightTurn, reduceChatEvent, type ChatEvent, type ChatEventType, type ChatMessage, type ChatState, type SessionSummary } from '../lib/chat-contract'
-import { appendCompletedAssistant, canMutatePumpState, claimInflightTurn, dedupeRestoredAssistant, isCurrentConversation, isCurrentPump, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline, releaseOwnedController, resetAnswerAtSessionBoundary, resetOwnedPumpState } from '../lib/conversation-runtime'
+import { appendCompletedAssistant, canMutatePumpState, claimInflightTurn, dedupeRestoredAssistant, isCurrentConversation, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, queuedTurnBaseline, releaseOwnedController, resetConversationRuntimeState, resetOwnedPumpState } from '../lib/conversation-runtime'
 import { planTurn, type PendingTurn, type TurnMode } from '../lib/turn-control'
 
 const supportedEvents: ChatEventType[] = ['token', 'reasoning', 'tool', 'tool_complete', 'subagent', 'approval', 'usage', 'done', 'cancel', 'apperror']
@@ -57,7 +57,7 @@ export function useChat() {
     })
     return () => controller.abort()
   }, [refreshSessions])
-  useEffect(() => () => { closeSource(); pollControllerRef.current?.abort(); pumpControllerRef.current?.abort() }, [closeSource])
+  useEffect(() => () => { closeSource(); pollControllerRef.current?.abort(); pollControllerRef.current = null; resetOwnedPumpState(pumpControllerRef, pendingUserIdRef) }, [closeSource])
 
   const finish = useCallback((streamId: string, sessionId: string, epoch: number, state: ChatState, status: ChatMessage['status'] = 'complete') => {
     if (terminalRef.current === streamId) return
@@ -220,7 +220,7 @@ export function useChat() {
       setStreamState({ ...initialChatState, status: 'error', error: normalizeRestoreError(error) })
       setSessionError(normalizeRestoreError(error))
     })
-    return () => { controller.abort(); sessionEpochRef.current += 1; closeSource(); pumpControllerRef.current?.abort(); pollControllerRef.current?.abort() }
+    return () => { controller.abort(); sessionEpochRef.current += 1; closeSource(); pumpControllerRef.current?.abort(); pumpControllerRef.current = null; pendingUserIdRef.current = null; pollControllerRef.current?.abort(); pollControllerRef.current = null }
   }, [closeSource, connectStream])
 
   const send = useCallback((content: string, files: File[] = [], options?: TurnOptions, mode: TurnMode = 'queue') => {
@@ -307,9 +307,9 @@ export function useChat() {
   }, [])
   const selectSession = useCallback(async (sessionId: string) => {
     const epoch = sessionEpochRef.current + 1
-    sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); resetOwnedPumpState(pumpControllerRef, pendingUserIdRef); messagesRef.current = []; setMessages([]); resetAnswerAtSessionBoundary(answerRef); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
+    sessionEpochRef.current = epoch; activeSessionRef.current = sessionId; closeSource(); pollControllerRef.current?.abort(); pollControllerRef.current = null; resetConversationRuntimeState({ cursor: lastEventIdRef, pump: pumpControllerRef, pendingUser: pendingUserIdRef, answer: answerRef }); messagesRef.current = []; setMessages([]); streamIdRef.current = null; fallbackStreamRef.current = null; setActiveSessionId(sessionId); chatStateRef.current = initialChatState; setStreamState(initialChatState); queueRef.current = []; setQueuedMessages([]); setSessionLoading(true); setSessionError(undefined)
     const controller = new AbortController()
-    pollControllerRef.current?.abort(); pollControllerRef.current = controller
+    pollControllerRef.current = controller
     try {
       const detail = await getSession(sessionId, controller.signal)
       if (sessionEpochRef.current !== epoch || activeSessionRef.current !== sessionId) return
@@ -320,6 +320,7 @@ export function useChat() {
       const journal = parseInflightTurn(window.localStorage.getItem(inflightTurnKey))
       if (journal?.session_id === sessionId) {
         streamIdRef.current = journal.stream_id
+        lastEventIdRef.current = journal.last_event_id || 0
         setStreamState({ ...initialChatState, status: 'streaming' })
         connectStream(journal.stream_id, sessionId, epoch)
       }
@@ -353,7 +354,7 @@ export function useChat() {
     const created = await duplicateSession(sessionId)
     setSessions((items) => [created, ...items])
   }, [])
-  const reset = useCallback(() => { sessionEpochRef.current += 1; const nextSessionId = newId(); activeSessionRef.current = nextSessionId; closeSource(); pollControllerRef.current?.abort(); resetOwnedPumpState(pumpControllerRef, pendingUserIdRef); pollControllerRef.current = null; streamIdRef.current = null; fallbackStreamRef.current = null; window.localStorage.removeItem(inflightTurnKey); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(nextSessionId) }, [closeSource])
+  const reset = useCallback(() => { sessionEpochRef.current += 1; const nextSessionId = newId(); activeSessionRef.current = nextSessionId; closeSource(); pollControllerRef.current?.abort(); pollControllerRef.current = null; resetConversationRuntimeState({ cursor: lastEventIdRef, pump: pumpControllerRef, pendingUser: pendingUserIdRef, answer: answerRef }); streamIdRef.current = null; fallbackStreamRef.current = null; window.localStorage.removeItem(inflightTurnKey); queueRef.current = []; setQueuedMessages([]); setMessages([]); chatStateRef.current = initialChatState; setStreamState(initialChatState); setDraft(''); setActiveSessionId(nextSessionId) }, [closeSource])
 
   return { messages, streamState, send, cancel, removeQueued, reset, retry, edit, approve, draft, setDraft, sessions, selectSession, searchSessions: searchSessionList, rename, pin, archive, remove, duplicate, activeSessionId, sessionLoading, sessionError, queuedMessages, isStreaming: streamState.status === 'streaming' }
 }

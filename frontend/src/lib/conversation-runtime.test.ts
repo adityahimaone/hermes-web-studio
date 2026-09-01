@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, canMutatePumpState, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, resetOwnedPumpState, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
+import { appendCompletedAssistant, branchFromTurn, claimInflightTurn, canMutatePumpState, createCompactionBarrier, defaultDisclosure, dedupeRestoredAssistant, discoverModels, exportSession, isCurrentConversation, isCurrentPump, lifecycleRows, normalizeActivityMode, normalizeClientError, normalizeRestoreError, pollSessionUntilSettled, projectSessions, releaseOwnedController, repairPartialTranscript, resetAnswerAtSessionBoundary, resetCursorAtSessionBoundary, resetConversationRuntimeState, resetOwnedPumpState, searchModels, shouldRenderActivity, shouldReplacePendingPump, queuedTurnBaseline, undoToTurn } from './conversation-runtime'
 import type { ChatMessage } from './chat-contract'
 
 const messages: ChatMessage[] = [{ id: 'u1', role: 'user', content: 'hello', status: 'complete' }, { id: 'a1', role: 'assistant', content: 'hi', status: 'complete' }]
@@ -85,6 +85,23 @@ describe('conversation runtime contracts', () => {
     const answer = { current: 'old streamed answer' }
     resetAnswerAtSessionBoundary(answer)
     expect(answer.current).toBe('')
+  })
+
+  it('resets replay cursor when session boundary changes', () => {
+    const cursor = { current: 42 }
+    resetCursorAtSessionBoundary(cursor)
+    expect(cursor.current).toBe(0)
+  })
+
+  it('clears cursor and ownership refs during reset cleanup', () => {
+    const controller = new AbortController()
+    const state = { cursor: { current: 9 }, pump: { current: controller }, pendingUser: { current: 'pending' as string | null }, answer: { current: 'stale' } }
+    resetConversationRuntimeState(state)
+    expect(state.cursor.current).toBe(0)
+    expect(state.pump.current).toBeNull()
+    expect(state.pendingUser.current).toBeNull()
+    expect(state.answer.current).toBe('')
+    expect(controller.signal.aborted).toBe(true)
   })
 
   it('aborts and releases only owned restore controller', () => {
