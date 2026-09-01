@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/config"
+	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 )
 
@@ -88,5 +89,31 @@ func TestSpacesP027ProtectsActiveDeletion(t *testing.T) {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusConflict {
 		t.Fatalf("delete active status=%d", response.StatusCode)
+	}
+}
+
+func TestSpacesP027RejectsUnsafeAndUnauthorizedAssignments(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir(), ProfilesJSON: `[{"id":"default","name":"Default"},{"id":"other","name":"Other"}]`}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+	for _, body := range []string{`{"name":"bad","location_kind":"local","workspace_ref":"../secret"}`, `{"name":"bad","location_kind":"local","workspace_ref":"/etc"}`, `{"name":"bad","location_kind":"remote","workspace_ref":"ssh://host/path"}`, `{"name":"bad","location_kind":"local","workspace_ref":"safe","profile_id":"unknown"}`} {
+		response, err := http.Post(api.URL+"/api/spaces", "application/json", bytes.NewBufferString(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusBadRequest {
+			t.Fatalf("body=%s status=%d", body, response.StatusCode)
+		}
+	}
+}
+
+func TestSpacesP027UsesNumericStableOrder(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), WorkspaceRoot: t.TempDir()}
+	server := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL}))
+	one, _ := server.control.Create("spaces", control.Item{Title: "ten", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "ten", "order": "10", "profile_id": "default"}})
+	two, _ := server.control.Create("spaces", control.Item{Title: "two", Metadata: map[string]string{"location_kind": "local", "workspace_ref": "two", "order": "2", "profile_id": "default"}})
+	if got := spacePayloads([]control.Item{one, two}, "")[0]["id"]; got != two.ID {
+		t.Fatalf("numeric order got=%v", got)
 	}
 }

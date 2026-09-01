@@ -255,6 +255,36 @@ func (s *Store) Preferences() map[string]string {
 	}
 	return result
 }
+func (s *Store) SpaceMutation(collection, id, activeKey string, deleteItem bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items, err := s.items(collection)
+	if err != nil {
+		return err
+	}
+	if deleteItem && s.state.Preferences[activeKey] == id {
+		return errors.New("active space protected")
+	}
+	found := false
+	for i := range items {
+		if items[i].ID == id {
+			found = true
+			if deleteItem {
+				items = append(items[:i], items[i+1:]...)
+			}
+			break
+		}
+	}
+	if !found {
+		return ErrNotFound
+	}
+	if !deleteItem {
+		s.state.Preferences[activeKey] = id
+	}
+	s.setItems(collection, items)
+	return s.persist()
+}
+
 func (s *Store) SetPreferences(values map[string]string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
