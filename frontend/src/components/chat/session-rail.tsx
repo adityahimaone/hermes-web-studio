@@ -207,12 +207,12 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
                   </Button>
                   <div className={sessionActionVisibilityClass()}>
                     <DropdownMenu label={`Actions for ${item.title || 'session'}`} items={[
-                      { label: 'Rename conversation', icon: Pencil, onSelect: () => { setRenameTarget(item); setRenameValue(item.title || '') } },
-                      { label: 'Duplicate conversation', icon: Copy, onSelect: () => { if (onDuplicate) void onDuplicate(item.session_id) } },
-                      { label: 'Export Markdown', icon: Download, onSelect: () => { window.location.assign(sessionExportUrl(item.session_id)) } },
-                      { label: item.pinned ? 'Unpin conversation' : 'Pin conversation', icon: Pin, onSelect: () => onPin(item.session_id, !item.pinned) },
-                      { label: item.archived ? 'Unarchive conversation' : 'Archive conversation', icon: item.archived ? Archive : ArchiveX, onSelect: () => onArchive(item.session_id, !item.archived) },
-                      { label: 'Delete conversation', icon: Trash2, onSelect: () => setDeleteTarget(item), destructive: true }
+                      { label: 'Rename conversation', icon: Pencil, onSelect: () => { setRenameTarget(item); setRenameValue(item.title || '') }, disabled: batchInFlight },
+                      { label: 'Duplicate conversation', icon: Copy, onSelect: () => { if (onDuplicate) void onDuplicate(item.session_id) }, disabled: batchInFlight },
+                      { label: 'Export Markdown', icon: Download, onSelect: () => { window.location.assign(sessionExportUrl(item.session_id)) }, disabled: batchInFlight },
+                      { label: item.pinned ? 'Unpin conversation' : 'Pin conversation', icon: Pin, onSelect: () => onPin(item.session_id, !item.pinned), disabled: batchInFlight },
+                      { label: item.archived ? 'Unarchive conversation' : 'Archive conversation', icon: item.archived ? Archive : ArchiveX, onSelect: () => onArchive(item.session_id, !item.archived), disabled: batchInFlight },
+                      { label: 'Delete conversation', icon: Trash2, onSelect: () => setDeleteTarget(item), destructive: true, disabled: batchInFlight }
                     ]} disabled={batchInFlight} />
                   </div>
                 </div>

@@ -237,6 +237,32 @@ describe('batch session actions', () => {
     root.remove()
   })
 
+  it('disables open overflow actions while batch action is in flight', async () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const reactRoot = createRoot(root)
+    let resolveArchive!: () => void
+    const archive = () => new Promise<void>(resolve => { resolveArchive = resolve })
+    const sessions = [{ session_id: 'one', title: 'One', updated_at: '2026-09-01T00:00:00Z' }]
+
+    await act(async () => {
+      reactRoot.render(createElement(SessionRail, { sessions, activeSessionId: 'one', onSelectSession: () => {}, onRename: async () => {}, onPin: () => {}, onArchive: archive, onDelete: async () => {}, onNewChat: () => {}, loading: false, onToggle: () => {} }))
+    })
+    await act(async () => { Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Select')?.click(); await Promise.resolve() })
+    await act(async () => { root.querySelector<HTMLButtonElement>('button[aria-label="Select One"]')?.click(); await Promise.resolve() })
+    await act(async () => { root.querySelector<HTMLButtonElement>('button[aria-label="Actions for One"]')?.click(); await Promise.resolve() })
+    expect(root.querySelector('[role="menu"]')).toBeTruthy()
+
+    await act(async () => { Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Archive')?.click(); await Promise.resolve() })
+    const menuItems = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+    expect(menuItems.length).toBeGreaterThan(0)
+    expect(menuItems.every(button => button.disabled)).toBe(true)
+
+    await act(async () => { resolveArchive(); await Promise.resolve() })
+    reactRoot.unmount()
+    root.remove()
+  })
+
   it('clears batch error when leaving batch mode and starting a new selection', async () => {
     const root = document.createElement('div')
     document.body.append(root)
