@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -349,13 +350,34 @@ func (s *Server) handleSessionDuplicate(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("format") != "markdown" {
-		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown export is supported.")
+	format := r.URL.Query().Get("format")
+	if format != "markdown" && format != "json" {
+		writeError(w, http.StatusBadRequest, "unsupported_export_format", "Only Markdown and JSON export are supported.")
 		return
 	}
 	item, err := s.sessions.Load(r.PathValue("session_id"))
 	if err != nil {
 		sessionError(w, err)
+		return
+	}
+	if format == "json" {
+		payload := map[string]any{"session_id": item.ID, "title": item.Title, "metadata": safeExportValue(summaryPayload(item.Summary)), "messages": make([]any, 0, len(item.Messages))}
+		messages := payload["messages"].([]any)
+		for _, raw := range item.Messages {
+			var message any
+			if json.Unmarshal(raw, &message) == nil {
+				messages = append(messages, safeExportValue(message))
+			}
+		}
+		payload["messages"] = messages
+		body, marshalErr := json.MarshalIndent(payload, "", "  ")
+		if marshalErr != nil {
+			writeError(w, http.StatusInternalServerError, "export_failed", "Session export failed.")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.json"`)
+		_, _ = w.Write(append(body, '\n'))
 		return
 	}
 	var body strings.Builder
@@ -377,6 +399,34 @@ func (s *Server) handleSessionExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="hermes-session.md"`)
 	_, _ = io.WriteString(w, body.String())
+}
+
+func safeExportValue(value any) any {
+	switch item := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(item))
+		for key, value := range item {
+			lower := strings.ToLower(key)
+			if strings.Contains(lower, "token") || strings.Contains(lower, "secret") || strings.Contains(lower, "password") || strings.Contains(lower, "api_key") || lower == "authorization" || strings.Contains(lower, "path") || strings.Contains(lower, "directory") || strings.Contains(lower, "dir") {
+				continue
+			}
+			out[key] = safeExportValue(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(item))
+		for i, value := range item {
+			out[i] = safeExportValue(value)
+		}
+		return out
+	case string:
+		if filepath.IsAbs(item) {
+			return "[redacted]"
+		}
+		return item
+	default:
+		return value
+	}
 }
 
 func (s *Server) handleSessionTruncate(w http.ResponseWriter, r *http.Request) {

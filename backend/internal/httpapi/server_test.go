@@ -456,6 +456,57 @@ func TestSessionDuplicateAndMarkdownExport(t *testing.T) {
 	}
 }
 
+func TestSessionJSONExportIsSafeAttachment(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(stateDir, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	data := `{"session_id":"session-json","title":"JSON export","created_at":"2026-01-02T03:04:05Z","api_key":"do-not-export","workspace_path":"/home/private/project","messages":[{"role":"user","content":"hello","metadata":{"authorization":"Bearer secret","path":"/srv/private/file"}},{"role":"assistant","content":"world"}]}`
+	if err := os.WriteFile(filepath.Join(stateDir, "sessions", "session-json.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
+	defer api.Close()
+
+	response, err := http.Get(api.URL + "/api/sessions/session-json/export?format=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK || response.Header.Get("Content-Type") != "application/json; charset=utf-8" || response.Header.Get("Content-Disposition") != `attachment; filename="hermes-session.json"` {
+		t.Fatalf("export status=%d content-type=%q disposition=%q", response.StatusCode, response.Header.Get("Content-Type"), response.Header.Get("Content-Disposition"))
+	}
+	var exported map[string]any
+	if err := json.Unmarshal(body, &exported); err != nil {
+		t.Fatalf("invalid JSON export: %v", err)
+	}
+	if exported["session_id"] != "session-json" || exported["title"] != "JSON export" {
+		t.Fatalf("metadata missing: %#v", exported)
+	}
+	messages, ok := exported["messages"].([]any)
+	if !ok || len(messages) != 2 {
+		t.Fatalf("messages missing: %#v", exported["messages"])
+	}
+	text := string(body)
+	if strings.Contains(text, "do-not-export") || strings.Contains(text, "/home/private/project") || strings.Contains(text, "/srv/private/file") || strings.Contains(text, "Bearer secret") {
+		t.Fatalf("unsafe JSON export: %s", body)
+	}
+
+	response, err = http.Get(api.URL + "/api/sessions/session-json/export?format=xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusBadRequest {
+		t.Fatalf("invalid format status=%d", response.StatusCode)
+	}
+}
+
 func TestSessionsAPIRejectsUnsafeAndMissingIDs(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	api := httptest.NewServer(NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler())
