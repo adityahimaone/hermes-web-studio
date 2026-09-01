@@ -101,6 +101,13 @@ copy, cancellation, and destructive intent visible and consistent. The API
 actions remain unchanged, so the compatibility boundary and rollback behavior
 are preserved.
 
+## ADR-053 - Bound session selection focus retries
+
+Arrow-key session navigation schedules focus after selection so React can
+rerender the active row. The retry is capped at ten animation frames; missing,
+filtered, or unmounted targets terminate safely instead of spinning forever.
+Successful rerenders still focus the row marked `aria-current="page"`.
+
 ## ADR-019 - Icon rail with Chat-owned session toggle
 
 The primary navigation is a compact icon-only rail on desktop. Each icon keeps

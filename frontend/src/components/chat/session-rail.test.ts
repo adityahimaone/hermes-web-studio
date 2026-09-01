@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterAriaPressed, findSessionButton, focusSessionButton, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
+import { filterAriaPressed, findSessionButton, focusSessionButton, focusSessionButtonAfterSelection, nextSessionId, sessionActionVisibilityClass, sessionRowAriaCurrent } from './session-rail'
 
 describe('session filter accessibility', () => {
   it.each([
@@ -31,6 +31,22 @@ describe('session keyboard navigation', () => {
     document.body.append(root)
     focusSessionButton(root, 'beta')
     expect(document.activeElement).toBe(target)
+  })
+
+  it('stops focus retries when selected session never appears', () => {
+    const root = document.createElement('div')
+    const frames: FrameRequestCallback[] = []
+    let scheduled = 0
+    focusSessionButtonAfterSelection(root, 'missing', callback => {
+      scheduled += 1
+      frames.push(callback)
+      return scheduled
+    })
+
+    while (frames.length) frames.shift()?.(0)
+
+    expect(scheduled).toBe(11)
+    expect(frames).toHaveLength(0)
   })
 
   it('finds session button by exact data attribute without CSS selector escaping', () => {

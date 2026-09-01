@@ -33,6 +33,18 @@ export function focusSessionButton(root: ParentNode, sessionId: string) {
   button.focus()
   return true
 }
+export function focusSessionButtonAfterSelection(root: ParentNode, sessionId: string, schedule = window.requestAnimationFrame, maxFrames = 10) {
+  let frames = 0
+  const attempt = () => {
+    const button = findSessionButton(root, sessionId)
+    if (button?.getAttribute('aria-current') === 'page') {
+      button.focus()
+      return
+    }
+    if (frames++ < maxFrames) schedule(attempt)
+  }
+  schedule(attempt)
+}
 export function sessionActionVisibilityClass() { return 'absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md bg-card/95 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100' }
 
 function formatCompactDate(dateStr?: string) {
@@ -161,12 +173,7 @@ export function SessionRail({ sessions, activeSessionId, onSelectSession, onSear
                   {batchMode && <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => toggleSelected(item.session_id)} aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.title || 'session'}`}>{isSelected ? <Check size={13} /> : <span className="size-2.5 rounded-sm border" />}</Button>}
                   <Button type="button" variant="ghost" size="sm" onClick={() => onSelectSession(item.session_id)} onKeyDown={event => { if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return; event.preventDefault(); const nextId = nextSessionId(visibleSessionIds, item.session_id, event.key === 'ArrowDown' ? 'next' : 'previous'); if (nextId) {
   onSelectSession(nextId)
-  const focusAfterSelection = () => {
-    const button = findSessionButton(document, nextId)
-    if (button?.getAttribute('aria-current') === 'page') button.focus()
-    else window.requestAnimationFrame(focusAfterSelection)
-  }
-  window.requestAnimationFrame(focusAfterSelection)
+  focusSessionButtonAfterSelection(document, nextId)
 } }} data-session-id={item.session_id} aria-current={sessionRowAriaCurrent(item.session_id, activeSessionId)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1 py-0 text-left text-xs">
                     {item.pinned ? <Pin size={11} className="shrink-0 text-primary" /> : null}
                     <span className="min-w-0 flex-1 truncate text-[11px] leading-tight text-foreground/90">{item.title || 'Untitled session'}</span>
