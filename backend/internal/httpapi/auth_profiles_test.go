@@ -39,6 +39,36 @@ func TestPasswordAuthProtectsAPIAndSetsHttpOnlyCookie(t *testing.T) {
 	_ = json.Unmarshal(recorder.Body.Bytes(), &payload)
 }
 
+func TestTrustedHeaderCannotAuthenticateClientSuppliedValue(t *testing.T) {
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir(), AuthTrustedHeader: "X-Trusted-User"}
+	handler := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+
+	setup := httptest.NewRequest(http.MethodPost, "/api/onboarding/password", strings.NewReader(`{"password":"correct horse battery"}`))
+	setup.Header.Set("Content-Type", "application/json")
+	if response := serve(handler, setup); response.Code != http.StatusCreated {
+		t.Fatalf("setup=%d %s", response.Code, response.Body.String())
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/api/sessions", nil)
+	request.Header.Set("X-Trusted-User", "attacker")
+	if response := serve(handler, request); response.Code != http.StatusUnauthorized {
+		t.Fatalf("trusted header authenticated client=%d %s", response.Code, response.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
+	request.Header.Set("X-Trusted-User", "attacker")
+	response := serve(handler, request)
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), `"authenticated":true`) {
+		t.Fatalf("auth/me trusted header authenticated client=%d %s", response.Code, response.Body.String())
+	}
+}
+
+func serve(handler http.Handler, request *http.Request) *httptest.ResponseRecorder {
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	return response
+}
+
 func TestOnboardingSetupCanRecoverAfterValidationFailure(t *testing.T) {
 	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: t.TempDir()}
 	handler := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()

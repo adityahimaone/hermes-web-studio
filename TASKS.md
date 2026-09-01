@@ -54,7 +54,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 - [x] Rate limits, CSRF/origin rules, security headers
 - [x] First-run Gateway configuration and diagnostics
 - [~] Passkeys/WebAuthn (capability is reported as unavailable until WebAuthn RP configuration is supplied)
-- [~] OIDC and trusted-header SSO (trusted-header mode is implemented; OIDC remains configuration/discovery-only until issuer client registration is supplied)
+- [~] OIDC and trusted-header SSO (trusted-header authentication disabled fail-closed until a server-validated proxy boundary/identity contract exists; OIDC remains configuration/discovery-only until issuer client registration is supplied)
 
 ## M4 — Control center feature parity
 

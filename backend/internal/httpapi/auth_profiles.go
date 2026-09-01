@@ -24,12 +24,6 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if s.config.AuthTrustedHeader != "" && strings.TrimSpace(r.Header.Get(s.config.AuthTrustedHeader)) != "" {
-			if sameOrigin(w, r) {
-				next.ServeHTTP(w, r)
-			}
-			return
-		}
 		if s.authErr != nil {
 			writeError(w, http.StatusServiceUnavailable, "auth_unavailable", "Authentication is unavailable.")
 			return
@@ -70,7 +64,7 @@ func (s *Server) handleOnboarding(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, 503, "auth_unavailable", "Authentication is unavailable.")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"configured": s.auth.Enabled(), "password_required": !s.auth.Enabled(), "providers": map[string]bool{"password": true, "trusted_header": s.config.AuthTrustedHeader != "", "oidc": s.config.OIDCIssuer != "", "passkey": false}})
+	writeJSON(w, 200, map[string]any{"configured": s.auth.Enabled(), "password_required": !s.auth.Enabled(), "providers": map[string]bool{"password": true, "trusted_header": false, "oidc": s.config.OIDCIssuer != "", "passkey": false}})
 }
 func (s *Server) handlePasswordSetup(w http.ResponseWriter, r *http.Request) {
 	if s.authErr != nil {
@@ -126,9 +120,7 @@ func sessionCookieFor(r *http.Request, value string, maxAge int) *http.Cookie {
 }
 func (s *Server) handleAuthMe(w http.ResponseWriter, r *http.Request) {
 	authenticated := false
-	if s.config.AuthTrustedHeader != "" && r.Header.Get(s.config.AuthTrustedHeader) != "" {
-		authenticated = true
-	} else if s.auth != nil && s.auth.Enabled() {
+	if s.auth != nil && s.auth.Enabled() {
 		if c, err := r.Cookie(sessionCookie); err == nil {
 			authenticated = s.auth.Verify(c.Value)
 		}
@@ -337,7 +329,7 @@ func (s *Server) providerIDs() map[string]bool {
 }
 
 func (s *Server) handleAuthProviders(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, 200, map[string]any{"password": true, "trusted_header": s.config.AuthTrustedHeader != "", "oidc": s.config.OIDCIssuer != "", "passkey": false, "oidc_issuer": s.config.OIDCIssuer})
+	writeJSON(w, 200, map[string]any{"password": true, "trusted_header": false, "oidc": s.config.OIDCIssuer != "", "passkey": false, "oidc_issuer": s.config.OIDCIssuer})
 }
 func clientIP(r *http.Request) string {
 	host, _, err := strings.Cut(r.RemoteAddr, ":")

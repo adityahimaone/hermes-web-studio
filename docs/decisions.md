@@ -622,3 +622,11 @@ Catalog identity uses normalized provider+model ID, so provider collisions remai
 - Local Space registration rejects URI/SSH/private refs, traversal, and symlink-escaping references. Containment uses resolved paths.
 - Space create/activate/delete persistence is transactional from the in-memory registry perspective: failed writes restore prior state. Profile-local semantics remain a documented global gap until profile state ownership is migrated.
 - Kanban consumes `workspace_ref` directly and does not read legacy `metadata.path`.
+
+## P027 trusted-header authentication boundary
+
+Trusted-header authentication is disabled until server-side proxy-boundary and
+identity validation exist. A browser can self-supply any request header, so a
+configured header name alone cannot authenticate requests. Password cookie
+authentication remains authoritative; auth capability responses report
+`trusted_header: false` while this boundary is unavailable.
