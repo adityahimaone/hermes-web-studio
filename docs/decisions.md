@@ -93,7 +93,7 @@ control-center menu is active; session actions and search behavior remain
 unchanged. The rail lives inside the Chat content area, leaving the primary
 navigation sidebar focused on product sections.
 
-## ADR-018 - Copy-owned dialogs for destructive and naming actions
+## ADR-052 - Copy-owned dialogs for destructive and naming actions
 
 Session rename/delete and workspace create/rename/delete use the shared Dialog
 primitive instead of browser-native prompt/confirm surfaces. This keeps focus,
