@@ -198,7 +198,16 @@ Gateway HTTP 200 completion frames must contain a non-empty answer and valid ter
 
 Spaces are backed by a server-owned registry. `GET /api/spaces` returns stable IDs, names, local/remote location kinds, sanitized workspace references, ordering, active state, profile ownership, and health. `POST /api/spaces` validates registration; `POST /api/spaces/active` persists activation; `DELETE /api/spaces/{id}` protects the active Space. Remote Spaces return only an opaque `remote:<id>` reference and explicit `unavailable` health; raw configured remote references never return to the browser, and remote references are never resolved or silently mapped to local paths. Legacy or unsafe references return `unavailable`.
 
-Profile isolation is partial: legacy Spaces with empty `profile_id` remain visible to every profile for compatibility. New Spaces are assigned to the active profile and profile-scoped Spaces are filtered by ownership; full isolation requires migrating legacy records.
+### Profile MVP boundary
+
+The MVP guarantees server-owned profile CRUD, active-profile selection, and
+profile-scoped preferences and newly created Spaces. Legacy Spaces with empty
+`profile_id` remain visible to every profile for compatibility. Malformed
+`profiles.json` or failed legacy-Space migration marks profile state
+unavailable; profile routes return HTTP 503 with `profiles_unavailable` rather
+than silently using defaults. This is partial profile isolation, not full
+isolation; migrating legacy records and isolating all profile-owned state remain
+outside the MVP boundary.
 
 The workspace surface is backed by one server-owned root. Set
 `HERMES_WEBUI_DEFAULT_WORKSPACE` to choose it; when unset, the backend creates

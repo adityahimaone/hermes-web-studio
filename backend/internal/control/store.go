@@ -255,6 +255,36 @@ func (s *Store) Preferences() map[string]string {
 	}
 	return result
 }
+func (s *Store) MigrateLegacySpaces(profileID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	previous := cloneState(s.state)
+	changed := false
+	for i := range s.state.Spaces {
+		if s.state.Spaces[i].Metadata == nil {
+			s.state.Spaces[i].Metadata = map[string]string{}
+		}
+		if s.state.Spaces[i].Metadata["profile_id"] == "" {
+			s.state.Spaces[i].Metadata["profile_id"] = profileID
+			changed = true
+		}
+	}
+	if changed {
+		if err := s.persist(); err != nil {
+			s.state = previous
+			return err
+		}
+	}
+	return nil
+}
+
+func cloneState(state State) State {
+	data, _ := json.Marshal(state)
+	var copy State
+	_ = json.Unmarshal(data, &copy)
+	return copy
+}
+
 func (s *Store) CreateSpace(item Item, activeKey string, activate bool) (Item, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

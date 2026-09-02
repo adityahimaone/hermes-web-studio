@@ -128,12 +128,18 @@ func (s *Server) handleAuthMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"authenticated": authenticated, "user": "local"})
 }
 func (s *Server) handleProfiles(w http.ResponseWriter, _ *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
 	writeJSON(w, 200, map[string]any{"profiles": s.profiles, "active": s.activeProfile})
 }
 
 func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var input profile
 	if !decodeBody(w, r, &input) || strings.TrimSpace(input.ID) == "" || strings.TrimSpace(input.Name) == "" {
 		writeError(w, http.StatusBadRequest, "profile_invalid", "Profile id and name are required.")
@@ -149,10 +155,18 @@ func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	input.Health = "configured"
 	s.profiles = append(s.profiles, input)
+	if err := s.saveProfilesLocked(); err != nil {
+		s.profiles = s.profiles[:len(s.profiles)-1]
+		writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+		return
+	}
 	writeJSON(w, http.StatusCreated, input)
 }
 
 func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var patch profile
 	if !decodeBody(w, r, &patch) {
 		return
@@ -166,6 +180,7 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The active profile cannot reference an unavailable provider.")
 				return
 			}
+			previous := s.profiles[i]
 			if patch.Name != "" {
 				s.profiles[i].Name = patch.Name
 			}
@@ -178,6 +193,11 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 			if patch.ProviderID != "" {
 				s.profiles[i].ProviderID = patch.ProviderID
 			}
+			if err := s.saveProfilesLocked(); err != nil {
+				s.profiles[i] = previous
+				writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+				return
+			}
 			writeJSON(w, http.StatusOK, s.profiles[i])
 			return
 		}
@@ -186,6 +206,9 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
@@ -195,7 +218,13 @@ func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	for i, item := range s.profiles {
 		if item.ID == id {
+			removed := s.profiles[i]
 			s.profiles = append(s.profiles[:i], s.profiles[i+1:]...)
+			if err := s.saveProfilesLocked(); err != nil {
+				s.profiles = append(s.profiles[:i], append([]profile{removed}, s.profiles[i:]...)...)
+				writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+				return
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
 			return
 		}
@@ -275,6 +304,9 @@ func (s *Server) handleSettingsCapabilities(w http.ResponseWriter, _ *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"sections": []string{"conversation", "appearance", "preferences", "providers", "plugins", "extensions", "system", "help"}, "locales": []string{"en", "id", "de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "zh-CN", "zh-TW", "ar", "hi", "tr"}})
 }
 func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var input struct {
 		ID string `json:"id"`
 	}
@@ -296,7 +328,13 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The profile references an unavailable provider.")
 				return
 			}
+			previous := s.activeProfile
 			s.activeProfile = p.ID
+			if err := s.saveProfilesLocked(); err != nil {
+				s.activeProfile = previous
+				writeError(w, 500, "profile_persist_failed", "The active profile could not be saved.")
+				return
+			}
 			writeJSON(w, 200, map[string]any{"active": p})
 			return
 		}
