@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-api_url="${HERMES_WEB_STUDIO_URL:-http://127.0.0.1:8787}"
+api_url="${HERMES_WEB_STUDIO_URL:-http://127.0.0.1:8789}"
 session_id="m1-live-$(date +%s)-$$"
 
 cleanup() {

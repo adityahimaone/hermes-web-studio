@@ -5,7 +5,7 @@ set -eu
 # reads metadata and creates/removes one isolated session when the BFF is live.
 # It never treats an offline Gateway as a passing live-chat result.
 
-api_url=${HERMES_WEB_STUDIO_URL:-http://127.0.0.1:8787}
+api_url=${HERMES_WEB_STUDIO_URL:-http://127.0.0.1:8789}
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/hermes-web-studio-live.XXXXXX")
 trap 'rm -rf "$tmp_dir"' EXIT
 
