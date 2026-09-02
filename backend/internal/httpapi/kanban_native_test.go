@@ -174,6 +174,25 @@ func TestNativeKanbanActionOmitsPrivateCLIOutput(t *testing.T) {
 		}
 	}
 }
+func TestValidKanbanStatsRequiresNumericReadyAndDone(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		input string
+		valid bool
+	}{
+		{"valid", `{"ready":1,"done":2}`, true},
+		{"missing field", `{"ready":1}`, false},
+		{"wrong type", `{"ready":"1","done":2}`, false},
+		{"negative", `{"ready":-1,"done":2}`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := validKanbanStats([]byte(test.input)); got != test.valid {
+				t.Fatalf("validKanbanStats(%s)=%v, want %v", test.input, got, test.valid)
+			}
+		})
+	}
+}
+
 func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 	server := nativeCLITestServer(t)
 	defer server.Close()

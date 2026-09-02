@@ -125,11 +125,25 @@ func (c kanbanCLI) run(ctx context.Context, board string, args ...string) ([]byt
 	return output, nil
 }
 
+func validKanbanStats(output []byte) bool {
+	var stats map[string]any
+	if err := json.Unmarshal(bytes.TrimSpace(output), &stats); err != nil {
+		return false
+	}
+	for _, key := range []string{"ready", "done"} {
+		value, ok := stats[key].(float64)
+		if !ok || value < 0 || value != float64(int(value)) {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	stats, err := s.kanbanCLI().run(ctx, "", "stats", "--json")
-	available := err == nil && json.Valid(bytes.TrimSpace(stats)) && len(bytes.TrimSpace(stats)) > 0 && bytes.HasPrefix(bytes.TrimSpace(stats), []byte("{"))
+	available := err == nil && validKanbanStats(stats)
 	if !available {
 		stats = nil
 	}
