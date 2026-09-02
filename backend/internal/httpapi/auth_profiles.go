@@ -149,6 +149,11 @@ func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	input.Health = "configured"
 	s.profiles = append(s.profiles, input)
+	if err := s.saveProfilesLocked(); err != nil {
+		s.profiles = s.profiles[:len(s.profiles)-1]
+		writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+		return
+	}
 	writeJSON(w, http.StatusCreated, input)
 }
 
@@ -178,6 +183,10 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 			if patch.ProviderID != "" {
 				s.profiles[i].ProviderID = patch.ProviderID
 			}
+			if err := s.saveProfilesLocked(); err != nil {
+				writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+				return
+			}
 			writeJSON(w, http.StatusOK, s.profiles[i])
 			return
 		}
@@ -195,7 +204,13 @@ func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	for i, item := range s.profiles {
 		if item.ID == id {
+			removed := s.profiles[i]
 			s.profiles = append(s.profiles[:i], s.profiles[i+1:]...)
+			if err := s.saveProfilesLocked(); err != nil {
+				s.profiles = append(s.profiles[:i], append([]profile{removed}, s.profiles[i:]...)...)
+				writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
+				return
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
 			return
 		}
@@ -296,7 +311,13 @@ func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The profile references an unavailable provider.")
 				return
 			}
+			previous := s.activeProfile
 			s.activeProfile = p.ID
+			if err := s.saveProfilesLocked(); err != nil {
+				s.activeProfile = previous
+				writeError(w, 500, "profile_persist_failed", "The active profile could not be saved.")
+				return
+			}
 			writeJSON(w, 200, map[string]any{"active": p})
 			return
 		}

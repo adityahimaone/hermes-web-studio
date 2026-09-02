@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -289,4 +291,58 @@ func readBody(response *http.Response) string {
 	body, _ := io.ReadAll(response.Body)
 	_ = response.Body.Close()
 	return string(body)
+}
+
+func TestProfilesAndActiveProfilePersistAcrossServerRecreation(t *testing.T) {
+	stateDir := t.TempDir()
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir}
+	first := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	profile := serve(first, httptest.NewRequest(http.MethodPost, "/api/profiles", strings.NewReader(`{"id":"writer","name":"Writer","model":"q4"}`)))
+	if profile.Code != http.StatusCreated {
+		t.Fatalf("profile create=%d", profile.Code)
+	}
+	activeRequest := httptest.NewRequest(http.MethodPost, "/api/profiles/active", strings.NewReader(`{"id":"writer"}`))
+	activeRequest.Header.Set("Content-Type", "application/json")
+	active := serve(first, activeRequest)
+	if active.Code != http.StatusOK {
+		t.Fatalf("profile switch=%d", active.Code)
+	}
+	second := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	response := serve(second, httptest.NewRequest(http.MethodGet, "/api/profiles", nil))
+	var payload struct {
+		Profiles []struct {
+			ID string `json:"id"`
+		} `json:"profiles"`
+		Active string `json:"active"`
+	}
+	decode(t, response.Body, &payload)
+	if payload.Active != "writer" || len(payload.Profiles) != 2 {
+		t.Fatalf("restored profiles=%+v active=%q", payload.Profiles, payload.Active)
+	}
+	_ = first
+}
+
+func TestLegacySpacesMigrateToDefaultAndStayHiddenFromOtherProfiles(t *testing.T) {
+	stateDir := t.TempDir()
+	controlState := `{"spaces":[{"id":"legacy","title":"Legacy","status":"ready","metadata":{"workspace_ref":"legacy"}}],"preferences":{}}`
+	if err := os.WriteFile(filepath.Join(stateDir, "control.json"), []byte(controlState), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{GatewayBaseURL: "http://127.0.0.1:1", StateDir: stateDir, WorkspaceRoot: stateDir}
+	first := NewWithGateway(cfg, gateway.New(gateway.Config{BaseURL: cfg.GatewayBaseURL})).Handler()
+	created := serve(first, httptest.NewRequest(http.MethodPost, "/api/profiles", strings.NewReader(`{"id":"other","name":"Other"}`)))
+	if created.Code != http.StatusCreated {
+		t.Fatalf("profile create=%d", created.Code)
+	}
+	switchRequest := httptest.NewRequest(http.MethodPost, "/api/profiles/active", strings.NewReader(`{"id":"other"}`))
+	switchRequest.Header.Set("Content-Type", "application/json")
+	switchResponse := serve(first, switchRequest)
+	if switchResponse.Code != http.StatusOK {
+		t.Fatalf("profile switch=%d", switchResponse.Code)
+	}
+	other := serve(first, httptest.NewRequest(http.MethodGet, "/api/spaces", nil))
+	if strings.Contains(other.Body.String(), "legacy") {
+		t.Fatal("legacy space exposed to non-default profile")
+	}
+	_ = first
 }

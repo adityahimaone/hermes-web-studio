@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -41,7 +42,37 @@ type Server struct {
 	stateMu       sync.RWMutex
 	profiles      []profile
 	activeProfile string
+	profilePath   string
 	providers     []provider
+}
+
+func persistJSON(path string, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".state.tmp-*")
+	if err != nil {
+		return err
+	}
+	name := tmp.Name()
+	defer os.Remove(name)
+	if err := tmp.Chmod(0600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(append(data, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(name, path)
+}
+
+func (s *Server) saveProfilesLocked() error {
+	return persistJSON(s.profilePath, profileState{Profiles: s.profiles, Active: s.activeProfile})
 }
 
 type profile struct {
@@ -51,6 +82,11 @@ type profile struct {
 	Provider   string `json:"provider,omitempty"`
 	Health     string `json:"health"`
 	ProviderID string `json:"provider_id,omitempty"`
+}
+
+type profileState struct {
+	Profiles []profile `json:"profiles"`
+	Active   string    `json:"active"`
 }
 
 type provider struct {
@@ -98,17 +134,42 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	if stateDir == "" {
 		stateDir, _ = session.ResolveStateDir(os.Getenv, os.UserHomeDir)
 	}
+	cfg.StateDir = stateDir
 	ws, wsErr := workspace.New(cfg.WorkspaceRoot)
 	authService, authErr := auth.New(stateDir)
 	controlStore, controlErr := control.New(stateDir)
+	if controlErr == nil {
+		_ = controlStore.MigrateLegacySpaces("default")
+	}
 	profiles := []profile{{ID: "default", Name: "Default", Model: cfg.DefaultModel, Provider: cfg.DefaultProvider, Health: "gateway"}}
-	if cfg.ProfilesJSON != "" {
+	activeProfile := "default"
+	profilePath := filepath.Join(stateDir, "profiles.json")
+	if data, err := os.ReadFile(profilePath); err == nil {
+		var saved profileState
+		if json.Unmarshal(data, &saved) == nil && len(saved.Profiles) > 0 {
+			profiles, activeProfile = saved.Profiles, saved.Active
+		}
+	}
+	if cfg.ProfilesJSON != "" && len(profiles) == 1 && profiles[0].ID == "default" {
 		var configured []profile
 		if json.Unmarshal([]byte(cfg.ProfilesJSON), &configured) == nil && len(configured) > 0 {
 			profiles = configured
+			activeProfile = profiles[0].ID
 		}
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: profiles[0].ID, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
+	if !profileIn(profiles, activeProfile) {
+		activeProfile = profiles[0].ID
+	}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: activeProfile, profilePath: profilePath, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
+}
+
+func profileIn(profiles []profile, id string) bool {
+	for _, p := range profiles {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) sessionLock(id string) *sync.Mutex {
