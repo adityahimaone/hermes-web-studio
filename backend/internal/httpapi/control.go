@@ -93,6 +93,13 @@ func (s *Server) handlePreferences(w http.ResponseWriter, _ *http.Request) {
 func profilePreferences(values map[string]string, profileID string) map[string]string {
 	prefix := "profile:" + profileID + ":"
 	result := map[string]string{}
+	if profileID == "default" {
+		for key, value := range values {
+			if !strings.Contains(key, ":") {
+				result[key] = value
+			}
+		}
+	}
 	for key, value := range values {
 		if strings.HasPrefix(key, prefix) {
 			result[strings.TrimPrefix(key, prefix)] = value

@@ -13,6 +13,20 @@ import (
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/gateway"
 )
 
+func TestProfilePreferencesPreserveLegacyDefaultFallback(t *testing.T) {
+	legacy := map[string]string{"theme": "dark", "language": "id"}
+	if got := profilePreferences(legacy, "default"); got["theme"] != "dark" || got["language"] != "id" {
+		t.Fatalf("legacy default preferences missing: %#v", got)
+	}
+	legacy["profile:default:theme"] = "light"
+	if got := profilePreferences(legacy, "default"); got["theme"] != "light" {
+		t.Fatalf("scoped preference did not override legacy value: %#v", got)
+	}
+	if got := profilePreferences(legacy, "other"); len(got) != 0 {
+		t.Fatalf("legacy preferences leaked to other profile: %#v", got)
+	}
+}
+
 func TestMalformedPersistedProfilesExposeUnavailableRoute(t *testing.T) {
 	dir := t.TempDir()
 	data := `{"profiles":[{"id":"bad/id","name":"Bad"}],"active":"bad/id"}`
