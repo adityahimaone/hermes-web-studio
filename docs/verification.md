@@ -108,6 +108,22 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 The browser proof uses a temporary mocked API fixture and does not certify
 authenticated Hermes Dashboard parity or real remote execution.
 
+## 2026-09-02 — Kanban native live transport
+
+| Check | Result |
+|---|---|
+| Studio supervisor environment | Pass: `HERMES_DELEGATED_CHILD_CONTEXT`, `HERMES_SESSION_ID`, `HERMES_SESSION_SOURCE`, and `HERMES_INTERACTIVE` absent; `HERMES_HOME`, `HERMES_WEBUI_PORT`, and Gateway runtime configuration present |
+| Native Kanban capability | Pass: `GET /api/kanban/capabilities` returned `available=true`, `transport=cli`, and real read/create/dispatch/action capability flags |
+| Native Kanban board read | Pass: `GET /api/kanban/board?board=f8-saas` returned HTTP 200 with persisted task projections |
+| Remote Mac canary | Pass: SSH alias `mac-tailscale` reached `Adityas-MacBook-Pro.local`; remote `/Users/adityahimawan` exists on Mac |
+| Remote Kanban execution | Not claimed: current Studio intentionally marks remote Spaces unavailable for local execution; no remote task mutation was performed |
+| Real Chat completion | Blocked safely: Hermes Gateway is healthy/reachable, upstream provider returned HTTP 402 insufficient credits |
+
+The live Kanban failure was supervisor environment contamination, not a code
+guard defect. The unsafe subprocess-env stripping patch was rejected; the fix
+is supervisor-level environment isolation, preserving Hermes delegated-child
+guards.
+
 ## 2026-08-31 - M7-M12 bounded local/live follow-up (historical evidence; not current gate)
 
 | Check | Result |
