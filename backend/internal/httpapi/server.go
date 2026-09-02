@@ -710,9 +710,18 @@ func (s *Server) runTurn(ctx context.Context, item *turn, input gateway.ChatRequ
 		originalMessageCount = len(loaded.Messages)
 	}
 	if createdSession {
-		if _, err := s.sessions.Create(input.SessionID, input.Message, nil); err != nil && !errors.Is(err, session.ErrSessionExists) {
-			s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be created."}})
-			return
+		if _, err := s.sessions.Create(input.SessionID, "", nil); err != nil {
+			if !errors.Is(err, session.ErrSessionExists) {
+				s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be created."}})
+				return
+			}
+			loaded, loadErr = s.sessions.Load(input.SessionID)
+			if loadErr != nil {
+				s.publish(item, gateway.Event{Name: "apperror", Data: map[string]any{"code": "session_unavailable", "message": "The session could not be loaded."}})
+				return
+			}
+			createdSession = false
+			originalMessageCount = len(loaded.Messages)
 		}
 	}
 	userMessage := mustMessage("user", input.Message)

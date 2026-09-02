@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -77,21 +78,51 @@ func TestRunTurnStopsOnNonNotFoundInitialLoadError(t *testing.T) {
 	}
 }
 
+func TestRunTurnNewSessionPersistsOneUserMessage(t *testing.T) {
+	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"answer\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer gw.Close()
+	s := NewWithGateway(config.Config{StateDir: t.TempDir()}, gateway.New(gateway.Config{BaseURL: gw.URL, ReadTimeout: time.Second}))
+	item := &turn{streamID: "stream", sessionID: "new", cancel: func() {}, subs: make(map[chan replayEvent]struct{})}
+	s.runTurn(context.Background(), item, gateway.ChatRequest{SessionID: "new", Message: "hello"})
+	if len(item.events) == 0 {
+		t.Fatal("no events")
+	}
+	loaded, err := s.sessions.Load("new")
+	if err != nil {
+		t.Fatalf("events=%#v load=%v", item.events, err)
+	}
+	if len(loaded.Messages) != 2 {
+		t.Fatalf("messages=%s", mustJSONMessages(loaded.Messages))
+	}
+	var user, assistant map[string]string
+	if err := json.Unmarshal(loaded.Messages[0], &user); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(loaded.Messages[1], &assistant); err != nil {
+		t.Fatal(err)
+	}
+	if user["role"] != "user" || user["content"] != "hello" || assistant["role"] != "assistant" || assistant["content"] != "answer" {
+		t.Fatalf("messages=%s", mustJSONMessages(loaded.Messages))
+	}
+}
+
 func TestRunTurnCancellationRollsBackOwnedUserMessage(t *testing.T) {
 	gatewayStarted := make(chan struct{})
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		close(gatewayStarted)
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
-		w.(http.Flusher).Flush()
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		close(gatewayStarted)
 		<-r.Context().Done()
 	}))
 	defer gw.Close()
-	stateDir := t.TempDir()
-	s := NewWithGateway(config.Config{StateDir: stateDir}, gateway.New(gateway.Config{BaseURL: gw.URL, ReadTimeout: time.Second}))
-	if _, err := s.sessions.Create("cancelled", "Existing", []json.RawMessage{mustMessage("user", "before")}); err != nil {
-		t.Fatal(err)
-	}
+
+	s := NewWithGateway(config.Config{StateDir: t.TempDir()}, gateway.New(gateway.Config{BaseURL: gw.URL, ReadTimeout: time.Second}))
 	ctx, cancel := context.WithCancel(context.Background())
 	item := &turn{streamID: "stream", sessionID: "cancelled", cancel: cancel, subs: make(map[chan replayEvent]struct{})}
 	done := make(chan struct{})
@@ -110,19 +141,37 @@ func TestRunTurnCancellationRollsBackOwnedUserMessage(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("cancelled turn did not finish")
 	}
-	loaded, err := s.sessions.Load("cancelled")
+	if _, err := s.sessions.Load("cancelled"); !os.IsNotExist(err) {
+		t.Fatalf("cancelled session err=%v, want not exist", err)
+	}
+	if len(item.events) == 0 || item.events[len(item.events)-1].Event.Name != "cancel" {
+		t.Fatalf("events=%#v", item.events)
+	}
+}
+
+func mustJSONMessages(messages []json.RawMessage) string {
+	data, _ := json.Marshal(messages)
+	return string(data)
+}
+
+func TestRunTurnCreateCollisionDoesNotDeleteSession(t *testing.T) {
+	stateDir := t.TempDir()
+	first := NewWithGateway(config.Config{StateDir: stateDir}, gateway.New(gateway.Config{}))
+	second := NewWithGateway(config.Config{StateDir: stateDir}, gateway.New(gateway.Config{}))
+	if _, err := first.sessions.Create("collision", "Existing", []json.RawMessage{mustMessage("user", "keep")}); err != nil {
+		t.Fatal(err)
+	}
+	item := &turn{streamID: "stream", sessionID: "collision", cancel: func() {}, subs: make(map[chan replayEvent]struct{})}
+	second.runTurn(context.Background(), item, gateway.ChatRequest{SessionID: "collision", Message: "new"})
+	loaded, err := second.sessions.Load("collision")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(loaded.Messages) != 1 {
-		t.Fatalf("messages=%d, want original message only", len(loaded.Messages))
+		t.Fatalf("messages=%s", mustJSONMessages(loaded.Messages))
 	}
-	if item.events == nil || item.events[len(item.events)-1].Event.Name != "cancel" {
-		t.Fatalf("events=%#v", item.events)
-	}
-	for _, event := range item.events {
-		if event.Event.Name == "apperror" {
-			t.Fatalf("unexpected error event=%#v", event.Event)
-		}
+	var message map[string]string
+	if err := json.Unmarshal(loaded.Messages[0], &message); err != nil || message["role"] != "user" || message["content"] != "keep" {
+		t.Fatalf("messages=%s", mustJSONMessages(loaded.Messages))
 	}
 }

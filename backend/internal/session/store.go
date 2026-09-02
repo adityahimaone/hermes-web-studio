@@ -19,11 +19,27 @@ func (s *Store) Create(id, title string, messages []json.RawMessage) (Session, e
 	if title == "" {
 		title = "New session"
 	}
-	if _, err := os.Stat(s.sessionPath(id)); err == nil {
-		return Session{}, ErrSessionExists
-	} else if !errors.Is(err, os.ErrNotExist) {
+	dir := filepath.Dir(s.sessionPath(id))
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return Session{}, err
 	}
+	placeholder, err := os.OpenFile(s.sessionPath(id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if errors.Is(err, os.ErrExist) {
+		return Session{}, ErrSessionExists
+	}
+	if err != nil {
+		return Session{}, err
+	}
+	if err := placeholder.Close(); err != nil {
+		_ = os.Remove(s.sessionPath(id))
+		return Session{}, err
+	}
+	owned := true
+	defer func() {
+		if owned {
+			_ = os.Remove(s.sessionPath(id))
+		}
+	}()
 	fields := map[string]json.RawMessage{
 		"session_id": mustJSON(id),
 		"title":      mustJSON(title),
@@ -34,6 +50,7 @@ func (s *Store) Create(id, title string, messages []json.RawMessage) (Session, e
 	if err := s.writeFields(id, fields); err != nil {
 		return Session{}, err
 	}
+	owned = false
 	return sessionFromFields(id, fields)
 }
 

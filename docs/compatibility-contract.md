@@ -157,7 +157,7 @@ The frozen upstream session store is file-based and remains the compatibility so
 - Session JSON: top-level metadata plus a `messages` array. Unknown top-level fields are retained by the reader.
 - Safety: session IDs are single path components. Traversal, slash, and backslash forms are rejected.
 
-The Go implementation uses the same JSON files as its durable session store. Writes are atomic, use `0600` files, preserve unknown top-level fields, and rebuild `_index.json` without transcript messages. SQLite or CLI session data is not treated as compatible until those formats receive their own inventory and tests.
+The Go implementation uses the same JSON files as its durable session store. Writes are atomic, use `0600` files, preserve unknown top-level fields, and rebuild `_index.json` without transcript messages. Atomic create reserves a session ID with exclusive file creation; `ErrSessionExists` preserves the existing session and treats it as pre-existing, never as turn-owned rollback state. SQLite or CLI session data is not treated as compatible until those formats receive their own inventory and tests.
 
 Per-session mutations are serialized by the BFF's per-session lock,
 including transcript append, truncate, metadata updates, duplicate, and delete.
@@ -167,8 +167,10 @@ read lock. Index rebuilds are serialized by a store-wide process-local mutex
 and replace `_index.json` atomically, which serializes rebuild writers only.
 Index and fallback reads do not provide a cross-file snapshot and may observe
 mixed filesystem state. Separate processes still require filesystem locking or
-CAS to provide cross-process coordination. A session detail read loads its
-session file directly.
+CAS to provide cross-process coordination. Session detail reads
+(`GET /api/sessions/{session_id}` and export/duplicate source reads) take the
+per-session lock before loading their session file. Session-list/search reads
+use `_index.json` or a directory scan and do not take per-session read locks.
 
 The current resolved state directory was inventoried on 2026-08-30: chat data is present as `sessions/*.json` plus `_index.json`; the separate `kanban.db` is not a chat session source and is not read by this service.
 
@@ -369,9 +371,11 @@ Conversation runtime helpers define disclosure, compaction repair, branch
 lineage, session projection, model search, safe export, and deterministic
 lifecycle rows. These helpers do not certify the corresponding upstream/live
 Hermes behavior until browser and side-by-side evidence is recorded.
-Session reads, duplication, exports, mutations, and chat turns use one
-process-local per-session lock, so concurrent writers are serialized within a
-single BFF process; this is not a multi-process compare-and-swap guarantee.
+Session detail reads, duplication, exports, mutations, and chat turns use one
+process-local per-session lock. Session-list/search reads do not acquire those
+read locks; index rebuild writers use a separate process-local lock. These
+locks serialize relevant operations within one BFF process, not across
+processes, and do not provide a cross-file snapshot for list/search reads.
 
 The production frontend exposes a manifest and service worker under the Vite
 base path. Registration is production-only and uses the configured base path;

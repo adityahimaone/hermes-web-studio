@@ -22,8 +22,7 @@ assistant content.
 proof, and upstream failure details must not leak to the browser or transcript.
 
 Failed turns are fail-closed: newly created sessions are deleted, while failed
-turns in existing sessions truncate back to their original message count. User
-User cancellation keeps its existing cancellation event and rolls back the
+turns in existing sessions truncate back to their original message count. User cancellation keeps its existing cancellation event and rolls back the
 owned user-message append; rollback failure emits a controlled error before the
 cancellation event.
 
