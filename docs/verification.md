@@ -103,7 +103,7 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Rendered Kanban browser acceptance | Pass: mocked board fixture verified Kanban navigation, board rendering, task filtering, create dialog, rendered `Done` transition action, and mobile navigation |
 | Native Kanban backend tests | Pass: `go test ./internal/httpapi -run 'Kanban|kanban' -count=1 -v` |
 | Kanban frontend contract tests | Pass: `pnpm test -- --run src/components/control/p027-acceptance.test.ts src/components/control/kanban-task-detail.test.ts` |
-| P033 completion status | Partial: Dashboard/REST proxy, full detail editing, links, bulk actions, live events, stats parity, migration, and remote execution proof remain open |
+| P033 completion status | Partial: Dashboard/REST proxy, full detail editing, bulk actions, live events, stats parity, migration, and remote execution proof remain open; safe result/summary edits and links are implemented |
 
 The browser proof uses a temporary mocked API fixture and does not certify
 authenticated Hermes Dashboard parity or real remote execution.
