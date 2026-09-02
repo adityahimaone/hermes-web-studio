@@ -95,6 +95,19 @@ This closes the M0 live gate. The version is intentionally recorded as unavailab
 | Performance budget script | Pass against the existing frontend/dist artifact |
 | M5 browser acceptance | Ready: `node frontend/e2e/m5-browser-check.mjs`; requires Vite on port 5173 and is pending hosted/manual execution |
 
+## 2026-09-02 — Kanban rendered acceptance
+
+| Check | Result |
+|---|---|
+| Live Studio shell geometry | Pass: `BASE_URL=http://127.0.0.1:8789 node frontend/e2e/m11-m12-shell-geometry.mjs` |
+| Rendered Kanban browser acceptance | Pass: mocked board fixture verified Kanban navigation, board rendering, task filtering, create dialog, rendered `Done` transition action, and mobile navigation |
+| Native Kanban backend tests | Pass: `go test ./internal/httpapi -run 'Kanban|kanban' -count=1 -v` |
+| Kanban frontend contract tests | Pass: `pnpm test -- --run src/components/control/p027-acceptance.test.ts src/components/control/kanban-task-detail.test.ts` |
+| P033 completion status | Partial: Dashboard/REST proxy, full detail editing, links, bulk actions, live events, stats parity, migration, and remote execution proof remain open |
+
+The browser proof uses a temporary mocked API fixture and does not certify
+authenticated Hermes Dashboard parity or real remote execution.
+
 ## 2026-08-31 - M7-M12 bounded local/live follow-up (historical evidence; not current gate)
 
 | Check | Result |
