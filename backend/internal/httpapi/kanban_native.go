@@ -135,7 +135,7 @@ func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request
 		"dashboard": map[string]any{"configured": s.config.KanbanDashboardURL != "", "available": false},
 		"features": map[string]any{
 			"read": available, "create": available, "dispatch": available,
-			"assign": available, "comments": available, "links": available,
+			"assign": false, "comments": false, "links": available,
 			"live_updates": false, "edit": available, "arbitrary_edit": false, "bulk": false,
 			"orchestration": false, "board_metadata": true,
 		},

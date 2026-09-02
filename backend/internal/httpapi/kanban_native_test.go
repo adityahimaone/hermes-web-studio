@@ -183,7 +183,7 @@ func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 	}
 	defer response.Body.Close()
 	body, _ := io.ReadAll(response.Body)
-	if !strings.Contains(string(body), `"transport":"cli"`) || !strings.Contains(string(body), `"live_updates":false`) || !strings.Contains(string(body), `"edit":true`) || !strings.Contains(string(body), `"links":true`) {
+	if !strings.Contains(string(body), `"transport":"cli"`) || !strings.Contains(string(body), `"live_updates":false`) || !strings.Contains(string(body), `"edit":true`) || !strings.Contains(string(body), `"links":true`) || !strings.Contains(string(body), `"assign":false`) || !strings.Contains(string(body), `"comments":false`) {
 		t.Fatalf("capabilities=%s", body)
 	}
 }
