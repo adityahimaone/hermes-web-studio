@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/adityahimaone/hermes-web-studio/backend/internal/control"
 )
@@ -87,8 +88,19 @@ func (s *Server) handlePreferences(w http.ResponseWriter, _ *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, 200, map[string]any{"preferences": store.Preferences()})
+	writeJSON(w, 200, map[string]any{"preferences": profilePreferences(store.Preferences(), s.activeProfileID())})
 }
+func profilePreferences(values map[string]string, profileID string) map[string]string {
+	prefix := "profile:" + profileID + ":"
+	result := map[string]string{}
+	for key, value := range values {
+		if strings.HasPrefix(key, prefix) {
+			result[strings.TrimPrefix(key, prefix)] = value
+		}
+	}
+	return result
+}
+
 func (s *Server) handlePreferencesUpdate(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.controlReady(w)
 	if !ok {
@@ -98,11 +110,16 @@ func (s *Server) handlePreferencesUpdate(w http.ResponseWriter, r *http.Request)
 	if !decodeBody(w, r, &values) {
 		return
 	}
-	if err := store.SetPreferences(values); err != nil {
+	profileID := s.activeProfileID()
+	scoped := map[string]string{}
+	for key, value := range values {
+		scoped["profile:"+profileID+":"+key] = value
+	}
+	if err := store.SetPreferences(scoped); err != nil {
 		writeError(w, 400, "preferences_invalid", "Preferences could not be saved.")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"preferences": store.Preferences()})
+	writeJSON(w, 200, map[string]any{"preferences": profilePreferences(store.Preferences(), profileID)})
 }
 
 func (s *Server) handleCrons(w http.ResponseWriter, _ *http.Request) {

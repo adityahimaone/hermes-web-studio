@@ -27,23 +27,24 @@ import (
 )
 
 type Server struct {
-	config        config.Config
-	gateway       *gateway.Client
-	sessions      *session.Store
-	turns         map[string]*turn
-	sessionLocks  map[string]*sync.Mutex
-	workspace     *workspace.Service
-	workspaceErr  error
-	auth          *auth.Service
-	authErr       error
-	control       *control.Store
-	controlErr    error
-	mu            sync.Mutex
-	stateMu       sync.RWMutex
-	profiles      []profile
-	activeProfile string
-	profilePath   string
-	providers     []provider
+	config             config.Config
+	gateway            *gateway.Client
+	sessions           *session.Store
+	turns              map[string]*turn
+	sessionLocks       map[string]*sync.Mutex
+	workspace          *workspace.Service
+	workspaceErr       error
+	auth               *auth.Service
+	authErr            error
+	control            *control.Store
+	controlErr         error
+	mu                 sync.Mutex
+	stateMu            sync.RWMutex
+	profiles           []profile
+	activeProfile      string
+	profilePath        string
+	profileUnavailable error
+	providers          []provider
 }
 
 func persistJSON(path string, value any) error {
@@ -73,6 +74,55 @@ func persistJSON(path string, value any) error {
 
 func (s *Server) saveProfilesLocked() error {
 	return persistJSON(s.profilePath, profileState{Profiles: s.profiles, Active: s.activeProfile})
+}
+
+func validateProfileState(state profileState) error {
+	if len(state.Profiles) == 0 || len(state.Profiles) > 100 {
+		return errors.New("invalid profiles")
+	}
+	seen := map[string]bool{}
+	for _, p := range state.Profiles {
+		if !safeProfileField(p.ID, 64) || !safeProfileField(p.Name, 128) || seen[p.ID] {
+			return errors.New("invalid profiles")
+		}
+		if len(p.Model) > 128 || len(p.Provider) > 128 || len(p.ProviderID) > 128 {
+			return errors.New("invalid profiles")
+		}
+		seen[p.ID] = true
+	}
+	if !seen[state.Active] {
+		return errors.New("invalid active profile")
+	}
+	return nil
+}
+
+func safeProfileField(value string, max int) bool {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > max || strings.ContainsAny(value, "/\\\\") {
+		return false
+	}
+	for _, r := range value {
+		if r < 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
+}
+
+func cloneProfiles(values []profile) []profile { return append([]profile(nil), values...) }
+
+func (s *Server) activeProfileID() string {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.activeProfile
+}
+
+func (s *Server) profilesReady(w http.ResponseWriter) bool {
+	if s.profileUnavailable != nil {
+		writeError(w, http.StatusServiceUnavailable, "profiles_unavailable", "Profiles are unavailable.")
+		return false
+	}
+	return true
 }
 
 type profile struct {
@@ -139,20 +189,22 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	authService, authErr := auth.New(stateDir)
 	controlStore, controlErr := control.New(stateDir)
 	if controlErr == nil {
-		_ = controlStore.MigrateLegacySpaces("default")
+		if err := controlStore.MigrateLegacySpaces("default"); err != nil {
+			controlErr = err
+		}
 	}
 	profiles := []profile{{ID: "default", Name: "Default", Model: cfg.DefaultModel, Provider: cfg.DefaultProvider, Health: "gateway"}}
 	activeProfile := "default"
 	profilePath := filepath.Join(stateDir, "profiles.json")
 	if data, err := os.ReadFile(profilePath); err == nil {
 		var saved profileState
-		if json.Unmarshal(data, &saved) == nil && len(saved.Profiles) > 0 {
+		if json.Unmarshal(data, &saved) == nil && validateProfileState(saved) == nil {
 			profiles, activeProfile = saved.Profiles, saved.Active
 		}
 	}
 	if cfg.ProfilesJSON != "" && len(profiles) == 1 && profiles[0].ID == "default" {
 		var configured []profile
-		if json.Unmarshal([]byte(cfg.ProfilesJSON), &configured) == nil && len(configured) > 0 {
+		if json.Unmarshal([]byte(cfg.ProfilesJSON), &configured) == nil && len(configured) > 0 && validateProfileState(profileState{Profiles: configured, Active: configured[0].ID}) == nil {
 			profiles = configured
 			activeProfile = profiles[0].ID
 		}

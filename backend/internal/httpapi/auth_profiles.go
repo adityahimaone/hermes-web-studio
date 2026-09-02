@@ -171,6 +171,7 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "profile_provider_unavailable", "The active profile cannot reference an unavailable provider.")
 				return
 			}
+			previous := s.profiles[i]
 			if patch.Name != "" {
 				s.profiles[i].Name = patch.Name
 			}
@@ -184,6 +185,7 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 				s.profiles[i].ProviderID = patch.ProviderID
 			}
 			if err := s.saveProfilesLocked(); err != nil {
+				s.profiles[i] = previous
 				writeError(w, 500, "profile_persist_failed", "The profile could not be saved.")
 				return
 			}
