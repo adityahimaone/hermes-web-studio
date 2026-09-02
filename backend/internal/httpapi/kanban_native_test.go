@@ -201,6 +201,21 @@ func TestNativeKanbanTaskShowUsesSelectedBoard(t *testing.T) {
 	}
 }
 
+func TestNativeKanbanUnsupportedAssignAndCommentActionsFailClosed(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	for _, action := range []string{"assign", "comment"} {
+		response, err := http.Post(server.URL+"/api/kanban/tasks/t_1/actions/"+action+"?board=selected", "application/json", strings.NewReader(`{}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.StatusCode != http.StatusBadRequest {
+			t.Fatalf("action=%s status=%d", action, response.StatusCode)
+		}
+		response.Body.Close()
+	}
+}
+
 func TestNativeKanbanSummaryOnlyEditOmitsEmptyResult(t *testing.T) {
 	server := nativeCLITestServer(t)
 	defer server.Close()

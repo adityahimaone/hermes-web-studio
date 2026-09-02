@@ -419,7 +419,7 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 
 var supportedKanbanActions = map[string]bool{
 	"complete": true, "archive": true, "block": true, "schedule": true,
-	"promote": true, "unblock": true, "assign": true, "comment": true,
+	"promote": true, "unblock": true,
 	"edit": true, "link": true, "unlink": true,
 }
 
