@@ -188,17 +188,23 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	ws, wsErr := workspace.New(cfg.WorkspaceRoot)
 	authService, authErr := auth.New(stateDir)
 	controlStore, controlErr := control.New(stateDir)
-	if controlErr == nil {
-		if err := controlStore.MigrateLegacySpaces("default"); err != nil {
-			controlErr = err
-		}
+	var profileUnavailable error
+	if controlErr != nil {
+		profileUnavailable = fmt.Errorf("profile state unavailable: %w", controlErr)
+	} else if err := controlStore.MigrateLegacySpaces("default"); err != nil {
+		controlErr = err
+		profileUnavailable = fmt.Errorf("profile migration failed: %w", err)
 	}
 	profiles := []profile{{ID: "default", Name: "Default", Model: cfg.DefaultModel, Provider: cfg.DefaultProvider, Health: "gateway"}}
 	activeProfile := "default"
 	profilePath := filepath.Join(stateDir, "profiles.json")
 	if data, err := os.ReadFile(profilePath); err == nil {
 		var saved profileState
-		if json.Unmarshal(data, &saved) == nil && validateProfileState(saved) == nil {
+		if err := json.Unmarshal(data, &saved); err != nil {
+			profileUnavailable = fmt.Errorf("profiles state is invalid: %w", err)
+		} else if err := validateProfileState(saved); err != nil {
+			profileUnavailable = fmt.Errorf("profiles state is invalid: %w", err)
+		} else {
 			profiles, activeProfile = saved.Profiles, saved.Active
 		}
 	}
@@ -212,7 +218,7 @@ func NewWithGateway(cfg config.Config, client *gateway.Client) *Server {
 	if !profileIn(profiles, activeProfile) {
 		activeProfile = profiles[0].ID
 	}
-	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: activeProfile, profilePath: profilePath, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
+	return &Server{config: cfg, gateway: client, sessions: session.NewStore(stateDir), turns: make(map[string]*turn), sessionLocks: make(map[string]*sync.Mutex), workspace: ws, workspaceErr: wsErr, auth: authService, authErr: authErr, control: controlStore, controlErr: controlErr, profiles: profiles, activeProfile: activeProfile, profilePath: profilePath, profileUnavailable: profileUnavailable, providers: []provider{{ID: "gateway", Name: "Hermes Gateway", Kind: "hermes_gateway", BaseURL: cfg.GatewayBaseURL, HasKey: cfg.GatewayAPIKey != "", Health: "configured"}}}
 }
 
 func profileIn(profiles []profile, id string) bool {

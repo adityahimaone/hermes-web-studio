@@ -128,12 +128,18 @@ func (s *Server) handleAuthMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"authenticated": authenticated, "user": "local"})
 }
 func (s *Server) handleProfiles(w http.ResponseWriter, _ *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
 	writeJSON(w, 200, map[string]any{"profiles": s.profiles, "active": s.activeProfile})
 }
 
 func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var input profile
 	if !decodeBody(w, r, &input) || strings.TrimSpace(input.ID) == "" || strings.TrimSpace(input.Name) == "" {
 		writeError(w, http.StatusBadRequest, "profile_invalid", "Profile id and name are required.")
@@ -158,6 +164,9 @@ func (s *Server) handleProfileCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var patch profile
 	if !decodeBody(w, r, &patch) {
 		return
@@ -197,6 +206,9 @@ func (s *Server) handleProfileUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleProfileDelete(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
@@ -292,6 +304,9 @@ func (s *Server) handleSettingsCapabilities(w http.ResponseWriter, _ *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"sections": []string{"conversation", "appearance", "preferences", "providers", "plugins", "extensions", "system", "help"}, "locales": []string{"en", "id", "de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "zh-CN", "zh-TW", "ar", "hi", "tr"}})
 }
 func (s *Server) handleProfileSwitch(w http.ResponseWriter, r *http.Request) {
+	if !s.profilesReady(w) {
+		return
+	}
 	var input struct {
 		ID string `json:"id"`
 	}
