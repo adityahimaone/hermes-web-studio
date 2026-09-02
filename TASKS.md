@@ -51,7 +51,7 @@ Production baseline is available with `docker build -t hermes-web-studio:local .
 ## M3 — Profiles, auth, and onboarding
 
 - [x] Profile discovery, model/provider picker, profile switch
-- [x] Persist profile registry and active profile; migrate legacy unowned Spaces to `default`
+- [x] Persist profile registry and active profile; migrate legacy unowned Spaces to `default` (malformed persisted state/migration failure fail closed with HTTP 503; rollback and profile-scoped preference/Space regressions verified)
 - [x] Password auth and secure signed cookies
 - [x] Rate limits, CSRF/origin rules, security headers
 - [x] First-run Gateway configuration and diagnostics
