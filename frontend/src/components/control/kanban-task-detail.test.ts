@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isCurrentKanbanRefresh, isKanbanMutationAvailable, runTaskDetailAction, runTaskDetailMutation } from './kanban-view'
+import { isCurrentKanbanMutation, isCurrentKanbanRefresh, isKanbanMutationAvailable, runTaskDetailAction, runTaskDetailMutation } from './kanban-view'
 
 describe('task detail mutation handling', () => {
   it('reports mutations unavailable unless capabilities explicitly allow them', () => {
@@ -11,6 +11,11 @@ describe('task detail mutation handling', () => {
   it('accepts only latest board refresh response', () => {
     expect(isCurrentKanbanRefresh(2, 2)).toBe(true)
     expect(isCurrentKanbanRefresh(1, 2)).toBe(false)
+  })
+
+  it('accepts only latest task mutation response', () => {
+    expect(isCurrentKanbanMutation(2, 2)).toBe(true)
+    expect(isCurrentKanbanMutation(1, 2)).toBe(false)
   })
 
   it('surfaces refresh rejection through visible error callback', async () => {
