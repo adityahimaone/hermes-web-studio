@@ -128,8 +128,11 @@ func (c kanbanCLI) run(ctx context.Context, board string, args ...string) ([]byt
 func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	_, err := s.kanbanCLI().run(ctx, "", "stats", "--json")
-	available := err == nil
+	stats, err := s.kanbanCLI().run(ctx, "", "stats", "--json")
+	available := err == nil && json.Valid(bytes.TrimSpace(stats)) && len(bytes.TrimSpace(stats)) > 0 && bytes.HasPrefix(bytes.TrimSpace(stats), []byte("{"))
+	if !available {
+		stats = nil
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"transport": "cli", "available": available,
 		"dashboard": map[string]any{"configured": s.config.KanbanDashboardURL != "", "available": false},
@@ -137,7 +140,7 @@ func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request
 			"read": available, "create": available, "dispatch": available,
 			"assign": false, "comments": false, "links": available,
 			"live_updates": false, "edit": available, "arbitrary_edit": false, "bulk": false,
-			"orchestration": false, "board_metadata": available,
+			"orchestration": false, "board_metadata": false,
 		},
 		"statuses": []string{"triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done", "archived"},
 	})
