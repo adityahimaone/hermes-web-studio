@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runTaskDetailAction, runTaskDetailMutation } from './kanban-view'
+import { isKanbanMutationAvailable, runTaskDetailAction, runTaskDetailMutation } from './kanban-view'
 
 describe('task detail mutation handling', () => {
+  it('reports mutations unavailable unless capabilities explicitly allow them', () => {
+    expect(isKanbanMutationAvailable(undefined)).toBe(false)
+    expect(isKanbanMutationAvailable({ available: false } as any)).toBe(false)
+    expect(isKanbanMutationAvailable({ available: true } as any)).toBe(true)
+  })
+
   it('surfaces refresh rejection through visible error callback', async () => {
     const onError = vi.fn()
     await runTaskDetailAction(
