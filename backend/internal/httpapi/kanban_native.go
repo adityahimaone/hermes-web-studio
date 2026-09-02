@@ -342,7 +342,11 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body struct {
-		Reason string `json:"reason"`
+		Reason   string         `json:"reason"`
+		Result   string         `json:"result"`
+		Summary  string         `json:"summary"`
+		ChildID  string         `json:"child_id"`
+		Metadata map[string]any `json:"metadata"`
 	}
 	if r.Body != nil && r.ContentLength != 0 {
 		if !decodeBody(w, r, &body) {
@@ -355,6 +359,38 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 		return
 	}
 	args := []string{action, id}
+	if action == "edit" {
+		if body.Result == "" && body.Summary == "" {
+			writeError(w, http.StatusBadRequest, "edit_required", "Result or summary is required.")
+			return
+		}
+		for _, value := range []string{body.Result, body.Summary} {
+			if err := validateKanbanArgument(value, true); err != nil {
+				writeError(w, http.StatusBadRequest, "edit_invalid", "The Kanban edit text is invalid.")
+				return
+			}
+		}
+		args = append(args, "--result", body.Result)
+		if body.Summary != "" {
+			args = append(args, "--summary", body.Summary)
+		}
+		if body.Metadata != nil {
+			encoded, err := json.Marshal(body.Metadata)
+			if err != nil || len(encoded) > maxKanbanActionReasonLength {
+				writeError(w, http.StatusBadRequest, "metadata_invalid", "The Kanban metadata is invalid.")
+				return
+			}
+			args = append(args, "--metadata", string(encoded))
+		}
+	}
+	if action == "link" || action == "unlink" {
+		child, err := validateKanbanIdentifier(body.ChildID, false)
+		if err != nil || child == id {
+			writeError(w, http.StatusBadRequest, "link_invalid", "The Kanban linked task ID is invalid.")
+			return
+		}
+		args = append(args, child)
+	}
 	if body.Reason != "" && (action == "block" || action == "schedule" || action == "promote" || action == "unblock") {
 		reason, err := validateKanbanActionReason(body.Reason)
 		if err != nil {
@@ -377,6 +413,7 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 var supportedKanbanActions = map[string]bool{
 	"complete": true, "archive": true, "block": true, "schedule": true,
 	"promote": true, "unblock": true, "assign": true, "comment": true,
+	"edit": true, "link": true, "unlink": true,
 }
 
 func (s *Server) handleKanbanDispatchNative(w http.ResponseWriter, r *http.Request) {
