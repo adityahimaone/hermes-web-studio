@@ -137,7 +137,7 @@ func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request
 			"read": available, "create": available, "dispatch": available,
 			"assign": false, "comments": false, "links": available,
 			"live_updates": false, "edit": available, "arbitrary_edit": false, "bulk": false,
-			"orchestration": false, "board_metadata": true,
+			"orchestration": false, "board_metadata": available,
 		},
 		"statuses": []string{"triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done", "archived"},
 	})
