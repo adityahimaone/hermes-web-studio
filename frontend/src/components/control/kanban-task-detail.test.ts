@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runTaskDetailAction } from './kanban-view'
+import { runTaskDetailAction, runTaskDetailMutation } from './kanban-view'
 
 describe('task detail mutation handling', () => {
   it('surfaces refresh rejection through visible error callback', async () => {
@@ -10,5 +10,11 @@ describe('task detail mutation handling', () => {
       onError,
     )
     expect(onError).toHaveBeenCalledWith('refresh failed')
+  })
+
+  it('reloads displayed detail after successful mutation', async () => {
+    const setDetail = vi.fn()
+    await runTaskDetailMutation(() => Promise.resolve(), () => Promise.resolve(), () => Promise.resolve({ id: 't_1', result: 'new' }), setDetail, vi.fn())
+    expect(setDetail).toHaveBeenCalledWith({ id: 't_1', result: 'new' })
   })
 })

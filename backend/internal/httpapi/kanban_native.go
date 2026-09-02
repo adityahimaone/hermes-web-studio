@@ -136,7 +136,7 @@ func (s *Server) handleKanbanCapabilities(w http.ResponseWriter, r *http.Request
 		"features": map[string]any{
 			"read": available, "create": available, "dispatch": available,
 			"assign": available, "comments": available, "links": available,
-			"live_updates": false, "arbitrary_edit": false, "bulk": false,
+			"live_updates": false, "edit": available, "arbitrary_edit": false, "bulk": false,
 			"orchestration": false, "board_metadata": true,
 		},
 		"statuses": []string{"triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done", "archived"},
@@ -370,7 +370,9 @@ func (s *Server) handleKanbanTaskActionNative(w http.ResponseWriter, r *http.Req
 				return
 			}
 		}
-		args = append(args, "--result", body.Result)
+		if body.Result != "" {
+			args = append(args, "--result", body.Result)
+		}
 		if body.Summary != "" {
 			args = append(args, "--summary", body.Summary)
 		}

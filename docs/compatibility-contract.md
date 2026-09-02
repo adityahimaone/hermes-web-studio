@@ -17,7 +17,7 @@ not change Hermes' shared current-board pointer. A Space is resolved to an
 upstream workspace value; no native `space` field is sent.
 
 CLI mode supports board reads, task creation, dispatch, assignment, comments,
-links, and named Hermes transitions. Generic task editing, arbitrary status
+safe result/summary edits, links, and named Hermes transitions. Arbitrary status
 patches, plugin bulk mutations, and live event streaming are capability-gated
 until the Dashboard transport is available. The earlier local `/api/kanban`
 placeholder handlers remain deprecated compatibility routes while migration

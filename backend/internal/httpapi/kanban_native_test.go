@@ -47,7 +47,9 @@ func TestNativeKanbanActionRejectsUnknownActionBeforeCLI(t *testing.T) {
 func nativeCLITestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "hermes")
+	logPath := filepath.Join(t.TempDir(), "args.log")
 	script := `#!/bin/sh
+printf '%s\n' "$*" >> ` + logPath + `
 case "$*" in
   *"stats --json"*) printf '%s' '{"ready":1,"done":2}' ;;
   *"boards list"*) printf '%s' '[{"slug":"default","name":"Default","task_count":3}]' ;;
@@ -181,8 +183,21 @@ func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 	}
 	defer response.Body.Close()
 	body, _ := io.ReadAll(response.Body)
-	if !strings.Contains(string(body), `"transport":"cli"`) || !strings.Contains(string(body), `"live_updates":false`) || !strings.Contains(string(body), `"arbitrary_edit":false`) {
+	if !strings.Contains(string(body), `"transport":"cli"`) || !strings.Contains(string(body), `"live_updates":false`) || !strings.Contains(string(body), `"edit":true`) || !strings.Contains(string(body), `"links":true`) {
 		t.Fatalf("capabilities=%s", body)
+	}
+}
+
+func TestNativeKanbanSummaryOnlyEditOmitsEmptyResult(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	response, err := http.Post(server.URL+"/api/kanban/tasks/t_1/actions/edit?board=selected", "application/json", strings.NewReader(`{"summary":"handoff"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", response.StatusCode)
 	}
 }
 func TestKanbanWorkspaceValueRejectsRemoteAndUnsafeReferences(t *testing.T) {

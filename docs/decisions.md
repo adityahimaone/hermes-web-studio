@@ -34,6 +34,14 @@ The browser uses the original two-step shape: start a turn, then subscribe to a 
 
 Kanban cards expose a visible native select for lane transitions, preserving drag-and-drop while providing keyboard and touch access with 44px targets. Space mutations and task-detail actions catch network failures and render sanitized messages in alert regions; no local fallback is introduced.
 
+## ADR-059 - Narrow native Kanban edit and link actions
+
+Native CLI mutations expose only result/summary edits and parent-child link
+operations in this slice. IDs and text are validated before becoming CLI
+arguments; metadata is bounded JSON. Arbitrary task patches, bulk mutations,
+events, stats, and Dashboard transport remain unsupported and are not presented
+as complete parity.
+
 ## ADR-054 - Partial batch session actions
 
 Batch archive and delete continue independent session actions after an individual
