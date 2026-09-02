@@ -188,9 +188,14 @@ func (s *Server) handleKanbanTaskNative(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "task_id_invalid", "The Kanban task ID is invalid.")
 		return
 	}
+	board, err := validateKanbanIdentifier(r.URL.Query().Get("board"), true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "board_invalid", "The Kanban board is invalid.")
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	out, err := s.kanbanCLI().run(ctx, "", "show", id, "--json")
+	out, err := s.kanbanCLI().run(ctx, board, "show", id, "--json")
 	if err != nil {
 		writeKanbanError(w, err)
 		return

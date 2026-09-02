@@ -188,6 +188,19 @@ func TestNativeKanbanCapabilitiesGateUnsupportedFeatures(t *testing.T) {
 	}
 }
 
+func TestNativeKanbanTaskShowUsesSelectedBoard(t *testing.T) {
+	server := nativeCLITestServer(t)
+	defer server.Close()
+	response, err := http.Get(server.URL + "/api/kanban/tasks/t_1?board=selected")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", response.StatusCode)
+	}
+}
+
 func TestNativeKanbanSummaryOnlyEditOmitsEmptyResult(t *testing.T) {
 	server := nativeCLITestServer(t)
 	defer server.Close()
